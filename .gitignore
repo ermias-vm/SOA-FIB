@@ -1,0 +1,53 @@
+# Bochs Installation Files
+bochs-2.6.7.tar.gz
+bochs-2.6.7/
+bochs-*
+
+# ZeOS Compilation Output Files
+zeos/*.o
+zeos/*.s
+zeos/bochsout.txt
+zeos/parport.out
+zeos/system.out
+zeos/system
+zeos/bootsect
+zeos/zeos.bin
+zeos/user
+zeos/user.out
+zeos/build
+zeos/*~
+
+# General Compilation Files
+*.o
+*.s
+*.bin
+*.out
+*.a
+*.so
+*.dylib
+
+# Build Directories
+build/
+dist/
+
+# Temporary Files
+*~
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# IDE Files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Log Files
+*.log
+bochsout.txt
+parport.out
+
+# Backup Files
+*.bak
+*.backup
