@@ -60,7 +60,7 @@ This version includes Bochs' built-in debugger with basic debugging features.
 
 #### Compile:
 ```bash
-make -j$(nproc)
+make -j$(($(nproc)-2))
 ```
 
 #### Install:
@@ -72,6 +72,8 @@ sudo make install
 
 This version allows you to use external GDB for advanced debugging.
 
+**Note:** If switching from Option A, clean first with `make clean`
+
 #### Configure:
 ```bash
 ./configure --enable-gdb-stub --with-x --prefix=/opt/bochs_gdb
@@ -79,7 +81,7 @@ This version allows you to use external GDB for advanced debugging.
 
 #### Compile:
 ```bash
-make -j$(nproc)
+make -j$(($(nproc)-2))
 ```
 
 #### Install:
@@ -106,7 +108,7 @@ Once Bochs is installed, you can compile and test your ZeOS operating system.
 ### Navigate to ZeOS Directory
 
 ```bash
-cd /zeos
+cd zeos
 ```
 
 ### Compile ZeOS

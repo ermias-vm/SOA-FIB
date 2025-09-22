@@ -8,7 +8,11 @@
 AS86 = as86 -0 -a
 LD86 = ld86 -0
 
-HOSTCFLAGS = -Wall -Wstrict-prototypes -g
+# Automatic parallel compilation using all cores minus 2 for system stability
+MAKEFLAGS += -j$(shell echo $$(($(shell nproc) - 2)))
+
+# Enhanced compilation flags for detailed error/warning reporting  
+HOSTCFLAGS = -Wall -Wstrict-prototypes -Wextra -g
 HOSTCC = gcc
 CC = gcc
 AS = as --32
@@ -18,7 +22,8 @@ OBJCOPY = objcopy -O binary -R .note -R .comment -S
 INCLUDEDIR = include
 
 
-CFLAGS = -m32 -O2  -g -fno-omit-frame-pointer -ffreestanding -Wall -I$(INCLUDEDIR) -fno-PIC
+# Enhanced CFLAGS for detailed warnings and debugging
+CFLAGS = -m32 -O2 -g -fno-omit-frame-pointer -ffreestanding -Wall -Wextra -Wpedantic -Wformat=2 -Wunused -Wcast-align -Wwrite-strings -Wlogical-op -Wmissing-declarations -Wredundant-decls -Wshadow -I$(INCLUDEDIR) -fno-PIC
 ASMFLAGS = -I$(INCLUDEDIR)
 LDFLAGS = -g -melf_i386
 
@@ -101,11 +106,11 @@ disk: zeos.bin
 	dd if=zeos.bin of=/dev/fd0
 
 emul: zeos.bin
-	bochs -q -f .bochsrc
+	/opt/bochs/bin/bochs -q -f .bochsrc
 
 gdb: zeos.bin
-	bochs -q -f .bochsrc_gdb &
+	/opt/bochs_gdb/bin/bochs -q -f .bochsrc_gdb &
 	gdb -x .gdbcmd system
 
 emuldbg: zeos.bin
-	bochs_nogdb -q -f .bochsrc
+	/opt/bochs/bin/bochs -q -f .bochsrc

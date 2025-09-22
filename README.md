@@ -11,14 +11,14 @@ This project involves creating a basic operating system kernel with:
 - Hardware abstraction layer
 
 ## Project Structure
-- `ConfigZeos.md`:  **[Bochs Configuration Guide](ConfigZeos.md)**
+- `ConfigZeos.md`: **[Bochs Configuration Guide](ConfigZeos.md)**
 - `zeos/`: Contains the ZeOS kernel source code and build files
   - `include/`: Header files and system definitions
   - `Makefile`: Build system configuration
   - Various `.c` and `.S` files: Kernel implementation
 - `docs/`: Project documentation and specifications
-  - `Zeos.pdf`: - [ZeOS Project Specification](docs/Zeos.pdf)
-
+  - `Zeos.pdf`: [ZeOS Project Specification](docs/Zeos.pdf)
+  - `BochsInternalDebuggerGuide.md`: [Bochs Internal Debugger Guide](docs/BochsInternalDebuggerGuide.md)
 - `bochs-2.6.7/`: Bochs emulator source code (for compilation)
 
 
