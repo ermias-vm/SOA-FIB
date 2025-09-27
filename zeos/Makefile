@@ -8,8 +8,10 @@
 AS86 = as86 -0 -a
 LD86 = ld86 -0
 
-# Automatic parallel compilation using all cores minus 2 for system stability
-MAKEFLAGS += -j$(shell echo $$(($(shell nproc) - 2)))
+# Parallel compilation configuration
+CORES ?= 1
+MAKEFLAGS += -j$(CORES)
+
 
 # Enhanced compilation flags for detailed error/warning reporting  
 HOSTCFLAGS = -Wall -Wstrict-prototypes -Wextra -g
@@ -23,7 +25,13 @@ INCLUDEDIR = include
 
 
 # Enhanced CFLAGS for detailed warnings and debugging
-CFLAGS = -m32 -O2 -g -fno-omit-frame-pointer -ffreestanding -Wall -Wextra -Wpedantic -Wformat=2 -Wunused -Wcast-align -Wwrite-strings -Wlogical-op -Wmissing-declarations -Wredundant-decls -Wshadow -I$(INCLUDEDIR) -fno-PIC
+# CFLAGS = -m32 -O2 -g -fno-omit-frame-pointer -ffreestanding -Wall -Wextra -Wpedantic -Wformat=2 -Wunused -Wcast-align -Wwrite-strings -Wlogical-op -Wmissing-declarations -Wredundant-decls -Wshadow -I$(INCLUDEDIR) -fno-PIC
+# CFLAGS = -m32 -O2 -g -fno-omit-frame-pointer -ffreestanding -Wall -Wextra -Wpedantic -Wformat=2 -Wcast-align -Wwrite-strings  -Wshadow -I$(INCLUDEDIR) -fno-PIC
+
+# Original CFLAGS
+CFLAGS = -m32 -O2  -g -fno-omit-frame-pointer -ffreestanding -Wall -Wextra  -I$(INCLUDEDIR) -fno-PIC
+# Original No optimizations
+#CFLAGS = -m32 -O0  -g -fno-omit-frame-pointer -ffreestanding -Wall -Wextra  -I$(INCLUDEDIR) -fno-PIC
 ASMFLAGS = -I$(INCLUDEDIR)
 LDFLAGS = -g -melf_i386
 
@@ -45,9 +53,9 @@ LIBZEOS = -L . -l zeos
 #add to USROBJ any object files required to complete the user program
 USROBJ = \
 	libc.o \
-	# libjp.a \
+	suma.o \
 
-all:zeos.bin
+all: zeos.bin
 
 zeos.bin: bootsect system build user
 	$(OBJCOPY) system system.out
@@ -88,9 +96,7 @@ sys.o:sys.c $(INCLUDEDIR)/devices.h
 
 utils.o:utils.c $(INCLUDEDIR)/utils.h
 
-
 system.o:system.c $(INCLUDEDIR)/hardware.h system.lds $(SYSOBJ) $(INCLUDEDIR)/segment.h $(INCLUDEDIR)/types.h $(INCLUDEDIR)/interrupt.h $(INCLUDEDIR)/system.h $(INCLUDEDIR)/sched.h $(INCLUDEDIR)/mm.h $(INCLUDEDIR)/io.h $(INCLUDEDIR)/mm_address.h 
-
 
 system: system.o system.lds $(SYSOBJ)
 	$(LD) $(LDFLAGS) -T system.lds -o $@ $< $(SYSOBJ) $(LIBZEOS)
@@ -98,6 +104,8 @@ system: system.o system.lds $(SYSOBJ)
 user: user.o user.lds $(USROBJ) 
 	$(LD) $(LDFLAGS) -T user.lds -o $@ $< $(USROBJ)
 
+suma.o: suma.S $(INCLUDEDIR)/asm.h
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
 	rm -f *.o *.s bochsout.txt parport.out system.out system bootsect zeos.bin user user.out *~ build 
@@ -109,8 +117,8 @@ emul: zeos.bin
 	/opt/bochs/bin/bochs -q -f .bochsrc
 
 gdb: zeos.bin
-	/opt/bochs_gdb/bin/bochs -q -f .bochsrc_gdb &
+	bochs -q -f .bochsrc_gdb &
 	gdb -x .gdbcmd system
 
 emuldbg: zeos.bin
-	/opt/bochs/bin/bochs -q -f .bochsrc
+	bochs_nogdb -q -f .bochsrc

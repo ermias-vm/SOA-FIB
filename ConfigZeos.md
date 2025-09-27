@@ -100,6 +100,20 @@ Check the installation of the GDB version:
 ```bash
 /opt/bochs_gdb/bin/bochs -v
 ```
+### Create System-wide Symbolic Links (Optional)
+
+To make the Bochs commands available system-wide for the Makefile targets, create symbolic links:
+
+```bash
+# Link for GDB debugging version (used by 'make gdb')
+sudo ln -s /opt/bochs_gdb/bin/bochs /usr/local/bin/bochs
+
+# Link for internal debugger version (used by 'make emuldbg') 
+sudo ln -s /opt/bochs/bin/bochs /usr/local/bin/bochs_nogdb
+
+which bochs          # Should show: /usr/local/bin/bochs
+which bochs_nogdb    # Should show: /usr/local/bin/bochs_nogdb
+```
 
 ## Part 3: Testing ZeOS
 
@@ -117,7 +131,9 @@ cd zeos
 make
 ```
 
-### Run ZeOS with Bochs Internal Debugger
+### Run ZeOS with Different Debugger Options
+
+#### Option 1: Run with Bochs Internal Debugger
 
 ```bash
 make emuldbg
@@ -127,3 +143,25 @@ make emuldbg
 - The debugger prompt will show the current address and wait for commands
 - Press `c` and ENTER to continue execution
 - Press `Ctrl+C` to finish and exit the debugger
+
+#### Option 2: Run with External GDB Debugger
+
+```bash
+make gdb
+```
+
+- Bochs will start in the background with GDB stub enabled
+- GDB will automatically attach and load debugging symbols
+- Use standard GDB commands for debugging
+- Press `Ctrl+C` in GDB to interrupt execution
+- Use `quit` to exit GDB and terminate Bochs
+
+#### Option 3: Run Normal Execution (No Debugger)
+
+```bash
+make emul
+```
+
+- Runs ZeOS in normal mode without debugging capabilities
+- Faster execution for testing basic functionality
+- Press `Ctrl+C` to exit Bochs

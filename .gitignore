@@ -47,7 +47,13 @@ Thumbs.db
 *.log
 bochsout.txt
 parport.out
+docs/*.txt
 
 # Backup Files
 *.bak
 *.backup
+
+# Other files
+ZeOSInternalArchitecture.md
+docs/*.txt
+docs/img
