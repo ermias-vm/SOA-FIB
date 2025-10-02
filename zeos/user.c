@@ -15,7 +15,7 @@ int main(void) {
     /* __asm__ __volatile__ ("mov %0, %%cr3"::"r" (0) ); */
 
     volatile int sum = add(2, 3);
-    volatile int sumAsm = addAsm(2, 3);
+    volatile int sumAsm = addAsm(999, 110);
     
     buff[0] = sum;
     buff[1] = sumAsm;
