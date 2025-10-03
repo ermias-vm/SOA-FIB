@@ -6,8 +6,8 @@
 #include <io.h>
 #include <segment.h>
 #include <types.h>
-
 #include <zeos_interrupt.h>
+#include <utils.h>
 
 Gate idt[IDT_ENTRIES];
 Register idtR;
@@ -16,6 +16,7 @@ void keyboard_handler();
 void clock_handler();
 void syscall_handler_sysenter();
 void writeMSR(unsigned long msr, unsigned long val);
+void pageFault_handler();
 
 int zeos_ticks = 0;
 
@@ -82,6 +83,7 @@ void setIdt() {
     /* ADD INITIALIZATION CODE FOR INTERRUPT VECTOR */
     setInterruptHandler(32, clock_handler, 0);
     setInterruptHandler(33, keyboard_handler, 0);
+    setInterruptHandler(14, pageFault_handler, 0);
 
     writeMSR(0x174, __KERNEL_CS);
     writeMSR(0x175, INITIAL_ESP);
@@ -107,4 +109,22 @@ void keyboard_routine() {
 void clock_routine(void) {
     zeos_ticks++;
     zeos_show_clock();
+}
+
+void pageFault_routine() {
+    unsigned int eip;
+    char buffer_eip[11];
+
+    asm("popl %0" : "=r"(eip));
+    itoa_hex(eip, buffer_eip);
+
+    printk_color("\n===============================================\n", ERROR_COLOR);
+    printk_color("           PAGE FAULT EXCEPTION               \n", ERROR_COLOR);
+    printk_color("===============================================\n", ERROR_COLOR);
+    printk_color("\n  Error at EIP:        ", WARNING_COLOR);
+    printk_color(buffer_eip, MAKE_COLOR(BLACK, WHITE));
+    printk_color("\n\n  The process tried to access an invalid\n", INFO_COLOR);
+    printk_color("  memory address and will be terminated.\n", INFO_COLOR);
+    printk_color("===============================================\n", ERROR_COLOR);
+    while (1);
 }

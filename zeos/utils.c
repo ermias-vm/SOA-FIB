@@ -130,36 +130,81 @@ unsigned long get_ticks(void) {
     return ticks;
 }
 
-     
+void itoa_hex(unsigned int num, char *buffer) {
+    const char hex_chars[] = "0123456789ABCDEF";
+    int i = 7;
+
+    buffer[0] = '0';
+    buffer[1] = 'x';
+
+    for (i = 9; i >= 2; i--) {
+        buffer[i] = hex_chars[num & 0xF];
+        num >>= 4;
+    }
+
+    buffer[10] = '\0';
+}
+
 void print_splash_screen(void) {
     // Limpiar las primeras líneas y centrar el contenido
     printk("\n\n");
-    
-    //ZEOS
-    printk_color("                 ###########    ########  #######    ######    \n", MAKE_COLOR(BLACK, LIGHT_CYAN));
-    printk_color("                        ##     ##        ##     ##  ##    ##    \n", MAKE_COLOR(BLACK, CYAN));
-    printk_color("                      ##      ##        ##     ##  ##           \n", MAKE_COLOR(BLACK, LIGHT_BLUE));
-    printk_color("                    ##       ######    ##     ##   ######       \n", MAKE_COLOR(BLACK, BLUE));
-    printk_color("                  ##        ##        ##     ##        ##       \n", MAKE_COLOR(BLACK, LIGHT_BLUE));
-    printk_color("                ##         ##        ##     ##  ##    ##        \n", MAKE_COLOR(BLACK, CYAN));
-    printk_color("              ##########  ########   #######    ######          \n", MAKE_COLOR(BLACK, LIGHT_CYAN));
+
+    // ZEOS
+    printk_color(
+        "                 ###########    ########  #######    ######     \n",
+        MAKE_COLOR(BLACK, LIGHT_CYAN));
+    printk_color(
+        "                        ##     ##        ##     ##  ##    ##    \n",
+        MAKE_COLOR(BLACK, CYAN));
+    printk_color(
+        "                      ##      ##        ##     ##  ##           \n",
+        MAKE_COLOR(BLACK, LIGHT_BLUE));
+    printk_color(
+        "                    ##       ######    ##     ##   ######       \n",
+        MAKE_COLOR(BLACK, BLUE));
+    printk_color(
+        "                  ##        ##        ##     ##        ##       \n",
+        MAKE_COLOR(BLACK, LIGHT_BLUE));
+    printk_color(
+        "                ##         ##        ##     ##  ##    ##        \n",
+        MAKE_COLOR(BLACK, CYAN));
+    printk_color(
+        "              ##########  ########   #######    ######          \n",
+        MAKE_COLOR(BLACK, LIGHT_CYAN));
     printk_color("\n\n", DEFAULT_COLOR);
     // SOA-FIB
-    printk_color("            ####    #####     ###        #######  ##  ######   \n", MAKE_COLOR(BLACK, YELLOW));
-    printk_color("           ##  ##  ##   ##   ## ##       ##       ##  ##   ##  \n", MAKE_COLOR(BLACK, LIGHT_RED));
-    printk_color("           ##      ##   ##  ##   ##      ##       ##  ##   ##  \n", MAKE_COLOR(BLACK, LIGHT_MAGENTA));
-    printk_color("            ####   ##   ##  #######      #####    ##  ######   \n", MAKE_COLOR(BLACK, MAGENTA));
-    printk_color("               ##  ##   ##  ##   ##      ##       ##  ##   ##  \n", MAKE_COLOR(BLACK, LIGHT_MAGENTA));
-    printk_color("           ##  ##  ##   ##  ##   ##      ##       ##  ##   ##  \n", MAKE_COLOR(BLACK, LIGHT_RED));
-    printk_color("            ####    #####   ##   ##      ##       ##  ######   \n", MAKE_COLOR(BLACK, YELLOW));
-    
-    printk("\n"); 
-    
+    printk_color(
+        "            ####    #####     ###        #######  ##  ######   \n",
+        MAKE_COLOR(BLACK, YELLOW));
+    printk_color(
+        "           ##  ##  ##   ##   ## ##       ##       ##  ##   ##  \n",
+        MAKE_COLOR(BLACK, LIGHT_RED));
+    printk_color(
+        "           ##      ##   ##  ##   ##      ##       ##  ##   ##  \n",
+        MAKE_COLOR(BLACK, LIGHT_MAGENTA));
+    printk_color(
+        "            ####   ##   ##  #######      #####    ##  ######   \n",
+        MAKE_COLOR(BLACK, MAGENTA));
+    printk_color(
+        "               ##  ##   ##  ##   ##      ##       ##  ##   ##  \n",
+        MAKE_COLOR(BLACK, LIGHT_MAGENTA));
+    printk_color(
+        "           ##  ##  ##   ##  ##   ##      ##       ##  ##   ##  \n",
+        MAKE_COLOR(BLACK, LIGHT_RED));
+    printk_color(
+        "            ####    #####   ##   ##      ##       ##  ######   \n",
+        MAKE_COLOR(BLACK, YELLOW));
+
+    printk("\n");
+
     // 2025-2026
-    printk_color("                  =========================\n\n", MAKE_COLOR(BLACK, DARK_GRAY));
-    printk_color("                      2 0 2 5", MAKE_COLOR(BLACK, LIGHT_GREEN));
+    printk_color("                  =========================\n\n",
+                 MAKE_COLOR(BLACK, DARK_GRAY));
+    printk_color("                      2 0 2 5",
+                 MAKE_COLOR(BLACK, LIGHT_GREEN));
     printk_color(" - ", MAKE_COLOR(BLACK, WHITE));
     printk_color("2 0 2 6\n\n", MAKE_COLOR(BLACK, LIGHT_GREEN));
-    printk_color("                  =========================\n", MAKE_COLOR(BLACK, DARK_GRAY));
+    printk_color("                  =========================\n",
+                 MAKE_COLOR(BLACK, DARK_GRAY));
     printk("\n");
-}       
+}

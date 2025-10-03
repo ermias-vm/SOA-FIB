@@ -120,3 +120,10 @@ ENTRY(keyboard_handler)
     popl %ebp
     ret
      
+ENTRY(pageFault_handler)
+    SAVE_ALL
+    pushl 44(%esp)            # Push EIP
+    call pageFault_routine
+    addl $4, %esp
+    RESTORE_ALL
+    iret

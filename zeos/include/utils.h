@@ -13,6 +13,8 @@ int access_ok(int type, const void *addr, unsigned long size);
 
 unsigned long get_ticks(void);
 
+void itoa_hex(unsigned int num, char *buffer);
+
 void print_splash_screen(void);
 
-#endif
+#endif // UTILS_H

@@ -49,4 +49,4 @@ void printk(char *string);
 
 void printk_color(char *string, Word color);
 
-#endif  /* __IO_H__ */
+#endif // __IO_H__
