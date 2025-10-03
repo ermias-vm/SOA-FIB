@@ -16,22 +16,22 @@
 /**                                              **/
 /** Stack layout in 'systemCall':                **/
 /**                                              **/
-/**   0(%esp) - %edx    \                        **/
-/**   4(%esp) - %ecx     |                       **/
-/**   8(%esp) - %ebx     |                       **/
-/**   C(%esp) - %esi     | Register saved        **/
-/**  10(%esp) - %edi     |  by 'save'            **/
-/**  14(%esp) - %ebp     |                       **/
-/**  18(%esp) - %eax     |                       **/
-/**  1C(%esp) - %ds      |                       **/
-/**  20(%esp) - %es      |                       **/
-/**  24(%esp) - %fs      |                       **/
-/**  28(%esp) - %gs     /                        **/
-/**  2C(%esp) - %eip    \                        **/
-/**  30(%esp) - %cs      |                       **/
-/**  34(%esp) - %eflags  |  Return context saved **/
-/**  38(%esp) - %oldesp  |   by the processor.   **/
-/**  3C(%esp) - %oldss  /                        **/
+/**   0(%esp) - %edx    \                        **/  // first parameter
+/**   4(%esp) - %ecx     |                       **/  // second parameter
+/**   8(%esp) - %ebx     |                       **/  // third parameter
+/**   C(%esp) - %esi     | Register saved        **/  // fourth parameter
+/**  10(%esp) - %edi     |  by 'save'            **/  // fifth parameter
+/**  14(%esp) - %ebp     |                       **/  // sixth parameter
+/**  18(%esp) - %eax     |                       **/  // result of the system call
+/**  1C(%esp) - %ds      |                       **/  // data segment
+/**  20(%esp) - %es      |                       **/  // extra segment
+/**  24(%esp) - %fs      |                       **/  // file segment
+/**  28(%esp) - %gs     /                        **/  // global segment
+/**  2C(%esp) - %eip    \                        **/  // user space instruction pointer
+/**  30(%esp) - %cs      |                       **/  // user space code segment
+/**  34(%esp) - %eflags  |  Return context saved **/  // user space eflags
+/**  38(%esp) - %oldesp  |   by the processor.   **/  // user space stack pointer
+/**  3C(%esp) - %oldss  /                        **/  // user space stack segment
 /**                                              **/
 /**************************************************/
 
@@ -51,3 +51,34 @@
       movl %edx, %ds;           \
       movl %edx, %es
 
+#define RESTORE_ALL \
+    popl %edx; \
+    popl %ecx; \
+    popl %ebx; \
+    popl %esi; \
+    popl %edi; \
+    popl %ebp; \
+    popl %eax; \
+    popl %ds; \
+    popl %es; \
+    popl %fs; \
+    popl %gs; \
+
+#define EOI \
+    movb $0x20, %al; \
+    outb %al, $0x20;
+
+ENTRY(clock_handler)
+      SAVE_ALL
+      EOI                     # EOI before call 
+      call clock_routine
+      RESTORE_ALL
+      iret
+
+// KEYBOARD HANDLER
+ENTRY(keyboard_handler) 
+      SAVE_ALL
+      call keyboard_routine
+      EOI                     # EOI after call        
+      RESTORE_ALL
+      iret

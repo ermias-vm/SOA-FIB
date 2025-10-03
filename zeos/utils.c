@@ -136,22 +136,22 @@ void print_splash_screen(void) {
     printk("\n\n");
     
     //ZEOS
-    printk_color("             ###########    ########  #######    ######    \n", MAKE_COLOR(BLACK, LIGHT_CYAN));
-    printk_color("                    ##     ##        ##     ##  ##    ##    \n", MAKE_COLOR(BLACK, CYAN));
-    printk_color("                  ##      ##        ##     ##  ##           \n", MAKE_COLOR(BLACK, LIGHT_BLUE));
-    printk_color("                ##       ######    ##     ##   ######       \n", MAKE_COLOR(BLACK, BLUE));
-    printk_color("              ##        ##        ##     ##        ##       \n", MAKE_COLOR(BLACK, LIGHT_BLUE));
-    printk_color("            ##         ##        ##     ##  ##    ##        \n", MAKE_COLOR(BLACK, CYAN));
-    printk_color("          ##########  ########   #######    ######          \n", MAKE_COLOR(BLACK, LIGHT_CYAN));
+    printk_color("                 ###########    ########  #######    ######    \n", MAKE_COLOR(BLACK, LIGHT_CYAN));
+    printk_color("                        ##     ##        ##     ##  ##    ##    \n", MAKE_COLOR(BLACK, CYAN));
+    printk_color("                      ##      ##        ##     ##  ##           \n", MAKE_COLOR(BLACK, LIGHT_BLUE));
+    printk_color("                    ##       ######    ##     ##   ######       \n", MAKE_COLOR(BLACK, BLUE));
+    printk_color("                  ##        ##        ##     ##        ##       \n", MAKE_COLOR(BLACK, LIGHT_BLUE));
+    printk_color("                ##         ##        ##     ##  ##    ##        \n", MAKE_COLOR(BLACK, CYAN));
+    printk_color("              ##########  ########   #######    ######          \n", MAKE_COLOR(BLACK, LIGHT_CYAN));
     printk_color("\n\n", DEFAULT_COLOR);
     // SOA-FIB
-    printk_color("        ####    #####     ###        #######  ##  ######   \n", MAKE_COLOR(BLACK, YELLOW));
-    printk_color("       ##  ##  ##   ##   ## ##       ##       ##  ##   ##  \n", MAKE_COLOR(BLACK, LIGHT_RED));
-    printk_color("       ##      ##   ##  ##   ##      ##       ##  ##   ##  \n", MAKE_COLOR(BLACK, LIGHT_MAGENTA));
-    printk_color("        ####   ##   ##  #######      #####    ##  ######   \n", MAKE_COLOR(BLACK, MAGENTA));
-    printk_color("           ##  ##   ##  ##   ##      ##       ##  ##   ##  \n", MAKE_COLOR(BLACK, LIGHT_MAGENTA));
-    printk_color("       ##  ##  ##   ##  ##   ##      ##       ##  ##   ##  \n", MAKE_COLOR(BLACK, LIGHT_RED));
-    printk_color("        ####    #####   ##   ##      ##       ##  ######   \n", MAKE_COLOR(BLACK, YELLOW));
+    printk_color("            ####    #####     ###        #######  ##  ######   \n", MAKE_COLOR(BLACK, YELLOW));
+    printk_color("           ##  ##  ##   ##   ## ##       ##       ##  ##   ##  \n", MAKE_COLOR(BLACK, LIGHT_RED));
+    printk_color("           ##      ##   ##  ##   ##      ##       ##  ##   ##  \n", MAKE_COLOR(BLACK, LIGHT_MAGENTA));
+    printk_color("            ####   ##   ##  #######      #####    ##  ######   \n", MAKE_COLOR(BLACK, MAGENTA));
+    printk_color("               ##  ##   ##  ##   ##      ##       ##  ##   ##  \n", MAKE_COLOR(BLACK, LIGHT_MAGENTA));
+    printk_color("           ##  ##  ##   ##  ##   ##      ##       ##  ##   ##  \n", MAKE_COLOR(BLACK, LIGHT_RED));
+    printk_color("            ####    #####   ##   ##      ##       ##  ######   \n", MAKE_COLOR(BLACK, YELLOW));
     
     printk("\n"); 
     

@@ -1,7 +1,11 @@
+#ifndef __ZEOS_INTERRUPT_H__
+#define __ZEOS_INTERRUPT_H__
+
 #include <sched.h>
 
 void zeos_show_clock();
 
+// Exception handlers
 void divide_error_routine();
 void debug_routine();
 void nm1_routine();
@@ -21,4 +25,10 @@ void intel_reserved_routine();
 void floating_point_error_routine();
 void alignment_check_routine();
 
+// Hardware interrupt handlers
+void keyboard_routine();
+void clock_routine();
+
 void set_handlers();
+
+#endif /* __ZEOS_INTERRUPT_H__ */
