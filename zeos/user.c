@@ -10,7 +10,24 @@ int add(int par1, int par2) {
 }
 
 void test_write() {
-    write(1, "\nWrite working correctly\n\n", 26);
+    write(1, "\n\nTesting write() syscall...\n", 29);
+    write(1, "Write working correctly\n", 24);
+    write(1, "write() test: PASSED", 20);
+}
+
+void test_gettime() {
+    write(1, "\n\nTesting gettime() syscall...\n", 31);
+    itoa(gettime(), buff);
+    write(1, "Ticks: ", 7);
+    write(1, buff, strlen(buff));
+    write(1, "\ngettime() test: PASSED", 23);
+}
+
+void test_pagefault() {
+    write(1, "\n\nTesting Page Fault Exception...\n", 34);
+    char *p = 0;
+    *p = 'x';
+    write(1, "Page Fault Exception test: FAILED\n", 36);
 }
 
 __attribute__((__section__(".text.main"))) int main(void) {
@@ -25,16 +42,11 @@ __attribute__((__section__(".text.main"))) int main(void) {
     buff[1] = sumAsm;
 
     test_write();
-    int ticks = gettime();
-    itoa(ticks, buff);
-    write(1, "Ticks: ", 7);
-    write(1, buff, strlen(buff));
-    write(1, "\n", 1);
+    test_gettime();
+    test_pagefault();
 
-    char *p = 0;
-    *p = 'x';
     while (1) {
-        ticks = gettime();
+        int ticks = gettime();
         itoa(ticks, buff);
         write(1, "Ticks: ", 7);
         write(1, buff, strlen(buff));
