@@ -25,7 +25,13 @@ __attribute__((__section__(".text.main"))) int main(void) {
     buff[1] = sumAsm;
 
     test_write();
-
+    int ticks;
     while (1) {
+        ticks = gettime();
+        itoa(ticks, buff);
+        write(1, "Ticks: ", 7);
+        write(1, buff, strlen(buff));
+        write(1, "\n", 1);
+        for (int i = 0; i < 100000000; i++);
     }
 }

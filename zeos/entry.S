@@ -16,9 +16,9 @@
 /**                                              **/
 /** Stack layout in 'systemCall':                **/
 /**                                              **/
-/**   0(%esp) - %edx    \                        **/  // first parameter
+/**   0(%esp) - %ebx    \                        **/  // first parameter
 /**   4(%esp) - %ecx     |                       **/  // second parameter
-/**   8(%esp) - %ebx     |                       **/  // third parameter
+/**   8(%esp) - %edx     |                       **/  // third parameter
 /**   C(%esp) - %esi     | Register saved        **/  // fourth parameter
 /**  10(%esp) - %edi     |  by 'save'            **/  // fifth parameter
 /**  14(%esp) - %ebp     |                       **/  // sixth parameter

@@ -15,6 +15,8 @@
 
 char buffer_k[BUFFER_SIZE];
 
+extern int zeos_ticks; 
+
 int check_fd(int fd, int permissions) {
     if (fd != 1) return -9;                    /*EBADF*/
     if (permissions != ESCRIPTURA) return -13; /*EACCES*/
@@ -62,6 +64,11 @@ int sys_write(int fd, char *buffer, int size) {
 
     return size - bytes_restantes;
 }
+
+int sys_gettime() {
+	return zeos_ticks;
+}
+
 
 void sys_exit() {
 }
