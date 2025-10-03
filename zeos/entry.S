@@ -4,7 +4,7 @@
 
 #include <asm.h>
 #include <segment.h>
-
+#include <errno.h>
 
 /**************************************************/
 /**** Save & Restore ******************************/
@@ -44,17 +44,17 @@
       pushl %ebp; \
       pushl %edi; \
       pushl %esi; \
-      pushl %ebx; \
-      pushl %ecx; \
       pushl %edx; \
+      pushl %ecx; \
+      pushl %ebx; \
       movl $__KERNEL_DS, %edx;    \
       movl %edx, %ds;           \
       movl %edx, %es
 
 #define RESTORE_ALL \
-    popl %edx; \
-    popl %ecx; \
     popl %ebx; \
+    popl %ecx; \
+    popl %edx; \
     popl %esi; \
     popl %edi; \
     popl %ebp; \
@@ -67,6 +67,33 @@
 #define EOI \
     movb $0x20, %al; \
     outb %al, $0x20;
+
+
+
+ENTRY(syscall_handler_sysenter)
+      push $__USER_DS
+      pushl %EBP
+      pushfl
+      push $__USER_CS
+      pushl 4(%EBP)
+      SAVE_ALL
+      cmpl $0, %EAX
+      jl sysenter_err
+      cmpl $MAX_SYSCALL, %EAX
+      jg sysenter_err
+      call *sys_call_table(, %EAX, 0x04)
+      jmp sysenter_fin
+
+sysenter_err:
+      movl $-ENOSYS, %EAX
+
+sysenter_fin:
+      movl %EAX, 0x18(%ESP)
+      RESTORE_ALL
+      movl (%ESP), %EDX
+      movl 12(%ESP), %ECX
+      sti
+      sysexit
 
 ENTRY(clock_handler)
       SAVE_ALL
@@ -82,3 +109,14 @@ ENTRY(keyboard_handler)
       EOI                     # EOI after call        
       RESTORE_ALL
       iret
+
+ ENTRY(writeMSR)
+    pushl %ebp
+    movl %esp, %ebp
+    movl 0x8(%ebp), %ecx
+    movl $0, %edx
+    movl 0xc(%ebp), %eax
+    wrmsr
+    popl %ebp
+    ret
+     

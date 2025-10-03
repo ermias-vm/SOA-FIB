@@ -14,6 +14,8 @@ Register idtR;
 
 void keyboard_handler();
 void clock_handler();
+void syscall_handler_sysenter();
+void writeMSR(unsigned long msr, unsigned long val);
 
 int zeos_ticks = 0;
 
@@ -81,6 +83,10 @@ void setIdt() {
     setInterruptHandler(32, clock_handler, 0);
     setInterruptHandler(33, keyboard_handler, 0);
 
+    writeMSR(0x174, __KERNEL_CS);
+    writeMSR(0x175, INITIAL_ESP);
+    writeMSR(0x176, (unsigned long)syscall_handler_sysenter);
+    
     set_idt_reg(&idtR);
 }
 

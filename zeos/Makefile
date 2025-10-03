@@ -54,6 +54,7 @@ LIBZEOS = -L . -l zeos
 USROBJ = \
 	libc.o \
 	suma.o \
+	sys_call_wrappers.o
 
 all: zeos.bin
 
@@ -78,6 +79,9 @@ entry.s: entry.S $(INCLUDEDIR)/asm.h $(INCLUDEDIR)/segment.h
 	$(CPP) $(ASMFLAGS) -o $@ $<
 
 sys_call_table.s: sys_call_table.S $(INCLUDEDIR)/asm.h $(INCLUDEDIR)/segment.h
+	$(CPP) $(ASMFLAGS) -o $@ $<
+
+sys_call_wrappers.s: sys_call_wrappers.S $(INCLUDEDIR)/asm.h $(INCLUDEDIR)/segment.h
 	$(CPP) $(ASMFLAGS) -o $@ $<
 
 user.o:user.c $(INCLUDEDIR)/libc.h
