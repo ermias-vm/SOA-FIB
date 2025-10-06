@@ -16,5 +16,5 @@ unsigned long get_ticks(void);
 void itoa_hex(unsigned int num, char *buffer);
 
 void print_splash_screen(void);
-
+void wait_ticks(int ticks_to_wait);
 #endif // UTILS_H

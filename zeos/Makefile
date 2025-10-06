@@ -112,7 +112,21 @@ suma.o: suma.S $(INCLUDEDIR)/asm.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
-	rm -f *.o *.s bochsout.txt parport.out system.out system bootsect zeos.bin user user.out *~ build 
+	rm -f *.o *.s bochsout.txt parport.out system.out system bootsect zeos.bin user user.out *~ build
+
+restart:
+	make clean && make all && make gdb
+
+backup: clean
+	@mkdir -p ../backup
+	@TIMESTAMP=$$(date +%Y%m%d_%H%M%S) && \
+	BACKUP_NAME="zeos_v$$TIMESTAMP.tar.gz" && \
+	if [ -f ../backup/$$BACKUP_NAME ]; then \
+		echo "Error: File $$BACKUP_NAME already exists!"; \
+		exit 1; \
+	fi && \
+	echo "Creating backup: $$BACKUP_NAME" && \
+	cd .. && tar -czvf backup/$$BACKUP_NAME zeos/
 
 disk: zeos.bin
 	dd if=zeos.bin of=/dev/fd0

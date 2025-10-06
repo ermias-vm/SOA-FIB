@@ -36,20 +36,21 @@
 /**************************************************/
 
 #define SAVE_ALL \
-      pushl %gs; \
-      pushl %fs; \
-      pushl %es; \
-      pushl %ds; \
-      pushl %eax; \
-      pushl %ebp; \
-      pushl %edi; \
-      pushl %esi; \
-      pushl %edx; \
-      pushl %ecx; \
-      pushl %ebx; \
-      movl $__KERNEL_DS, %edx;    \
-      movl %edx, %ds;           \
-      movl %edx, %es
+    pushl %gs; \
+    pushl %fs; \
+    pushl %es; \
+    pushl %ds; \
+    pushl %eax; \
+    pushl %ebp; \
+    pushl %edi; \
+    pushl %esi; \
+    pushl %edx; \
+    pushl %ecx; \
+    pushl %ebx; \
+    movl $__KERNEL_DS, %edx;    \
+    movl %edx, %ds;           \
+    movl %edx, %es
+
 
 #define RESTORE_ALL \
     popl %ebx; \
@@ -69,46 +70,46 @@
     outb %al, $0x20;
 
 
-
 ENTRY(syscall_handler_sysenter)
-      push $__USER_DS
-      pushl %EBP
-      pushfl
-      push $__USER_CS
-      pushl 4(%EBP)
-      SAVE_ALL
-      cmpl $0, %EAX
-      jl sysenter_err
-      cmpl $MAX_SYSCALL, %EAX
-      jg sysenter_err
-      call *sys_call_table(, %EAX, 0x04)
-      jmp sysenter_fin
+    push $__USER_DS
+    pushl %EBP
+    pushfl
+    push $__USER_CS
+    pushl 4(%EBP)
+    SAVE_ALL
+    cmpl $0, %EAX
+    jl sysenter_err
+    cmpl $MAX_SYSCALL, %EAX
+    jg sysenter_err
+    call *sys_call_table(, %EAX, 0x04)
+    
+    movl %EAX, 0x18(%ESP)
+    RESTORE_ALL
+    movl (%ESP), %EDX
+    movl 12(%ESP), %ECX
+    sti
+    sysexit
 
 sysenter_err:
-      movl $-ENOSYS, %EAX
+    movl $-ENOSYS, %EAX
 
-sysenter_fin:
-      movl %EAX, 0x18(%ESP)
-      RESTORE_ALL
-      movl (%ESP), %EDX
-      movl 12(%ESP), %ECX
-      sti
-      sysexit
+
 
 ENTRY(clock_handler)
-      SAVE_ALL
-      EOI                     # EOI before call 
-      call clock_routine
-      RESTORE_ALL
-      iret
+    SAVE_ALL
+    EOI                     # EOI before call 
+    call clock_routine
+    RESTORE_ALL
+    iret
 
-// KEYBOARD HANDLER
+
 ENTRY(keyboard_handler) 
-      SAVE_ALL
-      call keyboard_routine
-      EOI                     # EOI after call        
-      RESTORE_ALL
-      iret
+    SAVE_ALL
+    call keyboard_routine
+    EOI                     # EOI after call        
+    RESTORE_ALL
+    iret
+
 
  ENTRY(writeMSR)
     pushl %ebp
@@ -119,7 +120,8 @@ ENTRY(keyboard_handler)
     wrmsr
     popl %ebp
     ret
-     
+
+
 ENTRY(pageFault_handler)
     SAVE_ALL
     pushl 44(%esp)            # Push EIP
