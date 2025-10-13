@@ -77,21 +77,24 @@ ENTRY(syscall_handler_sysenter)
     push $__USER_CS
     pushl 4(%EBP)
     SAVE_ALL
+    
     cmpl $0, %EAX
     jl sysenter_err
     cmpl $MAX_SYSCALL, %EAX
     jg sysenter_err
     call *sys_call_table(, %EAX, 0x04)
-    
+    jmp sysenter_return
+
+sysenter_err:
+    movl $-ENOSYS, %EAX
+
+sysenter_return:
     movl %EAX, 0x18(%ESP)
     RESTORE_ALL
     movl (%ESP), %EDX
     movl 12(%ESP), %ECX
     sti
     sysexit
-
-sysenter_err:
-    movl $-ENOSYS, %EAX
 
 
 
@@ -123,9 +126,5 @@ ENTRY(keyboard_handler)
 
 
 ENTRY(pageFault_handler)
-    SAVE_ALL
     pushl 44(%esp)            # Push EIP
     call pageFault_routine
-    addl $4, %esp
-    RESTORE_ALL
-    iret
