@@ -6,34 +6,33 @@
 #include <segment.h>
 #include <errno.h>
 
-/**************************************************/
-/**** Save & Restore ******************************/
-/**                                              **/
-/** When we change to privilege level 0 (kernel) **/
-/** (through an interrupt, a system call, an     **/
-/** exception ...) we must save the state of the **/
-/** currently running task (save).               **/
-/**                                              **/
-/** Stack layout in 'systemCall':                **/
-/**                                              **/
-/**   0(%esp) - %ebx    \                        **/  // first parameter
-/**   4(%esp) - %ecx     |                       **/  // second parameter
-/**   8(%esp) - %edx     |                       **/  // third parameter
-/**   C(%esp) - %esi     | Register saved        **/  // fourth parameter
-/**  10(%esp) - %edi     |  by 'save'            **/  // fifth parameter
-/**  14(%esp) - %ebp     |                       **/  // sixth parameter
-/**  18(%esp) - %eax     |                       **/  // result of the system call
-/**  1C(%esp) - %ds      |                       **/  // data segment
-/**  20(%esp) - %es      |                       **/  // extra segment
-/**  24(%esp) - %fs      |                       **/  // file segment
-/**  28(%esp) - %gs     /                        **/  // global segment
-/**  2C(%esp) - %eip    \                        **/  // user space instruction pointer
-/**  30(%esp) - %cs      |                       **/  // user space code segment
-/**  34(%esp) - %eflags  |  Return context saved **/  // user space eflags
-/**  38(%esp) - %oldesp  |   by the processor.   **/  // user space stack pointer
-/**  3C(%esp) - %oldss  /                        **/  // user space stack segment
-/**                                              **/
-/**************************************************/
+/*********************************************************/
+/**** Save & Restore *************************************/
+/**                                                     **/
+/** When we change to privilege level 0 (kernel)        **/
+/** (through an interrupt, a system call, an            **/
+/** exception ...) we must save the state of the        **/
+/** currently running task (save).                      **/
+/**                                                     **/
+/** Stack layout in 'systemCall':                       **/
+/**     0x00(%esp) - %ebx     \                         **/  // first parameter
+/**     0x04(%esp) - %ecx     |                         **/  // second parameter
+/**     0x08(%esp) - %edx     |                         **/  // third parameter
+/**     0x0c(%esp) - %esi     | Register saved          **/  // fourth parameter
+/**     0x10(%esp) - %edi     |  by 'save'              **/  // fifth parameter
+/**     0x14(%esp) - %ebp     |                         **/  // sixth parameter
+/**     0x18(%esp) - %eax     |                         **/  // result of the system call
+/**     0x1c(%esp) - %ds      |                         **/  // data segment
+/**     0x20(%esp) - %es      |                         **/  // extra segment
+/**     0x24(%esp) - %fs      |                         **/  // file segment
+/**     0x28(%esp) - %gs      |                         **/  // global segment
+/**     0x2C(%esp) - %eip     |                         **/  // user space instruction pointer
+/**     0x30(%esp) - %cs      |                         **/  // user space code segment
+/**     0x34(%esp) - %eflags  |  Return context saved   **/  // user space eflags
+/**     0x38(%esp) - %oldesp  |   by the processor.     **/  // user space stack pointer
+/**     0x3C(%esp) - %oldss   |                         **/  // user space stack segment
+/**                                                     **/
+/*********************************************************/
 
 #define SAVE_ALL \
     pushl %gs; \
@@ -48,7 +47,7 @@
     pushl %ecx; \
     pushl %ebx; \
     movl $__KERNEL_DS, %edx;    \
-    movl %edx, %ds;           \
+    movl %edx, %ds;             \
     movl %edx, %es
 
 
@@ -72,29 +71,29 @@
 
 ENTRY(syscall_handler_sysenter)
     push $__USER_DS
-    pushl %EBP
+    pushl %ebp
     pushfl
     push $__USER_CS
-    pushl 4(%EBP)
+    pushl 4(%ebp)
     SAVE_ALL
-    
-    cmpl $0, %EAX
+
+    cmpl $0, %eax
     jl sysenter_err
-    cmpl $MAX_SYSCALL, %EAX
+    cmpl $MAX_SYSCALL, %eax
     jg sysenter_err
-    call *sys_call_table(, %EAX, 0x04)
+    call *sys_call_table(, %eax, 0x04)
     jmp sysenter_return
 
 sysenter_err:
-    movl $-ENOSYS, %EAX
+    movl $-ENOSYS, %eax
 
 sysenter_return:
-    movl %EAX, 0x18(%ESP)
+    movl %eax, 0x18(%esp)
     RESTORE_ALL
-    movl (%ESP), %EDX
-    movl 12(%ESP), %ECX
+    movl (%esp), %edx       # edx = eip user 
+    movl 0x0c(%esp), %ecx   # ecx = oldesp user
     sti
-    sysexit
+    sysexit                         
 
 
 
@@ -126,5 +125,8 @@ ENTRY(keyboard_handler)
 
 
 ENTRY(pageFault_handler)
-    pushl 44(%esp)            # Push EIP
+    SAVE_ALL
+    pushl 0x30(%esp)            # Push EIP
     call pageFault_routine
+    RESTORE_ALL                 # This line is never reached
+    iret

@@ -111,11 +111,9 @@ void clock_routine(void) {
     zeos_show_clock();
 }
 
-void pageFault_routine() {
-    unsigned int eip;
+void pageFault_routine(unsigned int eip) {
     char buffer_eip[11];
 
-    asm("popl %0" : "=r"(eip));
     itoa_hex(eip, buffer_eip);
 
     printk_color("\n===============================================\n", ERROR_COLOR);

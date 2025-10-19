@@ -48,7 +48,7 @@ int sys_write(int fd, char *buffer, int size) {
 
     int bytes_restantes = size;
     int written_bytes;
-
+    // TODO: test this syscall with sizes larger than BUFFER_SIZE and optimize it
     while (bytes_restantes > BUFFER_SIZE) {
         copy_from_user(buffer, buffer_k, BUFFER_SIZE);
         written_bytes = sys_write_console(buffer_k, BUFFER_SIZE);

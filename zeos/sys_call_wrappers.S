@@ -3,10 +3,13 @@
 ENTRY(write)
     pushl %ebp
     movl %esp,%ebp
+    pushl %ebx
+
     movl 0x08(%ebp), %ebx 
     movl 0x0c(%ebp), %ecx
     movl 0x10(%ebp), %edx
     movl $4, %eax
+    
     pushl $wr_return
     pushl %ebp
     movl %esp,%ebp
@@ -15,43 +18,38 @@ ENTRY(write)
 wr_return:
     popl %ebp
     addl $4, %esp
+    popl %ebx
+    popl %ebp
     cmpl $0, %eax 	
     jl wr_error
-    popl %ebp
     ret
     
 wr_error:
     negl %eax
     movl %eax, errno
-    movl -1, %eax
-
+    movl $-1, %eax
+    ret
 
 ENTRY(gettime)
     pushl %ebp
     movl %esp, %ebp
-    pushl %esi
     movl $10, %eax
-    pushl %edx
-    pushl %ecx
-    leal gt_return, %esi
-    pushl %esi
+
+    pushl $gt_return
     pushl %ebp
-    movl %esp, %ebp
+    movl %esp,%ebp
     sysenter
 
 gt_return:
     popl %ebp
-    popl %esi
-    popl %edx
-    popl %ecx
+    addl $4, %esp
+    popl %ebp
     cmpl $0, %eax
     jl gt_error
-    popl %esi
-    movl %ebp, %esp
-    popl %ebp
     ret
 
 gt_error:
     negl %eax
     movl %eax, errno
-    movl -1, %eax
+    movl $-1, %eax
+    ret
