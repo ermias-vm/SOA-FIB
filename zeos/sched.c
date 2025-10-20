@@ -16,6 +16,8 @@ struct task_struct *list_head_to_task_struct(struct list_head *l)
 #endif
 
 extern struct list_head blocked;
+struct list_head freequeue;
+struct list_head readyqueue;
 
 /* get_DIR - Returns the Page Directory address for task 't' */
 page_table_entry *get_DIR(struct task_struct *t) {
@@ -59,4 +61,12 @@ struct task_struct *current() {
 
     __asm__ __volatile__("movl %%esp, %0" : "=g"(ret_value));
     return (struct task_struct *)(ret_value & 0xfffff000);
+}
+
+void init_queues() {
+    INIT_LIST_HEAD(&freequeue);
+    INIT_LIST_HEAD(&readyqueue);
+    for (int i = 0; i < NR_TASKS; ++i) {
+        list_add_tail(&task[i].task.list, &freequeue);
+    }
 }
