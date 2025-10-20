@@ -3,6 +3,8 @@
 ## Overview
 This guide explains how to use GDB to debug the ZeOS operating system. ZeOS uses Bochs emulator with GDB stub support for kernel debugging, allowing you to debug both kernel space and user space code.
 
+**⚠️ Note**: This is for GDB external debugging, not Bochs internal debugger. For Bochs commands, see `BochsInternalDebuggerGuide.md`.
+
 ## Getting Started with ZeOS
 
 ### Starting Debug Session
@@ -70,28 +72,28 @@ The debug setup automatically:
 
 ### ZeOS-Specific Data Examination Examples
 ```bash
-# Examine current task structure
-(gdb) print *current()
+# Examine current task structure (if implemented)
+(gdb) print current()
 (gdb) print task[0]
 
-# Examine process information
-(gdb) print current()->PID
-(gdb) print current()->dir_pages_baseAddr
+# Examine process information  
+(gdb) print $eax            # Check system call number
+(gdb) print $ebx            # Check first parameter
 
 # Examine kernel stack
-(gdb) print-stack
+(gdb) print-stack           # Custom command from .gdbcmd
 
-# Examine GDT and system structures
-(gdb) print gdt[0]
-(gdb) print gdt[1]
-(gdb) print tss
+# Examine GDT and system structures (as memory)
+(gdb) x/8xw &gdt
+(gdb) x/4xw &tss
 
 # Examine memory management structures
-(gdb) x/10x phys_mem
+(gdb) x/10xw phys_mem
 (gdb) print free_frames
 
-# Check interrupt vector
-(gdb) x/10x idt
+# Check interrupt vector table  
+(gdb) x/256xw 0x0          # Real mode IVT
+(gdb) x/10xw &idt          # Protected mode IDT
 ```
 
 ### Memory Formats for ZeOS
@@ -129,20 +131,21 @@ The debug setup automatically:
 
 ### ZeOS Watchpoint Examples
 ```bash
-# Watch for changes in current task
-(gdb) watch current()->PID
+# Watch for changes in global variables
+(gdb) watch zeos_ticks
 
-# Watch for stack pointer changes
-(gdb) watch $esp
+# Watch for stack pointer changes (not recommended - too frequent)
+# (gdb) watch $esp
 
-# Watch for memory allocation changes
+# Watch for memory allocation changes  
 (gdb) watch free_frames
 
 # Watch for specific memory address writes
 (gdb) watch *0x114000
 
-# Watch for changes in task array
-(gdb) watch task[1].task.PID
+# Watch for changes in specific variables
+(gdb) watch errno
+(gdb) watch buffer_k[0]
 ```
 
 ### Memory Address Debugging
@@ -186,8 +189,8 @@ The setup automatically loads symbols:
 ```bash
 # 1. Set initial breakpoints
 (gdb) break main
-(gdb) break init_task1
-(gdb) break task_switch
+(gdb) break sys_write
+(gdb) break system_call_handler
 
 # 2. Continue to see system boot
 (gdb) continue
@@ -195,50 +198,50 @@ The setup automatically loads symbols:
 # 3. When breakpoint hits, examine state
 (gdb) info registers
 (gdb) backtrace
-(gdb) print current()->PID
+(gdb) print $eax           # System call number
 
 # 4. Step through critical sections
 (gdb) next
 (gdb) step
 
 # 5. Examine memory and data structures
-(gdb) print task[0]
+(gdb) x/10xw buffer_k
 (gdb) print-stack
+(gdb) print zeos_ticks
 ```
 
 ### Debugging Specific ZeOS Components
 
-#### Process Management
+#### System Call Debugging
 ```bash
-# Debug task switching
-(gdb) break task_switch
+# Debug system calls
+(gdb) break system_call_handler
+(gdb) break sys_write
 (gdb) continue
-(gdb) print *current()
-(gdb) info registers esp ebp
-
-# Debug scheduler
-(gdb) break sched_next_rr
-(gdb) continue
-(gdb) backtrace
+(gdb) print $eax           # System call number
+(gdb) print $ebx           # First parameter
+(gdb) print $ecx           # Second parameter
+(gdb) print $edx           # Third parameter
 ```
 
 #### Memory Management
 ```bash
-# Debug page allocation
-(gdb) break alloc_frame
-(gdb) break free_frame
+# Debug memory functions
+(gdb) break sys_write_console
+(gdb) break copy_from_user
 (gdb) continue
-(gdb) print free_frames
-(gdb) x/10x phys_mem
+(gdb) x/10xb buffer_k      # Examine kernel buffer
+(gdb) x/s buffer_k         # View as string
 ```
 
 #### Interrupt Handling
 ```bash
-# Debug system calls
-(gdb) break system_call_handler
+# Debug hardware interrupts
+(gdb) break keyboard_handler
+(gdb) break clock_handler  
 (gdb) continue
-(gdb) print $eax    # System call number
-(gdb) print $ebx    # First parameter
+(gdb) info registers
+(gdb) x/10xw $esp          # Examine interrupt stack frame
 ```
 
 #### User Space Debugging
