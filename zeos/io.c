@@ -11,7 +11,7 @@
 
 #define NUM_COLUMNS 80
 #define NUM_ROWS 25
-#define VIDEO_MEMORY_BASE 0xb8000 
+#define VIDEO_MEMORY_BASE 0xb8000
 
 Byte x = 0;
 Byte y = 19;
@@ -33,24 +33,26 @@ void write_char_to_screen(Byte x, Byte y, char c, Word color) {
 // TODO: refactor this function to make it more efficient
 void scroll_screen() {
     Word *screen = (Word *)VIDEO_MEMORY_BASE;
-    for (int i = 0; i < (NUM_ROWS - 1) * NUM_COLUMNS; i++) { 
+    for (int i = 0; i < (NUM_ROWS - 1) * NUM_COLUMNS; i++) {
         screen[i] = screen[i + NUM_COLUMNS];
     }
     for (int i = (NUM_ROWS - 1) * NUM_COLUMNS; i < NUM_ROWS * NUM_COLUMNS; i++) {
-        screen[i] = (Word) ' ' | DEFAULT_COLOR; 
+        screen[i] = (Word)' ' | DEFAULT_COLOR;
     }
     y = NUM_ROWS - 1;
 }
 
 void handle_newline() {
-  x = 0;
-  if (++y >= NUM_ROWS) scroll_screen();
+    x = 0;
+    if (++y >= NUM_ROWS) scroll_screen();
 }
 
 void printc(char c, Word color) {
-    __asm__ __volatile__("movb %0, %%al; outb $0xe9" ::"a"(c)); /* Magic BOCHS debug: writes 'c' to port 0xe9 */
-    
-    if (c == '\n') handle_newline();
+    __asm__ __volatile__(
+        "movb %0, %%al; outb $0xe9" ::"a"(c)); /* Magic BOCHS debug: writes 'c' to port 0xe9 */
+
+    if (c == '\n')
+        handle_newline();
     else {
         write_char_to_screen(x, y, c, color);
         if (++x >= NUM_COLUMNS) handle_newline();

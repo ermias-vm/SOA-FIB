@@ -66,15 +66,12 @@ int access_ok(int type, const void *addr, unsigned long size) {
 
     addr_ini = (((unsigned long)addr) >> 12);
     addr_fin = ((((unsigned long)addr) + size) >> 12);
-    if (addr_fin < addr_ini)
-        return 0; // This looks like an overflow ... deny access
+    if (addr_fin < addr_ini) return 0; // This looks like an overflow ... deny access
 
     switch (type) {
     case VERIFY_WRITE:
         /* Should suppose no support for automodifyable code */
-        if ((addr_ini >= USER_FIRST_PAGE) &&
-            (addr_fin <= USER_FIRST_PAGE + NUM_PAG_DATA))
-            return 1;
+        if ((addr_ini >= USER_FIRST_PAGE) && (addr_fin <= USER_FIRST_PAGE + NUM_PAG_DATA)) return 1;
     default:
         if ((addr_ini >= USER_FIRST_PAGE) &&
             (addr_fin <= (USER_FIRST_PAGE + NUM_PAG_CODE + NUM_PAG_DATA)))
@@ -97,21 +94,19 @@ int access_ok(int type, const void *addr, unsigned long size) {
  * This ends up being the most efficient "calling
  * convention" on x86.
  */
-#define do_div(n, base)                                                        \
-    ({                                                                         \
-        unsigned long __upper, __low, __high, __mod, __base;                   \
-        __base = (base);                                                       \
-        asm("" : "=a"(__low), "=d"(__high) : "A"(n));                          \
-        __upper = __high;                                                      \
-        if (__high) {                                                          \
-            __upper = __high % (__base);                                       \
-            __high = __high / (__base);                                        \
-        }                                                                      \
-        asm("divl %2"                                                          \
-            : "=a"(__low), "=d"(__mod)                                         \
-            : "rm"(__base), "0"(__low), "1"(__upper));                         \
-        asm("" : "=A"(n) : "a"(__low), "d"(__high));                           \
-        __mod;                                                                 \
+#define do_div(n, base)                                                                            \
+    ({                                                                                             \
+        unsigned long __upper, __low, __high, __mod, __base;                                       \
+        __base = (base);                                                                           \
+        asm("" : "=a"(__low), "=d"(__high) : "A"(n));                                              \
+        __upper = __high;                                                                          \
+        if (__high) {                                                                              \
+            __upper = __high % (__base);                                                           \
+            __high = __high / (__base);                                                            \
+        }                                                                                          \
+        asm("divl %2" : "=a"(__low), "=d"(__mod) : "rm"(__base), "0"(__low), "1"(__upper));        \
+        asm("" : "=A"(n) : "a"(__low), "d"(__high));                                               \
+        __mod;                                                                                     \
     })
 
 #define rdtsc(low, high) __asm__ __volatile__("rdtsc" : "=a"(low), "=d"(high))
@@ -151,10 +146,9 @@ void wait_ticks(int ticks_to_wait) {
     }
 }
 
-
 void print_splash_screen(void) {
     printk("\n\n");
-    
+
     // clang-format off
     //ZEOS
     printk_color("             ###########    ########  #######    ######       \n", MAKE_COLOR(BLACK, LIGHT_CYAN));
@@ -186,4 +180,3 @@ void print_splash_screen(void) {
     printk("\n");
     wait_ticks(1000);
 }
-

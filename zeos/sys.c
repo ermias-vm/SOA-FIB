@@ -2,12 +2,12 @@
  * sys.c - Syscalls implementation
  */
 #include <devices.h>
+#include <errno.h>
 #include <io.h>
 #include <mm.h>
 #include <mm_address.h>
 #include <sched.h>
 #include <utils.h>
-#include <errno.h>
 
 #define LECTURA 0
 #define ESCRIPTURA 1
@@ -15,7 +15,7 @@
 
 char buffer_k[BUFFER_SIZE];
 
-extern int zeos_ticks; 
+extern int zeos_ticks;
 
 int check_fd(int fd, int permissions) {
     if (fd != 1) return -9;                    /*EBADF*/
@@ -66,9 +66,8 @@ int sys_write(int fd, char *buffer, int size) {
 }
 
 int sys_gettime() {
-	return zeos_ticks;
+    return zeos_ticks;
 }
-
 
 void sys_exit() {
 }

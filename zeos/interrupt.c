@@ -6,8 +6,8 @@
 #include <io.h>
 #include <segment.h>
 #include <types.h>
-#include <zeos_interrupt.h>
 #include <utils.h>
+#include <zeos_interrupt.h>
 
 Gate idt[IDT_ENTRIES];
 Register idtR;
@@ -20,16 +20,14 @@ void pageFault_handler();
 
 int zeos_ticks = 0;
 
-char char_map[] = {'\0', '\0', '1',  '2',  '3',  '4',  '5',  '6',  '7',  '8',
-                   '9',  '0',  '\'', '\0', '\0', '\0', 'q',  'w',  'e',  'r',
-                   't',  'y',  'u',  'i',  'o',  'p',  '`',  '+',  '\0', '\0',
-                   'a',  's',  'd',  'f',  'g',  'h',  'j',  'k',  'l',  '\0',
-                   '\0', '\0', '\0', '\0', 'z',  'x',  'c',  'v',  'b',  'n',
-                   'm',  ',',  '.',  '-',  '\0', '*',  '\0', '\0', '\0', '\0',
-                   '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0',
-                   '\0', '7',  '8',  '9',  '-',  '4',  '5',  '6',  '+',  '1',
-                   '2',  '3',  '0',  '\0', '\0', '\0', '<',  '\0', '\0', '\0',
-                   '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0'};
+char char_map[] = {'\0', '\0', '1',  '2',  '3',  '4',  '5',  '6',  '7',  '8',  '9',  '0',  '\'',
+                   '\0', '\0', '\0', 'q',  'w',  'e',  'r',  't',  'y',  'u',  'i',  'o',  'p',
+                   '`',  '+',  '\0', '\0', 'a',  's',  'd',  'f',  'g',  'h',  'j',  'k',  'l',
+                   '\0', '\0', '\0', '\0', '\0', 'z',  'x',  'c',  'v',  'b',  'n',  'm',  ',',
+                   '.',  '-',  '\0', '*',  '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0',
+                   '\0', '\0', '\0', '\0', '\0', '\0', '7',  '8',  '9',  '-',  '4',  '5',  '6',
+                   '+',  '1',  '2',  '3',  '0',  '\0', '\0', '\0', '<',  '\0', '\0', '\0', '\0',
+                   '\0', '\0', '\0', '\0', '\0', '\0', '\0'};
 
 void setInterruptHandler(int vector, void (*handler)(), int maxAccessibleFromPL) {
     /***********************************************************************/
@@ -88,7 +86,7 @@ void setIdt() {
     writeMSR(0x174, __KERNEL_CS);
     writeMSR(0x175, INITIAL_ESP);
     writeMSR(0x176, (unsigned long)syscall_handler_sysenter);
-    
+
     set_idt_reg(&idtR);
 }
 
@@ -124,5 +122,6 @@ void pageFault_routine(unsigned int eip) {
     printk_color("\n\n  The process tried to access an invalid\n", INFO_COLOR);
     printk_color("  memory address and will be terminated.\n", INFO_COLOR);
     printk_color("===============================================\n", ERROR_COLOR);
-    while (1);
+    while (1)
+        ;
 }

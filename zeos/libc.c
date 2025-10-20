@@ -2,9 +2,9 @@
  * libc.c
  */
 
+#include <errno.h>
 #include <libc.h>
 #include <types.h>
-#include <errno.h>
 
 int errno;
 
@@ -38,8 +38,7 @@ int strlen(char *a) {
 
     i = 0;
 
-    while (a[i] != 0)
-        i++;
+    while (a[i] != 0) i++;
 
     return i;
 }

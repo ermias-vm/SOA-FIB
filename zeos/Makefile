@@ -143,3 +143,14 @@ gdb: zeos.bin
 
 emuldbg: zeos.bin
 	bochs_nogdb -q -f .bochsrc
+
+format:
+	@echo "Formatting all C/C++ files..."
+	@find . -maxdepth 1 -name "*.c" -exec clang-format -i {} \; 2>/dev/null || true
+	@find include/ -name "*.h" -exec clang-format -i {} \; 2>/dev/null || true
+	@echo "Formatting complete!"
+
+format-check:
+	@echo "Checking formatting..."
+	@find . -maxdepth 1 -name "*.c" -exec clang-format --dry-run --Werror {} \; 2>/dev/null || true
+	@find include/ -name "*.h" -exec clang-format --dry-run --Werror {} \; 2>/dev/null || true
