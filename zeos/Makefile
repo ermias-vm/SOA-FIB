@@ -54,7 +54,8 @@ LIBZEOS = -L . -l zeos
 USROBJ = \
 	libc.o \
 	suma.o \
-	sys_call_wrappers.o
+	sys_call_wrappers.o \
+	zeos_test.o
 
 all: zeos.bin
 
@@ -93,6 +94,8 @@ io.o:io.c $(INCLUDEDIR)/io.h
 sched.o:sched.c $(INCLUDEDIR)/sched.h
 
 libc.o:libc.c $(INCLUDEDIR)/libc.h
+
+zeos_test.o:zeos_test.c $(INCLUDEDIR)/libc.h
 
 mm.o:mm.c $(INCLUDEDIR)/types.h $(INCLUDEDIR)/mm.h
 
