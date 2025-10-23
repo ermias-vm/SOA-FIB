@@ -80,7 +80,7 @@ __attribute__((__section__(".text.main"))) int main(void) {
     /* Initialize Scheduling */
     init_sched();
 
-    /* Initialize idle task  data */
+    /* Initialize idle task data */
     init_idle();
     /* Initialize task 1 data */
     init_task1();

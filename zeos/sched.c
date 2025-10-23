@@ -51,6 +51,7 @@ void cpu_idle(void) {
 struct task_struct *idle_task;
 
 void init_idle(void) {
+    printk_color("Initializing idle task...\n", INFO_COLOR);
     struct list_head *free_task = freequeue.next;
     list_del(free_task);
     union task_union *idle_union = list_entry(free_task, union task_union, task.list);
@@ -64,9 +65,11 @@ void init_idle(void) {
     idle_union->task.kernel_esp = (unsigned long)&idle_union->stack[KERNEL_STACK_SIZE - 2];
 
     idle_task = &idle_union->task;
+    printk_color("Idle task initialized successfully\n", INFO_COLOR);
 }
 
 void init_task1(void) {
+    printk_color("Initializing task 1...\n", INFO_COLOR);
     struct list_head *free_task = freequeue.next;
     list_del(free_task);
     union task_union *init_union = list_entry(free_task, union task_union, task.list);
@@ -81,9 +84,11 @@ void init_task1(void) {
     tss.ss0 = __KERNEL_DS;
 
     set_cr3(get_DIR(&init_union->task));
+    printk_color("Task 1 initialized successfully\n", INFO_COLOR);
 }
 
 void init_sched() {
+    init_queues();
 }
 
 struct task_struct *current() {

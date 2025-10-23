@@ -117,11 +117,11 @@ void pageFault_routine(unsigned int eip) {
     printk_color("\n===============================================\n", ERROR_COLOR);
     printk_color("           PAGE FAULT EXCEPTION               \n", ERROR_COLOR);
     printk_color("===============================================\n", ERROR_COLOR);
-    printk_color("\n  Error at EIP:        ", WARNING_COLOR);
+    printk_color("\n  Error at EIP:   ", WARNING_COLOR);
     printk_color(buffer_eip, MAKE_COLOR(BLACK, WHITE));
     printk_color("\n\n  The process tried to access an invalid\n", INFO_COLOR);
     printk_color("  memory address and will be terminated.\n", INFO_COLOR);
     printk_color("===============================================\n", ERROR_COLOR);
-    while (1)
-        ;
+    while (1) {
+    }
 }

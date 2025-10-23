@@ -40,6 +40,8 @@ extern struct task_struct *idle_task;
 
 void init_sched(void);
 
+void init_queues(void);
+
 struct task_struct *current();
 
 void task_switch(union task_union *t);
