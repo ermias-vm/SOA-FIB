@@ -5,6 +5,7 @@
 #include <io.h>
 #include <mm.h>
 #include <sched.h>
+#include <segment.h>
 
 union task_union task[NR_TASKS] __attribute__((__section__(".data.task")));
 
@@ -47,10 +48,39 @@ void cpu_idle(void) {
     }
 }
 
+struct task_struct *idle_task;
+
 void init_idle(void) {
+    struct list_head *free_task = freequeue.next;
+    list_del(free_task);
+    union task_union *idle_union = list_entry(free_task, union task_union, task.list);
+
+    idle_union->task.PID = 0;
+
+    allocate_DIR(&idle_union->task);
+
+    idle_union->stack[KERNEL_STACK_SIZE - 1] = (unsigned long)&cpu_idle;
+    idle_union->stack[KERNEL_STACK_SIZE - 2] = 0;
+    idle_union->task.kernel_esp = (unsigned long)&idle_union->stack[KERNEL_STACK_SIZE - 2];
+
+    idle_task = &idle_union->task;
 }
 
 void init_task1(void) {
+    struct list_head *free_task = freequeue.next;
+    list_del(free_task);
+    union task_union *init_union = list_entry(free_task, union task_union, task.list);
+
+    init_union->task.PID = 1;
+
+    allocate_DIR(&init_union->task);
+
+    set_user_pages(&init_union->task);
+
+    tss.esp0 = (unsigned long)&init_union->stack[KERNEL_STACK_SIZE];
+    tss.ss0 = __KERNEL_DS;
+
+    set_cr3(get_DIR(&init_union->task));
 }
 
 void init_sched() {
