@@ -1,0 +1,34 @@
+---
+Language: Cpp
+BasedOnStyle: LLVM
+IndentWidth: 4
+UseTab: Never
+ColumnLimit: 100
+
+# Allow single-line if statements WITHOUT braces
+AllowShortIfStatementsOnASingleLine: WithoutElse
+
+# Allow multi-line if statements WITH braces on the same line
+BreakBeforeBraces: Attach
+
+# Other useful configurations for C
+AllowShortFunctionsOnASingleLine: None
+AllowShortLoopsOnASingleLine: yes
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortBlocksOnASingleLine: false
+
+# Spacing
+SpaceBeforeParens: ControlStatements
+SpaceInEmptyParentheses: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+
+# Comments
+ReflowComments: true
+SpacesBeforeTrailingComments: 1
+
+# Pointers and references
+PointerAlignment: Right
+ReferenceAlignment: Right
+
+---

@@ -58,4 +58,3 @@ ZeOSInternalArchitecture.md
 docs/*.txt
 docs/img
 /backup
-.clang-format
