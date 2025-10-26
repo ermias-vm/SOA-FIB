@@ -9,12 +9,9 @@
 
 union task_union task[NR_TASKS] __attribute__((__section__(".data.task")));
 
-#if 0
-struct task_struct *list_head_to_task_struct(struct list_head *l)
-{
-  return list_entry( l, struct task_struct, list);
+struct task_struct *list_head_to_task_struct(struct list_head *l) {
+    return list_entry(l, struct task_struct, list);
 }
-#endif
 
 extern struct list_head blocked;
 struct list_head freequeue;
@@ -43,48 +40,62 @@ int allocate_DIR(struct task_struct *t) {
 void cpu_idle(void) {
     __asm__ __volatile__("sti" : : : "memory");
 
+    printk_color("\n[IDLE_TASK] In cpu_idle\n", INFO_COLOR);
     while (1) {
         ;
     }
 }
 
-struct task_struct *idle_task;
+struct task_struct *idle_task, *init_task;
 
 void init_idle(void) {
-    printk_color("Initializing idle task...\n", INFO_COLOR);
+    printk_color("Initializing idle task...\n", INFO_COLOR); // TODO: remove
     struct list_head *free_task = freequeue.next;
     list_del(free_task);
-    union task_union *idle_union = list_entry(free_task, union task_union, task.list);
 
-    idle_union->task.PID = 0;
+    idle_task = list_head_to_task_struct(free_task);
+    idle_task->PID = 0;
 
-    allocate_DIR(&idle_union->task);
+    allocate_DIR(idle_task);
+
+    union task_union *idle_union = (union task_union *)idle_task;
 
     idle_union->stack[KERNEL_STACK_SIZE - 1] = (unsigned long)&cpu_idle;
     idle_union->stack[KERNEL_STACK_SIZE - 2] = 0;
-    idle_union->task.kernel_esp = (unsigned long)&idle_union->stack[KERNEL_STACK_SIZE - 2];
+    idle_task->kernel_esp = (unsigned long)&idle_union->stack[KERNEL_STACK_SIZE - 2];
 
-    idle_task = &idle_union->task;
-    printk_color("Idle task initialized successfully\n", INFO_COLOR);
+    printk_color("Idle task initialized successfully\n", INFO_COLOR); // TODO: remove
 }
 
 void init_task1(void) {
-    printk_color("Initializing task 1...\n", INFO_COLOR);
+    printk_color("Initializing task 1...\n", INFO_COLOR); // TODO: remove
     struct list_head *free_task = freequeue.next;
     list_del(free_task);
-    union task_union *init_union = list_entry(free_task, union task_union, task.list);
 
-    init_union->task.PID = 1;
+    init_task = list_head_to_task_struct(free_task);
 
-    allocate_DIR(&init_union->task);
+    init_task->PID = 1;
 
-    set_user_pages(&init_union->task);
+    allocate_DIR(init_task);
+    set_user_pages(init_task);
 
-    tss.esp0 = (unsigned long)&init_union->stack[KERNEL_STACK_SIZE];
+    union task_union *init_union = (union task_union *)init_task;
+
+    init_union->stack[KERNEL_STACK_SIZE - 1] = (unsigned long)&init_function;
+    init_union->stack[KERNEL_STACK_SIZE - 2] = 0;
+    tss.esp0 = KERNEL_ESP(init_union);
     tss.ss0 = __KERNEL_DS;
 
-    set_cr3(get_DIR(&init_union->task));
-    printk_color("Task 1 initialized successfully\n", INFO_COLOR);
+    set_cr3(init_task->dir_pages_baseAddr);
+    printk_color("Task 1 initialized successfully\n", INFO_COLOR); // TODO: remove
+}
+
+void init_queues() {
+    INIT_LIST_HEAD(&freequeue);
+    INIT_LIST_HEAD(&readyqueue);
+    for (int i = 0; i < NR_TASKS; ++i) {
+        list_add_tail(&task[i].task.list, &freequeue);
+    }
 }
 
 void init_sched() {
@@ -98,10 +109,20 @@ struct task_struct *current() {
     return (struct task_struct *)(ret_value & 0xfffff000);
 }
 
-void init_queues() {
-    INIT_LIST_HEAD(&freequeue);
-    INIT_LIST_HEAD(&readyqueue);
-    for (int i = 0; i < NR_TASKS; ++i) {
-        list_add_tail(&task[i].task.list, &freequeue);
-    }
+void inner_task_switch(union task_union *new) {
+    tss.esp0 = KERNEL_ESP(new);
+    writeMSR(0x175, (int)tss.esp0);
+    set_cr3(get_DIR(&new->task));
+    switch_context(&current()->kernel_esp, new->task.kernel_esp);
+}
+
+/* TEST FUNCTIONS */
+
+void init_function(void) {
+    __asm__ __volatile__("sti" : : : "memory");
+
+    printk_color("\n[INIT_TASK] In init_function\n", INFO_COLOR);
+	while (1){
+        ;
+	}
 }

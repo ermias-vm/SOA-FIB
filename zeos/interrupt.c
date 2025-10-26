@@ -4,6 +4,7 @@
 #include <hardware.h>
 #include <interrupt.h>
 #include <io.h>
+#include <sched.h>
 #include <segment.h>
 #include <types.h>
 #include <utils.h>
@@ -11,12 +12,6 @@
 
 Gate idt[IDT_ENTRIES];
 Register idtR;
-
-void keyboard_handler();
-void clock_handler();
-void syscall_handler_sysenter();
-void writeMSR(unsigned long msr, unsigned long val);
-void pageFault_handler();
 
 int zeos_ticks = 0;
 
@@ -91,16 +86,17 @@ void setIdt() {
 }
 
 void keyboard_routine() {
-    unsigned char key = inb(0x60);
-
-    int isBreak = key & 0x80;
-
+    unsigned char key = inb(0x60);              // Read the value from port 0x60 (keyboard port)
+                                                // Bit 7 indicates if the key was pressed or released (0: pressed(MAKE), 1: released(BREAK))
+    int isBreak = key & 0x80;                   // 0x80 & 00000000 = 0 // Make  <--> 0x80 & 10000000 = 1 // Break
     if (!isBreak) {
-        char pressedKey = char_map[key & 0x7F];
+        char pressedKey = char_map[key & 0x7F]; // Get the character from char_map
         if (pressedKey == '\0') {
             pressedKey = 'C';
         }
-        printc_xy(0, 0, pressedKey, DEFAULT_COLOR);
+
+        testTaskSwitch(pressedKey); // Test de cambio de contexto
+        printc_xy(0, 0, pressedKey, INFO_COLOR);
     }
 }
 
@@ -123,5 +119,17 @@ void pageFault_routine(unsigned int eip) {
     printk_color("  memory address and will be terminated.\n", INFO_COLOR);
     printk_color("===============================================\n", ERROR_COLOR);
     while (1) {
+    }
+}
+
+void testTaskSwitch(char key) {
+    if (key == '0') {
+        printk_color("\n[BEFORE_TASK_SWITCH] Switching to idle task\n", INFO_COLOR);
+        task_switch((union task_union *)idle_task);
+    }
+
+    else if (key == '1') {
+        printk_color("\n[BEFORE_TASK_SWITCH] Switching to init task\n", INFO_COLOR);
+        task_switch((union task_union *)init_task);
     }
 }
