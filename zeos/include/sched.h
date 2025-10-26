@@ -64,5 +64,5 @@ void update_sched_data_rr();
 
 /* TEST FUNCTIONS */
 void init_function(void);
-
+void idle_to_init_test(void);
 #endif /* __SCHED_H__ */

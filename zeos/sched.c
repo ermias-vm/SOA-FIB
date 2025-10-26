@@ -40,7 +40,7 @@ int allocate_DIR(struct task_struct *t) {
 void cpu_idle(void) {
     __asm__ __volatile__("sti" : : : "memory");
 
-    printk_color("\n[IDLE_TASK] In cpu_idle\n", INFO_COLOR);
+    idle_to_init_test();
     while (1) {
         ;
     }
@@ -49,7 +49,6 @@ void cpu_idle(void) {
 struct task_struct *idle_task, *init_task;
 
 void init_idle(void) {
-    printk_color("Initializing idle task...\n", INFO_COLOR); // TODO: remove
     struct list_head *free_task = freequeue.next;
     list_del(free_task);
 
@@ -68,7 +67,6 @@ void init_idle(void) {
 }
 
 void init_task1(void) {
-    printk_color("Initializing task 1...\n", INFO_COLOR); // TODO: remove
     struct list_head *free_task = freequeue.next;
     list_del(free_task);
 
@@ -81,12 +79,10 @@ void init_task1(void) {
 
     union task_union *init_union = (union task_union *)init_task;
 
-    init_union->stack[KERNEL_STACK_SIZE - 1] = (unsigned long)&init_function;
-    init_union->stack[KERNEL_STACK_SIZE - 2] = 0;
     tss.esp0 = KERNEL_ESP(init_union);
-    tss.ss0 = __KERNEL_DS;
-
+    writeMSR(0x175,(unsigned long) tss.esp0);	
     set_cr3(init_task->dir_pages_baseAddr);
+
     printk_color("Task 1 initialized successfully\n", INFO_COLOR); // TODO: remove
 }
 
@@ -125,4 +121,10 @@ void init_function(void) {
 	while (1){
         ;
 	}
+}
+
+void idle_to_init_test(void) {
+    printk_color("\n[IDLE_TASK] In cpu_idle\n", INFO_COLOR);
+    printk_color("[IDLE_TASK] Switching to init task\n", INFO_COLOR);
+    task_switch((union task_union *)init_task);
 }

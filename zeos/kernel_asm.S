@@ -11,6 +11,7 @@
     movl $0, %edx
     movl 0xc(%ebp), %eax
     wrmsr
+    movl %ebp, %esp
     popl %ebp
     ret
 
@@ -29,12 +30,13 @@ ENTRY(task_switch)
     popl %ebx
     popl %esi
     popl %edi
+    movl %ebp, %esp
     popl %ebp
     ret
 
 ENTRY(switch_context)
-    movl 4(%ebp), %eax          # eax = current_esp
+    movl 4(%esp), %eax          # eax = current_esp
     movl %esp, (%eax)           # Save current esp
-    movl 8(%ebp), %esp          # esp = new_esp
+    movl 8(%esp), %esp          # esp = new_esp
     popl %ebp
     ret
