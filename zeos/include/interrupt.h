@@ -17,4 +17,12 @@ void setTrapHandler(int vector, void (*handler)(), int maxAccessibleFromPL);
 
 void setIdt();
 
+void keyboard_handler();
+void clock_handler();
+void syscall_handler_sysenter();
+void writeMSR(unsigned long msr, unsigned long val);
+void pageFault_handler();
+
+// Test functions
+void testTaskSwitch(char key);
 #endif /* __INTERRUPT_H__ */

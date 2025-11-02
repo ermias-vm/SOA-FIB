@@ -37,6 +37,7 @@ void init_task1(void);
 
 void init_idle(void);
 extern struct task_struct *idle_task;
+extern struct task_struct *init_task;
 
 void init_sched(void);
 
@@ -44,7 +45,8 @@ void init_queues(void);
 
 struct task_struct *current();
 
-void task_switch(union task_union *t);
+extern void task_switch(union task_union *new);
+extern void switch_context(unsigned long *current_esp, unsigned long new_esp);
 
 struct task_struct *list_head_to_task_struct(struct list_head *l);
 
@@ -60,4 +62,7 @@ void update_process_state_rr(struct task_struct *t, struct list_head *dest);
 int needs_sched_rr();
 void update_sched_data_rr();
 
+/* TEST FUNCTIONS */
+void init_function(void);
+void idle_to_init_test(void);
 #endif /* __SCHED_H__ */

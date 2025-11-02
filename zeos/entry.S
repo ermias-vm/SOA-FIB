@@ -50,7 +50,6 @@
     movl %edx, %ds;             \
     movl %edx, %es
 
-
 #define RESTORE_ALL \
     popl %ebx; \
     popl %ecx; \
@@ -67,7 +66,6 @@
 #define EOI \
     movb $0x20, %al; \
     outb %al, $0x20;
-
 
 ENTRY(syscall_handler_sysenter)
     push $__USER_DS
@@ -96,14 +94,12 @@ sysenter_return:
     sysexit                         
 
 
-
 ENTRY(clock_handler)
     SAVE_ALL
     EOI                     # EOI before call 
     call clock_routine
     RESTORE_ALL
     iret
-
 
 ENTRY(keyboard_handler) 
     SAVE_ALL
@@ -112,21 +108,10 @@ ENTRY(keyboard_handler)
     RESTORE_ALL
     iret
 
-
- ENTRY(writeMSR)
-    pushl %ebp
-    movl %esp, %ebp
-    movl 0x8(%ebp), %ecx
-    movl $0, %edx
-    movl 0xc(%ebp), %eax
-    wrmsr
-    popl %ebp
-    ret
-
-
 ENTRY(pageFault_handler)
     SAVE_ALL
     pushl 0x30(%esp)            # Push EIP
     call pageFault_routine
     RESTORE_ALL                 # This line is never reached
     iret
+
