@@ -86,9 +86,9 @@ void setIdt() {
 }
 
 void keyboard_routine() {
-    unsigned char key = inb(0x60);              // Read the value from port 0x60 (keyboard port)
-                                                // Bit 7 indicates if the key was pressed or released (0: pressed(MAKE), 1: released(BREAK))
-    int isBreak = key & 0x80;                   // 0x80 & 00000000 = 0 // Make  <--> 0x80 & 10000000 = 1 // Break
+    unsigned char key = inb(0x60); // Read the value from port 0x60 (keyboard port)
+    // Bit 7 indicates if the key was pressed (MAKE = 0) or released (BREAK = 1)
+    int isBreak = key & 0x80; // 0x80 & 00000000 = 0 // Make  <--> 0x80 & 10000000 = 1 // Break
     if (!isBreak) {
         char pressedKey = char_map[key & 0x7F]; // Get the character from char_map
         if (pressedKey == '\0') {
@@ -126,10 +126,14 @@ void testTaskSwitch(char key) {
     if (key == '0') {
         printk_color("\n[BEFORE_TASK_SWITCH] Switching to idle task\n", INFO_COLOR);
         task_switch((union task_union *)idle_task);
+        printk_color("\n[AFTER_TASK_SWITCH] Switched to idle task\n",
+                     INFO_COLOR); // Should not reach here
     }
 
     else if (key == '1') {
         printk_color("\n[BEFORE_TASK_SWITCH] Switching to init task\n", INFO_COLOR);
         task_switch((union task_union *)init_task);
+        printk_color("\n[AFTER_TASK_SWITCH] Switched to init task\n",
+                     INFO_COLOR); // Should not reach here
     }
 }

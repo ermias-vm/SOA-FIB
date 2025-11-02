@@ -80,7 +80,7 @@ void init_task1(void) {
     union task_union *init_union = (union task_union *)init_task;
 
     tss.esp0 = KERNEL_ESP(init_union);
-    writeMSR(0x175,(unsigned long) tss.esp0);	
+    writeMSR(0x175, (unsigned long)tss.esp0);
     set_cr3(init_task->dir_pages_baseAddr);
 
     printk_color("Task 1 initialized successfully\n", INFO_COLOR); // TODO: remove
@@ -118,9 +118,9 @@ void init_function(void) {
     __asm__ __volatile__("sti" : : : "memory");
 
     printk_color("\n[INIT_TASK] In init_function\n", INFO_COLOR);
-	while (1){
+    while (1) {
         ;
-	}
+    }
 }
 
 void idle_to_init_test(void) {

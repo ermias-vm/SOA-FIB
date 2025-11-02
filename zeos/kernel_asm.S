@@ -35,8 +35,8 @@ ENTRY(task_switch)
     ret
 
 ENTRY(switch_context)
-    movl 4(%esp), %eax          # eax = current_esp
-    movl %esp, (%eax)           # Save current esp
+    movl 4(%esp), %eax          # eax =  &current()->kernel_esp
+    movl %ebp, (%eax)           # Save current esp, *eax = %ebp
     movl 8(%esp), %esp          # esp = new_esp
     popl %ebp
     ret

@@ -45,7 +45,7 @@ void init_queues(void);
 
 struct task_struct *current();
 
-extern void task_switch(union task_union *t);
+extern void task_switch(union task_union *new);
 extern void switch_context(unsigned long *current_esp, unsigned long new_esp);
 
 struct task_struct *list_head_to_task_struct(struct list_head *l);
