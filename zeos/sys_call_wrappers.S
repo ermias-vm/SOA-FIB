@@ -20,7 +20,7 @@ wr_return:
     addl $4, %esp
     popl %ebx
     popl %ebp
-    cmpl $0, %eax 	
+    cmpl $0, %eax
     jl wr_error
     ret
     
@@ -29,6 +29,7 @@ wr_error:
     movl %eax, errno
     movl $-1, %eax
     ret
+
 
 ENTRY(gettime)
     pushl %ebp
@@ -49,6 +50,31 @@ gt_return:
     ret
 
 gt_error:
+    negl %eax
+    movl %eax, errno
+    movl $-1, %eax
+    ret
+
+
+ENTRY(getpid)
+    pushl %ebp
+    movl %esp, %ebp
+    movl $20, %eax
+    
+    pushl $gp_return
+    pushl %ebp
+    movl %esp, %ebp
+    sysenter
+
+gp_return:
+    popl %ebp
+    addl $4, %esp
+    popl %ebp
+    cmpl $0, %eax
+    jl gp_error
+    ret
+ 
+gp_error:
     negl %eax
     movl %eax, errno
     movl $-1, %eax

@@ -1,13 +1,6 @@
+#include "zeos_test.h"
 #include <errno.h>
 #include <libc.h>
-
-#define BUFFER_SIZE 256
-#define LARGE_BUFFER_SIZE 300
-// clang-format off
-#define WRITE_TEST              1
-#define GETTIME_TEST            1
-#define PAGEFAULT_TEST          0
-// clang-format on
 
 char buffer[BUFFER_SIZE];
 char large_buffer[LARGE_BUFFER_SIZE]; // For testing large writes
@@ -17,14 +10,6 @@ static int tests_passed = 0;
 static int subtests_run = 0;
 static int subtests_passed = 0;
 extern int errno;
-
-void print_test_header(char *test_name);
-void print_test_result(char *test_name, int passed);
-void print_final_summary(void);
-
-void test_write_syscall(void);
-void test_gettime_syscall(void);
-void test_pagefault_exception(void);
 
 void execute_zeos_tests(void) {
     char *msg = "\n";
@@ -41,10 +26,17 @@ void execute_zeos_tests(void) {
 
 #if WRITE_TEST == 1
     test_write_syscall();
+    RESET_ERRNO();
 #endif
 
 #if GETTIME_TEST == 1
     test_gettime_syscall();
+    RESET_ERRNO();
+#endif
+
+#if GETPID_TEST == 1
+    test_getpid_syscall();
+    RESET_ERRNO();
 #endif
 
 #if PAGEFAULT_TEST == 1
@@ -194,7 +186,7 @@ void test_write_syscall(void) {
     itoa(subtests_run, buffer);
     write(1, buffer, strlen(buffer));
 
-    msg = " passed\n";
+    msg = " passed";
     write(1, msg, strlen(msg));
 
     int passed = (subtests_passed == subtests_run);
@@ -229,12 +221,31 @@ void test_gettime_syscall(void) {
     itoa(ticks2, buffer);
     write(1, buffer, strlen(buffer));
 
-    msg = "\n";
-    write(1, msg, strlen(msg));
-
     // Test result - ticks should be non-negative and second >= first
     int passed = (ticks1 >= 0 && ticks2 >= 0 && ticks2 >= ticks1);
     print_test_result("gettime() syscall", passed);
+}
+
+void test_getpid_syscall(void) {
+    RESET_ERRNO(); // Reset errno at the start of test
+
+    print_test_header("GETPID SYSCALL");
+    char *msg;
+
+    msg = "[TEST] Testing getpid() syscall...\n";
+    write(1, msg, strlen(msg));
+
+    int pid = getpid();
+
+    msg = "[TEST] getpid() returned: ";
+    write(1, msg, strlen(msg));
+
+    itoa(pid, buffer);
+    write(1, buffer, strlen(buffer));
+
+    // Test conditions: errno should be 0 and PID should be > 0
+    int passed = (errno == 0 && pid > 0);
+    print_test_result("getpid() syscall", passed);
 }
 
 void test_pagefault_exception(void) {
@@ -242,12 +253,6 @@ void test_pagefault_exception(void) {
     char *msg;
 
     msg = "[TEST] Testing Page Fault Exception...\n";
-    write(1, msg, strlen(msg));
-
-    msg = "[TEST] WARNING: This will cause a page fault!\n";
-    write(1, msg, strlen(msg));
-
-    msg = "[TEST] About to access NULL pointer...\n";
     write(1, msg, strlen(msg));
 
     // This will cause a page fault and should not return
@@ -274,7 +279,7 @@ void print_test_result(char *test_name, int passed) {
     tests_run++;
     if (passed) {
         tests_passed++;
-        msg = "[RESULT] ";
+        msg = "\n[RESULT] ";
         write(1, msg, strlen(msg));
         write(1, test_name, strlen(test_name));
         msg = ": PASSED\n";
