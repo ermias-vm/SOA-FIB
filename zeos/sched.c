@@ -20,6 +20,10 @@ extern struct list_head blocked;
 struct list_head freequeue;
 struct list_head readyqueue;
 
+/* Scheduling variables */
+static int current_quantum = 0;
+#define DEFAULT_QUANTUM 5
+
 /* get_DIR - Returns the Page Directory address for task 't' */
 page_table_entry *get_DIR(struct task_struct *t) {
     return t->dir_pages_baseAddr;
@@ -58,6 +62,18 @@ void init_idle(void) {
     idle_task = list_head_to_task_struct(free_task);
     idle_task->PID = 0;
 
+    /* Initialize scheduling fields */
+    idle_task->quantum = DEFAULT_QUANTUM;
+    idle_task->remaining_ticks = DEFAULT_QUANTUM;
+
+    /* Initialize process hierarchy */
+    idle_task->parent = NULL;
+    INIT_LIST_HEAD(&idle_task->children);
+    INIT_LIST_HEAD(&idle_task->child_list);
+
+    /* Initialize blocking mechanism */
+    idle_task->pending_unblocks = 0;
+
     allocate_DIR(idle_task);
 
     union task_union *idle_union = (union task_union *)idle_task;
@@ -66,7 +82,7 @@ void init_idle(void) {
     idle_union->stack[KERNEL_STACK_SIZE - 2] = 0;
     idle_task->kernel_esp = (unsigned long)&idle_union->stack[KERNEL_STACK_SIZE - 2];
 
-    printk_color("Idle task initialized successfully\n", INFO_COLOR); // TODO: remove
+    printk_color("Idle task initialized successfully\n", INFO_COLOR);
 }
 
 void init_task1(void) {
@@ -77,6 +93,19 @@ void init_task1(void) {
 
     init_task->PID = 1;
 
+    /* Initialize scheduling fields */
+    init_task->quantum = DEFAULT_QUANTUM;
+    init_task->remaining_ticks = DEFAULT_QUANTUM;
+    current_quantum = DEFAULT_QUANTUM;
+
+    /* Initialize process hierarchy */
+    init_task->parent = NULL;
+    INIT_LIST_HEAD(&init_task->children);
+    INIT_LIST_HEAD(&init_task->child_list);
+
+    /* Initialize blocking mechanism */
+    init_task->pending_unblocks = 0;
+
     allocate_DIR(init_task);
     set_user_pages(init_task);
 
@@ -86,12 +115,13 @@ void init_task1(void) {
     writeMSR(0x175, (unsigned long)tss.esp0);
     set_cr3(init_task->dir_pages_baseAddr);
 
-    printk_color("Task 1 initialized successfully\n", INFO_COLOR); // TODO: remove
+    printk_color("Task 1 initialized successfully\n", INFO_COLOR);
 }
 
 void init_queues() {
     INIT_LIST_HEAD(&freequeue);
     INIT_LIST_HEAD(&readyqueue);
+    INIT_LIST_HEAD(&blocked);
     for (int i = 0; i < NR_TASKS; ++i) {
         list_add_tail(&task[i].task.list, &freequeue);
     }
@@ -115,6 +145,83 @@ void inner_task_switch(union task_union *new) {
     switch_context(&current()->kernel_esp, new->task.kernel_esp);
 }
 
+
+int get_next_pid(void) {
+    return ++next_pid; // Pre-increment to get: 2, 3, 4, etc.
+}
+
+/* Quantum management functions */
+int get_quantum(struct task_struct *t) {
+    return t->quantum;
+}
+
+void set_quantum(struct task_struct *t, int new_quantum) {
+    t->quantum = new_quantum;
+}
+
+/* Round-robin scheduling interface implementation */
+void update_sched_data_rr(void) {
+    current_quantum--;
+}
+
+int needs_sched_rr(void) {
+    return (current_quantum <= 0 && !list_empty(&readyqueue));
+}
+
+void update_process_state_rr(struct task_struct *t, struct list_head *dst_queue) {
+    /* If process is not RUNNING, remove from current queue */
+    if (!list_empty(&t->list)) {
+        list_del(&t->list);
+    }
+
+    /* If destination is not NULL, add to new queue */
+    if (dst_queue != NULL) {
+        list_add_tail(&t->list, dst_queue);
+    }
+}
+
+void sched_next_rr(void) {
+    if (list_empty(&readyqueue)) {
+        /* No processes in ready queue, keep current or switch to idle */
+        if (current() != idle_task) {
+            current_quantum = get_quantum(idle_task);
+            task_switch((union task_union *)idle_task);
+        }
+        return;
+    }
+
+    /* Get next process from ready queue */
+    struct list_head *next_node = list_first(&readyqueue);
+    list_del(next_node);
+    struct task_struct *next_task = list_head_to_task_struct(next_node);
+
+    /* Restore quantum for the new process */
+    current_quantum = get_quantum(next_task);
+
+    /* Switch to new process */
+    task_switch((union task_union *)next_task);
+}
+
+void schedule(void) {
+    /* Update scheduling data */
+    update_sched_data_rr();
+
+    /* Check if scheduling is needed */
+    if (!needs_sched_rr()) {
+        return;
+    }
+
+    struct task_struct *current_task = current();
+
+    /* If current is not idle, put it back in ready queue */
+    if (current_task != idle_task) {
+        update_process_state_rr(current_task, &readyqueue);
+    }
+
+    /* Schedule next process */
+    sched_next_rr();
+}
+
 /* TEST FUNCTIONS */
 
 void init_function(void) {
@@ -130,8 +237,4 @@ void idle_to_init_test(void) {
     printk_color("\n[IDLE_TASK] In cpu_idle\n", INFO_COLOR);
     printk_color("[IDLE_TASK] Switching to init task\n", INFO_COLOR);
     task_switch((union task_union *)init_task);
-}
-
-int get_next_pid(void) {
-    return ++next_pid; // Pre-increment to get: 2, 3, 4, etc.
 }

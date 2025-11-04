@@ -103,6 +103,7 @@ void keyboard_routine() {
 void clock_routine(void) {
     zeos_ticks++;
     zeos_show_clock();
+    schedule();
 }
 
 void pageFault_routine(unsigned int eip) {
@@ -122,7 +123,7 @@ void pageFault_routine(unsigned int eip) {
     }
 }
 
-void testTaskSwitch(char key) {
+void testTaskSwitch(char key) { // TODO: Remove 
     if (key == '0') {
         printk_color("\n[BEFORE_TASK_SWITCH] Switching to idle task\n", INFO_COLOR);
         task_switch((union task_union *)idle_task);

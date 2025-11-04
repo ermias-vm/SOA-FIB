@@ -10,7 +10,9 @@
 #define WRITE_TEST              1
 #define GETTIME_TEST            1
 #define GETPID_TEST             1
-#define FORK_TEST               1  // Activado para pruebas
+#define FORK_TEST               1
+#define EXIT_TEST               1
+#define BLOCK_UNBLOCK_TEST      1
 #define PAGEFAULT_TEST          0
 // clang-format on
 
@@ -71,6 +73,20 @@ void test_fork_syscall(void);
  * correctly when accessing invalid memory addresses.
  */
 void test_pagefault_exception(void);
+
+/**
+ * @brief Test exit system call functionality.
+ *
+ * This function tests the exit() system call.
+ */
+void test_exit_syscall(void);
+
+/**
+ * @brief Test block/unblock system calls functionality.
+ *
+ * This function tests the block() and unblock() system calls.
+ */
+void test_block_unblock_syscalls(void);
 
 // Helper functions
 /**

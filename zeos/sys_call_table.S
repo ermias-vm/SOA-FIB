@@ -3,7 +3,7 @@
 
 ENTRY (sys_call_table)
     .long sys_ni_syscall	# 0
-    .long sys_ni_syscall    # 1
+    .long sys_exit          # 1
     .long sys_fork          # 2
     .long sys_ni_syscall    # 3
     .long sys_write			# 4
@@ -14,8 +14,8 @@ ENTRY (sys_call_table)
     .long sys_ni_syscall	# 9
     .long sys_gettime	    # 10
     .long sys_ni_syscall	# 11
-    .long sys_ni_syscall	# 12
-    .long sys_ni_syscall	# 13
+    .long sys_block	        # 12
+    .long sys_unblock	    # 13
     .long sys_ni_syscall	# 14
     .long sys_ni_syscall	# 15
     .long sys_ni_syscall	# 16

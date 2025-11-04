@@ -90,6 +90,22 @@ int fork();
 void exit();
 
 /**
+ * @brief Block current process.
+ *
+ * This function blocks the current process.
+ */
+void block(void);
+
+/**
+ * @brief Unblock a child process.
+ *
+ * This function unblocks a child process by PID.
+ * @param pid Process ID to unblock.
+ * @return 0 on success, -1 on error.
+ */
+int unblock(int pid);
+
+/**
  * @brief Execute ZeOS test suite.
  *
  * This function runs the comprehensive ZeOS test suite.

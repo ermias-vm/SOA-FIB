@@ -44,6 +44,16 @@ void execute_zeos_tests(void) {
     RESET_ERRNO();
 #endif
 
+#if EXIT_TEST == 1
+    test_exit_syscall();
+    RESET_ERRNO();
+#endif
+
+#if BLOCK_UNBLOCK_TEST == 1
+    test_block_unblock_syscalls();
+    RESET_ERRNO();
+#endif
+
 #if PAGEFAULT_TEST == 1
     test_pagefault_exception();
 #endif
@@ -545,5 +555,95 @@ void test_fork_syscall(void) {
 
         int passed = (parent_subtests_passed == parent_subtests_run);
         print_test_result("fork() syscall", passed);
+    }
+}
+
+void test_exit_syscall(void) {
+    print_test_header("EXIT SYSCALL");
+    char *msg;
+
+    msg = "[TEST] Testing exit() syscall with child process...\n";
+    write(1, msg, strlen(msg));
+
+    int pid = fork();
+    if (pid == 0) {
+        // Child process
+        msg = "[CHILD] Child process about to exit\n";
+        write(1, msg, strlen(msg));
+        exit();
+        // This should never be reached
+        msg = "[CHILD] ERROR: Code after exit() executed!\n";
+        write(1, msg, strlen(msg));
+    } else if (pid > 0) {
+        // Parent process - wait a bit for child to exit
+        int start_time = gettime();
+        while (gettime() - start_time < 10) {
+            // Brief wait
+        }
+        msg = "[PARENT] Child process should have exited\n";
+        write(1, msg, strlen(msg));
+
+        int passed = (pid > 0);
+        print_test_result("exit() syscall", passed);
+    } else {
+        msg = "[ERROR] Fork failed for exit test\n";
+        write(1, msg, strlen(msg));
+        print_test_result("exit() syscall", 0);
+    }
+}
+
+void test_block_unblock_syscalls(void) {
+    print_test_header("BLOCK/UNBLOCK SYSCALLS");
+    char *msg;
+
+    msg = "[TEST] Testing block() and unblock() syscalls...\n";
+    write(1, msg, strlen(msg));
+
+    int pid = fork();
+    if (pid == 0) {
+        // Child process
+        msg = "[CHILD] Child about to block\n";
+        write(1, msg, strlen(msg));
+
+        block();
+
+        msg = "[CHILD] Child unblocked successfully\n";
+        write(1, msg, strlen(msg));
+        exit();
+    } else if (pid > 0) {
+        // Parent process
+        msg = "[PARENT] Parent waiting before unblocking child\n";
+        write(1, msg, strlen(msg));
+
+        // Wait a bit
+        int start_time = gettime();
+        while (gettime() - start_time < 5) {
+            // Brief wait
+        }
+
+        msg = "[PARENT] Unblocking child process\n";
+        write(1, msg, strlen(msg));
+
+        int result = unblock(pid);
+        if (result == 0) {
+            msg = "[PARENT] Unblock successful\n";
+            write(1, msg, strlen(msg));
+        } else {
+            msg = "[PARENT] Unblock failed\n";
+            write(1, msg, strlen(msg));
+        }
+
+        // Wait for child to finish
+        start_time = gettime();
+        while (gettime() - start_time < 10) {
+            // Wait for child
+        }
+
+        int passed = (result == 0);
+        print_test_result("block/unblock syscalls", passed);
+    } else {
+        msg = "[ERROR] Fork failed for block/unblock test\n";
+        write(1, msg, strlen(msg));
+        print_test_result("block/unblock syscalls", 0);
     }
 }

@@ -19,6 +19,18 @@ struct task_struct {
     page_table_entry *dir_pages_baseAddr;
     struct list_head list;
     unsigned long kernel_esp;
+
+    /* Scheduling fields for round-robin */
+    int quantum;
+    int remaining_ticks;
+
+    /* Process hierarchy fields */
+    struct task_struct *parent;
+    struct list_head children;   /* List of child processes */
+    struct list_head child_list; /* Entry in parent's children list */
+
+    /* Blocking mechanism */
+    int pending_unblocks;
 };
 
 union task_union {
@@ -27,6 +39,8 @@ union task_union {
 };
 
 extern union task_union task[NR_TASKS]; /* Vector de tasques */
+extern struct task_struct *idle_task;
+extern struct task_struct *init_task;
 
 #define KERNEL_ESP(t) (DWord) & (t)->stack[KERNEL_STACK_SIZE]
 
@@ -47,12 +61,11 @@ void init_task1(void);
  * processes are ready to execute. The idle task runs with the lowest priority.
  */
 void init_idle(void);
-extern struct task_struct *idle_task;
-extern struct task_struct *init_task;
 
 /* Global queues for process management */
 extern struct list_head freequeue;
 extern struct list_head readyqueue;
+extern struct list_head blocked;
 
 /**
  * @brief Initialize the scheduler.
@@ -180,6 +193,44 @@ int needs_sched_rr();
  */
 void update_sched_data_rr();
 
+/**
+ * @brief Main scheduler function.
+ *
+ * This function implements the main scheduling logic, calling the
+ * appropriate scheduling policy functions to determine if a context
+ * switch is needed and performing it if necessary.
+ */
+void schedule();
+
+/**
+ * @brief Get quantum value for a task.
+ *
+ * This function returns the quantum value assigned to the specified task.
+ * @param t Pointer to the task structure.
+ * @return Quantum value of the task.
+ */
+int get_quantum(struct task_struct *t);
+
+/**
+ * @brief Set quantum value for a task.
+ *
+ * This function sets the quantum value for the specified task.
+ * @param t Pointer to the task structure.
+ * @param new_quantum New quantum value to set.
+ */
+void set_quantum(struct task_struct *t, int new_quantum);
+
+/* PID management */
+/**
+ * @brief Get next available process ID.
+ *
+ * This function returns the next available process identifier and
+ * increments the internal PID counter.
+ * @return The next available PID.
+ */
+int get_next_pid(void);
+
+
 /* TEST FUNCTIONS */
 /**
  * @brief Initialize test function.
@@ -194,15 +245,5 @@ void init_function(void);
  * This function tests the transition from idle task to init task.
  */
 void idle_to_init_test(void);
-
-/* PID management */
-/**
- * @brief Get next available process ID.
- *
- * This function returns the next available process identifier and
- * increments the internal PID counter.
- * @return The next available PID.
- */
-int get_next_pid(void);
 
 #endif /* __SCHED_H__ */

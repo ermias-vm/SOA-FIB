@@ -119,6 +119,21 @@ int sys_fork() {
     // Fields already copied from parent need to be modified for child
     INIT_LIST_HEAD(&child_task->list); // New list
 
+    /* Initialize scheduling fields - inherit from parent */
+    child_task->quantum = current()->quantum;
+    child_task->remaining_ticks = child_task->quantum;
+
+    /* Initialize process hierarchy */
+    child_task->parent = current();
+    INIT_LIST_HEAD(&child_task->children);
+    INIT_LIST_HEAD(&child_task->child_list);
+
+    /* Add child to parent's children list */
+    list_add_tail(&child_task->child_list, &current()->children);
+
+    /* Initialize blocking mechanism */
+    child_task->pending_unblocks = 0;
+
     /* === STEP i & j: Prepare registers and child stack for task_switch === */
     // We need to prepare the child's stack so that when task_switch occurs,
     // the child can return correctly to user space with %eax = 0
@@ -171,4 +186,95 @@ int sys_gettime() {
 }
 
 void sys_exit() {
+    struct task_struct *current_task = current();
+
+    /* === STEP a: Free process resources === */
+    // Free data pages
+    page_table_entry *PT = get_PT(current_task);
+    for (int page = 0; page < NUM_PAG_DATA; page++) {
+        int frame = get_frame(PT, PAG_LOG_INIT_DATA + page);
+        if (frame >= 0) {
+            free_frame(frame);
+        }
+    }
+
+    /* === STEP b: Update process hierarchy === */
+    // Remove from parent's children list if parent exists
+    if (current_task->parent != NULL) {
+        list_del(&current_task->child_list);
+    }
+
+    // Move children to idle process
+    struct list_head *pos, *tmp;
+    list_for_each_safe(pos, tmp, &current_task->children) {
+        struct task_struct *child = list_entry(pos, struct task_struct, child_list);
+        list_del(&child->child_list);
+        child->parent = idle_task;
+        list_add_tail(&child->child_list, &idle_task->children);
+    }
+
+    /* === STEP c: Return task_struct to free queue === */
+    update_process_state_rr(current_task, &freequeue);
+
+    /* === STEP d: Schedule new process === */
+    sched_next_rr();
+
+    // This point should never be reached
+}
+
+void sys_block() {
+    struct task_struct *current_task = current();
+
+    /* Check for pending unblocks */
+    if (current_task->pending_unblocks > 0) {
+        current_task->pending_unblocks--;
+        return; // Don't block, continue execution
+    }
+
+    /* Block the process */
+    update_process_state_rr(current_task, &blocked);
+
+    /* Schedule next process */
+    sched_next_rr();
+}
+
+int sys_unblock(int pid) {
+    struct task_struct *current_task = current();
+    struct task_struct *target_task = NULL;
+
+    /* Find the target process in children list */
+    struct list_head *pos;
+    list_for_each(pos, &current_task->children) {
+        struct task_struct *child = list_entry(pos, struct task_struct, child_list);
+        if (child->PID == pid) {
+            target_task = child;
+            break;
+        }
+    }
+
+    /* Check if target is a child of current process */
+    if (target_task == NULL) {
+        return -1; // Process not found or not a child
+    }
+
+    /* Check if target is in blocked queue */
+    struct list_head *blocked_pos;
+    int is_blocked = 0;
+    list_for_each(blocked_pos, &blocked) {
+        struct task_struct *blocked_task = list_head_to_task_struct(blocked_pos);
+        if (blocked_task == target_task) {
+            is_blocked = 1;
+            break;
+        }
+    }
+
+    if (is_blocked) {
+        /* Unblock the process */
+        update_process_state_rr(target_task, &readyqueue);
+    } else {
+        /* Process not blocked, increase pending unblocks */
+        target_task->pending_unblocks++;
+    }
+
+    return 0;
 }

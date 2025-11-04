@@ -133,7 +133,7 @@ backup: clean
 		exit 1; \
 	fi && \
 	echo "Creating backup: $$BACKUP_NAME" && \
-	cd .. && tar -czvf backup/$$BACKUP_NAME zeos/
+	cd .. && tar -czvf backup/VERSIONS/$$BACKUP_NAME zeos/
 
 disk: zeos.bin
 	dd if=zeos.bin of=/dev/fd0

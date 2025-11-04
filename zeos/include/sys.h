@@ -62,4 +62,29 @@ int sys_write(int fd, char *buffer, int size);
  */
 int sys_gettime(void);
 
+/**
+ * @brief Terminate the current process.
+ *
+ * This function terminates the calling process, freeing its resources
+ * and scheduling a new process to run.
+ */
+void sys_exit(void);
+
+/**
+ * @brief Block the current process.
+ *
+ * This function blocks the current process unless there are pending
+ * unblock operations.
+ */
+void sys_block(void);
+
+/**
+ * @brief Unblock a child process.
+ *
+ * This function unblocks a child process identified by its PID.
+ * @param pid Process ID of the child to unblock.
+ * @return 0 on success, -1 on error.
+ */
+int sys_unblock(int pid);
+
 #endif /* __SYS_H__ */
