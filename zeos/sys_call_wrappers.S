@@ -79,3 +79,28 @@ gp_error:
     movl %eax, errno
     movl $-1, %eax
     ret
+
+
+ENTRY(fork)
+    pushl %ebp
+    movl %esp, %ebp
+    movl $2, %eax
+    
+    pushl $fork_return
+    pushl %ebp
+    movl %esp, %ebp
+    sysenter
+
+fork_return:
+    popl %ebp
+    addl $4, %esp
+    popl %ebp
+    test %eax, %eax
+    js fork_error
+    ret
+ 
+fork_error:
+    negl %eax
+    movl %eax, errno
+    movl $-1, %eax
+    ret

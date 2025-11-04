@@ -2,12 +2,15 @@
  * sched.c - initializes struct for task 0 anda task 1
  */
 
+#include <interrupt.h>
 #include <io.h>
 #include <mm.h>
 #include <sched.h>
 #include <segment.h>
 
 union task_union task[NR_TASKS] __attribute__((__section__(".data.task")));
+
+static int next_pid = 1; // Contador global de PIDs
 
 struct task_struct *list_head_to_task_struct(struct list_head *l) {
     return list_entry(l, struct task_struct, list);
@@ -127,4 +130,8 @@ void idle_to_init_test(void) {
     printk_color("\n[IDLE_TASK] In cpu_idle\n", INFO_COLOR);
     printk_color("[IDLE_TASK] Switching to init task\n", INFO_COLOR);
     task_switch((union task_union *)init_task);
+}
+
+int get_next_pid(void) {
+    return ++next_pid; // Pre-increment to get: 2, 3, 4, etc.
 }

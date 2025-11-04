@@ -10,6 +10,7 @@
 #define WRITE_TEST              1
 #define GETTIME_TEST            1
 #define GETPID_TEST             1
+#define FORK_TEST               1  // Activado para pruebas
 #define PAGEFAULT_TEST          0
 // clang-format on
 
@@ -27,6 +28,7 @@ void execute_zeos_tests(void);
 void test_write_syscall(void);
 void test_gettime_syscall(void);
 void test_getpid_syscall(void);
+void test_fork_syscall(void);
 void test_pagefault_exception(void);
 
 // Helper functions

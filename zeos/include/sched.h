@@ -39,6 +39,10 @@ void init_idle(void);
 extern struct task_struct *idle_task;
 extern struct task_struct *init_task;
 
+/* Global queues for process management */
+extern struct list_head freequeue;
+extern struct list_head readyqueue;
+
 void init_sched(void);
 
 void init_queues(void);
@@ -47,6 +51,7 @@ struct task_struct *current();
 
 extern void task_switch(union task_union *new);
 extern void switch_context(unsigned long *current_esp, unsigned long new_esp);
+extern void ret_from_fork(void);
 
 struct task_struct *list_head_to_task_struct(struct list_head *l);
 
@@ -65,4 +70,8 @@ void update_sched_data_rr();
 /* TEST FUNCTIONS */
 void init_function(void);
 void idle_to_init_test(void);
+
+/* PID management */
+int get_next_pid(void);
+
 #endif /* __SCHED_H__ */
