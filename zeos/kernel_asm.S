@@ -3,6 +3,8 @@
  */
 
 #include <asm.h>
+#include <segment.h>
+
 
  ENTRY(writeMSR)
     pushl %ebp
@@ -14,6 +16,7 @@
     movl %ebp, %esp
     popl %ebp
     ret
+
 
 ENTRY(task_switch)
     pushl %ebp
@@ -34,9 +37,19 @@ ENTRY(task_switch)
     popl %ebp
     ret
 
+
 ENTRY(switch_context)
     movl 4(%esp), %eax          # eax =  &current()->kernel_esp
     movl %ebp, (%eax)           # Save current esp, *eax = %ebp
     movl 8(%esp), %esp          # esp = new_esp
     popl %ebp
+    ret
+
+
+/*
+ * Handles the return from fork for a child process.
+ * Ensures the child returns 0 (instead of the parent's PID) by setting %eax to 0.
+ */
+ENTRY(ret_from_fork)
+    movl $0, %eax
     ret
