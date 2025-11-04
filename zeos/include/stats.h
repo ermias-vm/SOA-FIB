@@ -8,8 +8,8 @@ struct stats {
     unsigned long blocked_ticks;
     unsigned long ready_ticks;
     unsigned long elapsed_total_ticks;
-    unsigned long
-        total_trans; /* Number of times the process has got the CPU: READY->RUN transitions */
+    /* Number of times the process has got the CPU: READY->RUN transitions */
+    unsigned long total_trans; 
     unsigned long remaining_ticks;
 };
 #endif /* !STATS_H */

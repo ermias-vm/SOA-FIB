@@ -21,7 +21,6 @@ struct task_struct {
 
     /* Scheduling fields for round-robin */
     int quantum;
-    int remaining_ticks;
 
     /* Process hierarchy fields */
     struct task_struct *parent;

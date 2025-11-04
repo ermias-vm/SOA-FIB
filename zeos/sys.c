@@ -121,7 +121,6 @@ int sys_fork() {
 
     /* Initialize scheduling fields - inherit from parent */
     child_task->quantum = current()->quantum;
-    child_task->remaining_ticks = child_task->quantum;
 
     /* Initialize process hierarchy */
     child_task->parent = current();

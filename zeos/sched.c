@@ -22,7 +22,7 @@ struct list_head readyqueue;
 
 /* Scheduling variables */
 static int current_quantum = 0;
-#define DEFAULT_QUANTUM 5
+#define DEFAULT_QUANTUM 100
 
 /* get_DIR - Returns the Page Directory address for task 't' */
 page_table_entry *get_DIR(struct task_struct *t) {
@@ -61,9 +61,8 @@ void init_idle(void) {
     idle_task = list_head_to_task_struct(free_task);
     idle_task->PID = 0;
 
-    /* Initialize scheduling fields */
+    /* Initialize q*/
     idle_task->quantum = DEFAULT_QUANTUM;
-    idle_task->remaining_ticks = DEFAULT_QUANTUM;
 
     /* Initialize process hierarchy */
     idle_task->parent = NULL;
@@ -80,8 +79,6 @@ void init_idle(void) {
     idle_union->stack[KERNEL_STACK_SIZE - 1] = (unsigned long)&cpu_idle;
     idle_union->stack[KERNEL_STACK_SIZE - 2] = 0;
     idle_task->kernel_esp = (unsigned long)&idle_union->stack[KERNEL_STACK_SIZE - 2];
-
-    printk_color("Idle task initialized successfully\n", INFO_COLOR);
 }
 
 void init_task1(void) {
@@ -94,7 +91,6 @@ void init_task1(void) {
 
     /* Initialize scheduling fields */
     init_task->quantum = DEFAULT_QUANTUM;
-    init_task->remaining_ticks = DEFAULT_QUANTUM;
     current_quantum = DEFAULT_QUANTUM;
 
     /* Initialize process hierarchy */
@@ -113,8 +109,6 @@ void init_task1(void) {
     tss.esp0 = KERNEL_ESP(init_union);
     writeMSR(0x175, (unsigned long)tss.esp0);
     set_cr3(init_task->dir_pages_baseAddr);
-
-    printk_color("Task 1 initialized successfully\n", INFO_COLOR);
 }
 
 void init_queues() {
@@ -182,7 +176,6 @@ void sched_next_rr(void) {
     if (list_empty(&readyqueue)) {
         /* No processes in ready queue, keep current or switch to idle */
         if (current() != idle_task) {
-            printk_color("[SCHED] No ready processes, switching to idle\n", INFO_COLOR);
             current_quantum = get_quantum(idle_task);
             task_switch((union task_union *)idle_task);
         }
@@ -197,19 +190,15 @@ void sched_next_rr(void) {
     /* Restore quantum for the new process */
     current_quantum = get_quantum(next_task);
 
-    /* Debug message */
+    /* Simple debug message */
     char buffer[12];
-    printk_color("[SCHED] Context switch: ", INFO_COLOR);
-    printk_color("PID ", INFO_COLOR);
+    printk_color("SCHED: ", INFO_COLOR);
     itoa(current()->PID, buffer);
     printk_color(buffer, INFO_COLOR);
-    printk_color(" -> PID ", INFO_COLOR);
+    printk_color("->", INFO_COLOR);
     itoa(next_task->PID, buffer);
     printk_color(buffer, INFO_COLOR);
-    printk_color(" (quantum=", INFO_COLOR);
-    itoa(current_quantum, buffer);
-    printk_color(buffer, INFO_COLOR);
-    printk_color(")\n", INFO_COLOR);
+    printk_color("\n", INFO_COLOR);
 
     /* Switch to new process */
     task_switch((union task_union *)next_task);
@@ -224,22 +213,9 @@ void schedule(void) {
         return;
     }
 
-    struct task_struct *current_task = current();
-
-    /* Debug message */
-    char buffer[12];
-    printk_color("[SCHED] Quantum expired for PID ", WARNING_COLOR);
-    itoa(current_task->PID, buffer);
-    printk_color(buffer, WARNING_COLOR);
-    printk_color(", scheduling...\n", WARNING_COLOR);
-
     /* If current is not idle, put it back in ready queue */
-    if (current_task != idle_task) {
-        update_process_state_rr(current_task, &readyqueue);
-        printk_color("[SCHED] Process PID ", INFO_COLOR);
-        itoa(current_task->PID, buffer);
-        printk_color(buffer, INFO_COLOR);
-        printk_color(" moved to ready queue\n", INFO_COLOR);
+    if (current() != idle_task) {
+        update_process_state_rr(current(), &readyqueue);
     }
 
     /* Schedule next process */
