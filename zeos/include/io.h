@@ -39,11 +39,54 @@
 /** Screen functions **/
 /**********************/
 
+/**
+ * @brief Read byte from I/O port.
+ *
+ * This function reads a byte from the specified I/O port.
+ * @param port I/O port number to read from.
+ * @return Byte value read from the port.
+ */
 Byte inb(unsigned short port);
+
+/**
+ * @brief Print character with color.
+ *
+ * This function prints a single character to the screen at the current
+ * cursor position with the specified color.
+ * @param c Character to print.
+ * @param color Color attribute for the character.
+ */
 void printc(char c, Word color);
+
+/**
+ * @brief Print character at specific position with color.
+ *
+ * This function prints a character at the specified screen coordinates
+ * with the given color.
+ * @param x X coordinate (column) on the screen.
+ * @param y Y coordinate (row) on the screen.
+ * @param c Character to print.
+ * @param color Color attribute for the character.
+ */
 void printc_xy(Byte x, Byte y, char c, Word color);
+
+/**
+ * @brief Print string to screen.
+ *
+ * This function prints a null-terminated string to the screen at the
+ * current cursor position using the default color.
+ * @param string Null-terminated string to print.
+ */
 void printk(char *string);
 
+/**
+ * @brief Print string with color.
+ *
+ * This function prints a null-terminated string to the screen with
+ * the specified color.
+ * @param string Null-terminated string to print.
+ * @param color Color attribute for the text.
+ */
 void printk_color(char *string, Word color);
 
 #endif // __IO_H__

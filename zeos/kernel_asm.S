@@ -5,8 +5,7 @@
 #include <asm.h>
 #include <segment.h>
 
-
- ENTRY(writeMSR)
+ENTRY(writeMSR)
     pushl %ebp
     movl %esp, %ebp
     movl 0x8(%ebp), %ecx
@@ -46,10 +45,6 @@ ENTRY(switch_context)
     ret
 
 
-/*
- * Handles the return from fork for a child process.
- * Ensures the child returns 0 (instead of the parent's PID) by setting %eax to 0.
- */
 ENTRY(ret_from_fork)
     movl $0, %eax
     ret

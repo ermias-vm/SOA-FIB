@@ -123,27 +123,15 @@ int sys_fork() {
     // We need to prepare the child's stack so that when task_switch occurs,
     // the child can return correctly to user space with %eax = 0
 
-    // The child's hardware context is already copied from parent
-    // But we need the child to return 0 instead of PID
-
-    // Prepare child's stack according to the pattern used in idle task
-    // See init_idle() in sched.c for reference
-
     // Place return address and fake ebp at the end of the stack
     child_union->stack[KERNEL_STACK_SIZE - 1] = (unsigned long)ret_from_fork;
     child_union->stack[KERNEL_STACK_SIZE - 2] = 0; // fake ebp
-
-    // The kernel_esp should point to the fake ebp
     child_task->kernel_esp = (unsigned long)&child_union->stack[KERNEL_STACK_SIZE - 2];
 
     // When task_switch occurs to the child:
     // 1. switch_context will restore ebp (fake ebp = 0)
     // 2. ret will jump to ret_from_fork
     // 3. ret_from_fork will restore the complete context and return to user space
-
-    // IMPORTANT: The hardware context copied from parent contains %eax = PID
-    // ret_from_fork must modify this so the child returns 0
-    // This is done in the ret_from_fork implementation
 
     /* === STEP k: Insert into ready queue === */
     list_add_tail(&child_task->list, &readyqueue);
