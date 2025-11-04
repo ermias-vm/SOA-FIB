@@ -47,7 +47,6 @@ int allocate_DIR(struct task_struct *t) {
 void cpu_idle(void) {
     __asm__ __volatile__("sti" : : : "memory");
 
-    idle_to_init_test();
     while (1) {
         ;
     }
@@ -145,7 +144,6 @@ void inner_task_switch(union task_union *new) {
     switch_context(&current()->kernel_esp, new->task.kernel_esp);
 }
 
-
 int get_next_pid(void) {
     return ++next_pid; // Pre-increment to get: 2, 3, 4, etc.
 }
@@ -184,6 +182,7 @@ void sched_next_rr(void) {
     if (list_empty(&readyqueue)) {
         /* No processes in ready queue, keep current or switch to idle */
         if (current() != idle_task) {
+            printk_color("[SCHED] No ready processes, switching to idle\n", INFO_COLOR);
             current_quantum = get_quantum(idle_task);
             task_switch((union task_union *)idle_task);
         }
@@ -197,6 +196,20 @@ void sched_next_rr(void) {
 
     /* Restore quantum for the new process */
     current_quantum = get_quantum(next_task);
+
+    /* Debug message */
+    char buffer[12];
+    printk_color("[SCHED] Context switch: ", INFO_COLOR);
+    printk_color("PID ", INFO_COLOR);
+    itoa(current()->PID, buffer);
+    printk_color(buffer, INFO_COLOR);
+    printk_color(" -> PID ", INFO_COLOR);
+    itoa(next_task->PID, buffer);
+    printk_color(buffer, INFO_COLOR);
+    printk_color(" (quantum=", INFO_COLOR);
+    itoa(current_quantum, buffer);
+    printk_color(buffer, INFO_COLOR);
+    printk_color(")\n", INFO_COLOR);
 
     /* Switch to new process */
     task_switch((union task_union *)next_task);
@@ -213,28 +226,22 @@ void schedule(void) {
 
     struct task_struct *current_task = current();
 
+    /* Debug message */
+    char buffer[12];
+    printk_color("[SCHED] Quantum expired for PID ", WARNING_COLOR);
+    itoa(current_task->PID, buffer);
+    printk_color(buffer, WARNING_COLOR);
+    printk_color(", scheduling...\n", WARNING_COLOR);
+
     /* If current is not idle, put it back in ready queue */
     if (current_task != idle_task) {
         update_process_state_rr(current_task, &readyqueue);
+        printk_color("[SCHED] Process PID ", INFO_COLOR);
+        itoa(current_task->PID, buffer);
+        printk_color(buffer, INFO_COLOR);
+        printk_color(" moved to ready queue\n", INFO_COLOR);
     }
 
     /* Schedule next process */
     sched_next_rr();
-}
-
-/* TEST FUNCTIONS */
-
-void init_function(void) {
-    __asm__ __volatile__("sti" : : : "memory");
-
-    printk_color("\n[INIT_TASK] In init_function\n", INFO_COLOR);
-    while (1) {
-        ;
-    }
-}
-
-void idle_to_init_test(void) {
-    printk_color("\n[IDLE_TASK] In cpu_idle\n", INFO_COLOR);
-    printk_color("[IDLE_TASK] Switching to init task\n", INFO_COLOR);
-    task_switch((union task_union *)init_task);
 }

@@ -13,7 +13,6 @@
 #define KERNEL_STACK_SIZE 1024
 
 enum state_t { ST_RUN, ST_READY, ST_BLOCKED };
-
 struct task_struct {
     int PID; /* Process ID. This MUST be the first field of the struct. */
     page_table_entry *dir_pages_baseAddr;
@@ -229,21 +228,5 @@ void set_quantum(struct task_struct *t, int new_quantum);
  * @return The next available PID.
  */
 int get_next_pid(void);
-
-
-/* TEST FUNCTIONS */
-/**
- * @brief Initialize test function.
- *
- * This function initializes test-related functionality for the scheduler.
- */
-void init_function(void);
-
-/**
- * @brief Test function for idle to init transition.
- *
- * This function tests the transition from idle task to init task.
- */
-void idle_to_init_test(void);
 
 #endif /* __SCHED_H__ */

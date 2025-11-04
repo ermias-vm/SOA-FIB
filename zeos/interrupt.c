@@ -95,7 +95,6 @@ void keyboard_routine() {
             pressedKey = 'C';
         }
 
-        testTaskSwitch(pressedKey); // Test de cambio de contexto
         printc_xy(0, 0, pressedKey, INFO_COLOR);
     }
 }
@@ -120,21 +119,5 @@ void pageFault_routine(unsigned int eip) {
     printk_color("  memory address and will be terminated.\n", INFO_COLOR);
     printk_color("===============================================\n", ERROR_COLOR);
     while (1) {
-    }
-}
-
-void testTaskSwitch(char key) { // TODO: Remove 
-    if (key == '0') {
-        printk_color("\n[BEFORE_TASK_SWITCH] Switching to idle task\n", INFO_COLOR);
-        task_switch((union task_union *)idle_task);
-        printk_color("\n[AFTER_TASK_SWITCH] Switched to idle task\n",
-                     INFO_COLOR); // Should not reach here
-    }
-
-    else if (key == '1') {
-        printk_color("\n[BEFORE_TASK_SWITCH] Switching to init task\n", INFO_COLOR);
-        task_switch((union task_union *)init_task);
-        printk_color("\n[AFTER_TASK_SWITCH] Switched to init task\n",
-                     INFO_COLOR); // Should not reach here
     }
 }
