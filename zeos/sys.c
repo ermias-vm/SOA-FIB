@@ -32,7 +32,6 @@ int sys_getpid() {
 }
 
 int ret_from_fork() {
-    printk_color("FORK: Child process starting execution\n", INFO_COLOR);
     return 0;
 }
 
@@ -201,22 +200,13 @@ void sys_exit() {
     printk_color(buffer, INFO_COLOR);
     printk_color(" exiting\n", INFO_COLOR);
 
-    /* === STEP a: Free process resources === */
-    // Free data pages
-    page_table_entry *PT = get_PT(current_task);
-    for (int page = 0; page < NUM_PAG_DATA; page++) {
-        int frame = get_frame(PT, PAG_LOG_INIT_DATA + page);
-        if (frame >= 0) {
-            free_frame(frame);
-        }
+    // If the process is task 1, it cannot exit
+    if (current_task->PID == 1) {
+        printk("The task 1 cannot exit\n");
+        return;
     }
 
-    /* === STEP b: Update process hierarchy === */
-    // Remove from parent's children list if parent exists
-    if (current_task->parent != NULL) {
-        list_del(&current_task->child_list);
-    }
-
+    /* === STEP 1: Handle orphaned children === */
     // Move children to idle process
     struct list_head *pos, *tmp;
     list_for_each_safe(pos, tmp, &current_task->children) {
@@ -226,10 +216,26 @@ void sys_exit() {
         list_add_tail(&child->child_list, &idle_task->children);
     }
 
-    /* === STEP c: Return task_struct to free queue === */
-    update_process_state_rr(current_task, &freequeue);
+    /* === STEP 2: Remove from parent's children list === */
+    if (current_task->parent != NULL) {
+        list_del(&current_task->child_list);
+    }
 
-    /* === STEP d: Schedule new process === */
+    /* === STEP 3: Free process resources === */
+    // Free data pages and clear page table entries
+    page_table_entry *PT = get_PT(current_task);
+    for (int page = 0; page < NUM_PAG_DATA; page++) {
+        int frame = get_frame(PT, PAG_LOG_INIT_DATA + page);
+        if (frame >= 0) {
+            free_frame(frame);
+            del_ss_pag(PT, PAG_LOG_INIT_DATA + page);
+        }
+    }
+
+    /* === STEP 4: Return task_struct to free queue === */
+    list_add_tail(&current_task->list, &freequeue);
+
+    /* === STEP 5: Schedule new process === */
     sched_next_rr();
 
     // This point should never be reached
@@ -238,82 +244,33 @@ void sys_exit() {
 void sys_block() {
     struct task_struct *current_task = current();
 
-    printk_color("BLOCK: Process attempting to block\n", INFO_COLOR);
-
-    /* Check for pending unblocks */
-    if (current_task->pending_unblocks > 0) {
+    int pending = current_task->pending_unblocks;
+    if (pending == 0) {
+        current_task->status = ST_BLOCKED;
+        list_add_tail(&current_task->list, &blockedqueue);
+        scheduler();
+    } else {
         current_task->pending_unblocks--;
-        printk_color("BLOCK: Had pending unblocks, not blocking\n", WARNING_COLOR);
-        return; // Don't block, continue execution
     }
-
-    /* Block the process */
-    printk_color("BLOCK: Blocking process\n", INFO_COLOR);
-    current_task->status = ST_BLOCKED;
-    list_add_tail(&current_task->list, &blockedqueue);
-
-    /* Schedule next process */
-    schedule();
 }
 int sys_unblock(int pid) {
     struct task_struct *current_task = current();
-    struct task_struct *target_task = NULL;
-
-    printk_color("UNBLOCK: Received PID parameter: ", WARNING_COLOR);
-    char buffer[12];
-    itoa(pid, buffer);
-    printk_color(buffer, WARNING_COLOR);
-    printk_color("\n", WARNING_COLOR);
-
-    printk_color("UNBLOCK: Looking for child with PID ", INFO_COLOR);
-    itoa(pid, buffer);
-    printk_color(buffer, INFO_COLOR);
-    printk_color("\n", INFO_COLOR);
-
-    // Count and list children for debugging
-    int child_count = 0;
     struct list_head *pos;
-    list_for_each(pos, &current_task->children) {
-        struct task_struct *child = list_entry(pos, struct task_struct, child_list);
-        child_count++;
-        printk_color("UNBLOCK: Found child with PID ", WARNING_COLOR);
-        itoa(child->PID, buffer);
-        printk_color(buffer, WARNING_COLOR);
-        printk_color("\n", WARNING_COLOR);
-    }
 
-    printk_color("UNBLOCK: Total children found: ", INFO_COLOR);
-    itoa(child_count, buffer);
-    printk_color(buffer, INFO_COLOR);
-    printk_color("\n", INFO_COLOR);
-
-    /* Find the target process in children list */
+    /* Search for child with given PID */
     list_for_each(pos, &current_task->children) {
         struct task_struct *child = list_entry(pos, struct task_struct, child_list);
         if (child->PID == pid) {
-            target_task = child;
-            break;
+            if (child->status == ST_BLOCKED) {
+                child->status = ST_READY;
+                list_del(&child->list);
+                list_add_tail(&child->list, &readyqueue);
+                return 0;
+            } else {
+                child->pending_unblocks++;
+                return 0;
+            }
         }
     }
-
-    /* Check if target is a child of current process */
-    if (target_task == NULL) {
-        printk_color("UNBLOCK: Process not found or not a child\n", ERROR_COLOR);
-        return -1; // Process not found or not a child
-    }
-
-    /* Check if target is blocked */
-    if (target_task->status == ST_BLOCKED) {
-        /* Unblock the process */
-        target_task->status = ST_READY;
-        list_del(&target_task->list);
-        list_add_tail(&target_task->list, &readyqueue);
-        printk_color("UNBLOCK: Process successfully unblocked\n", DEFAULT_COLOR);
-    } else {
-        /* Process not blocked, increase pending unblocks */
-        target_task->pending_unblocks++;
-        printk_color("UNBLOCK: Process not blocked, added pending unblock\n", WARNING_COLOR);
-    }
-
-    return 0;
+    return -1;
 }

@@ -192,6 +192,7 @@ void update_process_state_rr(struct task_struct *t, struct list_head *dst_queue)
 void sched_next_rr(void) {
     if (list_empty(&readyqueue)) {
         /* No processes in ready queue, switch to idle if not already */
+        printk_color("SCHED: Ready queue empty, switching to idle\n", WARNING_COLOR);
         if (current() != idle_task) {
             idle_task->status = ST_RUN;
             current_quantum = get_quantum(idle_task);
@@ -199,6 +200,7 @@ void sched_next_rr(void) {
         } else {
             /* Already idle, just reset quantum */
             current_quantum = get_quantum(idle_task);
+            printk_color("SCHED: Already idle, reset quantum\n", INFO_COLOR);
         }
         return;
     }
@@ -241,6 +243,9 @@ void schedule(void) {
         printk_color(" PID=", INFO_COLOR);
         itoa(current()->PID, buffer);
         printk_color(buffer, INFO_COLOR);
+        printk_color(" ready_empty=", INFO_COLOR);
+        itoa(list_empty(&readyqueue), buffer);
+        printk_color(buffer, INFO_COLOR);
         printk_color("\n", INFO_COLOR);
     }
 
@@ -248,6 +253,15 @@ void schedule(void) {
     if (!needs_sched_rr()) {
         return;
     }
+
+    printk_color("SCHED: Context switch needed, current_quantum=", WARNING_COLOR);
+    char buffer[12];
+    itoa(current_quantum, buffer);
+    printk_color(buffer, WARNING_COLOR);
+    printk_color(" PID=", WARNING_COLOR);
+    itoa(current()->PID, buffer);
+    printk_color(buffer, WARNING_COLOR);
+    printk_color("\n", WARNING_COLOR);
 
     /* Context switch is required */
     struct task_struct *current_task = current();

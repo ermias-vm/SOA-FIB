@@ -232,7 +232,7 @@ void update_sched_data_rr();
  * appropriate scheduling policy functions to determine if a context
  * switch is needed and performing it if necessary.
  */
-void schedule();
+void scheduler();
 
 /**
  * @brief Get quantum value for a task.

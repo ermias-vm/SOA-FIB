@@ -61,6 +61,82 @@ void execute_zeos_tests(void) {
     print_final_summary();
 }
 
+// Helper functions
+void print_test_header(char *test_name) {
+    char *msg = "\n--- Testing: ";
+    write(1, msg, strlen(msg));
+    write(1, test_name, strlen(test_name));
+    msg = " ---\n";
+    write(1, msg, strlen(msg));
+}
+
+void print_test_result(char *test_name, int passed) {
+    char *msg;
+    tests_run++;
+    if (passed) {
+        tests_passed++;
+        msg = "\n[RESULT] ";
+        write(1, msg, strlen(msg));
+        write(1, test_name, strlen(test_name));
+        msg = ": PASSED\n";
+        write(1, msg, strlen(msg));
+    } else {
+        msg = "[RESULT] ";
+        write(1, msg, strlen(msg));
+        write(1, test_name, strlen(test_name));
+        msg = ": FAILED\n";
+        write(1, msg, strlen(msg));
+    }
+}
+
+void print_final_summary(void) {
+    char *msg;
+
+    msg = "\n\n";
+    write(1, msg, strlen(msg));
+
+    msg = "=========================================\n";
+    write(1, msg, strlen(msg));
+
+    msg = "           TEST SUMMARY                  \n";
+    write(1, msg, strlen(msg));
+
+    msg = "=========================================\n";
+    write(1, msg, strlen(msg));
+
+    msg = "Tests run: ";
+    write(1, msg, strlen(msg));
+    itoa(tests_run, buffer);
+    write(1, buffer, strlen(buffer));
+    msg = "\n";
+    write(1, msg, strlen(msg));
+
+    msg = "Tests passed: ";
+    write(1, msg, strlen(msg));
+    itoa(tests_passed, buffer);
+    write(1, buffer, strlen(buffer));
+    msg = "\n";
+    write(1, msg, strlen(msg));
+
+    msg = "Tests failed: ";
+    write(1, msg, strlen(msg));
+    itoa(tests_run - tests_passed, buffer);
+    write(1, buffer, strlen(buffer));
+    msg = "\n";
+    write(1, msg, strlen(msg));
+
+    if (tests_passed == tests_run) {
+        msg = "\n*** ALL TESTS PASSED! ***\n";
+        write(1, msg, strlen(msg));
+    } else {
+        msg = "\n*** SOME TESTS FAILED! ***\n";
+        write(1, msg, strlen(msg));
+    }
+
+    msg = "=========================================\n";
+    write(1, msg, strlen(msg));
+}
+
 void test_write_syscall(void) {
     print_test_header("WRITE SYSCALL");
 
@@ -278,82 +354,6 @@ void test_pagefault_exception(void) {
     msg = "[TEST] ERROR: Page fault was not triggered!\n";
     write(1, msg, strlen(msg));
     print_test_result("Page Fault Exception", 0);
-}
-
-// Helper functions
-void print_test_header(char *test_name) {
-    char *msg = "\n--- Testing: ";
-    write(1, msg, strlen(msg));
-    write(1, test_name, strlen(test_name));
-    msg = " ---\n";
-    write(1, msg, strlen(msg));
-}
-
-void print_test_result(char *test_name, int passed) {
-    char *msg;
-    tests_run++;
-    if (passed) {
-        tests_passed++;
-        msg = "\n[RESULT] ";
-        write(1, msg, strlen(msg));
-        write(1, test_name, strlen(test_name));
-        msg = ": PASSED\n";
-        write(1, msg, strlen(msg));
-    } else {
-        msg = "[RESULT] ";
-        write(1, msg, strlen(msg));
-        write(1, test_name, strlen(test_name));
-        msg = ": FAILED\n";
-        write(1, msg, strlen(msg));
-    }
-}
-
-void print_final_summary(void) {
-    char *msg;
-
-    msg = "\n\n";
-    write(1, msg, strlen(msg));
-
-    msg = "=========================================\n";
-    write(1, msg, strlen(msg));
-
-    msg = "           TEST SUMMARY                  \n";
-    write(1, msg, strlen(msg));
-
-    msg = "=========================================\n";
-    write(1, msg, strlen(msg));
-
-    msg = "Tests run: ";
-    write(1, msg, strlen(msg));
-    itoa(tests_run, buffer);
-    write(1, buffer, strlen(buffer));
-    msg = "\n";
-    write(1, msg, strlen(msg));
-
-    msg = "Tests passed: ";
-    write(1, msg, strlen(msg));
-    itoa(tests_passed, buffer);
-    write(1, buffer, strlen(buffer));
-    msg = "\n";
-    write(1, msg, strlen(msg));
-
-    msg = "Tests failed: ";
-    write(1, msg, strlen(msg));
-    itoa(tests_run - tests_passed, buffer);
-    write(1, buffer, strlen(buffer));
-    msg = "\n";
-    write(1, msg, strlen(msg));
-
-    if (tests_passed == tests_run) {
-        msg = "\n*** ALL TESTS PASSED! ***\n";
-        write(1, msg, strlen(msg));
-    } else {
-        msg = "\n*** SOME TESTS FAILED! ***\n";
-        write(1, msg, strlen(msg));
-    }
-
-    msg = "=========================================\n";
-    write(1, msg, strlen(msg));
 }
 
 void test_fork_syscall(void) {
@@ -638,12 +638,6 @@ void test_block_unblock_syscalls(void) {
         } else {
             msg = "[PARENT] Unblock failed\n";
             write(1, msg, strlen(msg));
-        }
-
-        // Wait for child to finish
-        start_time = gettime();
-        while (gettime() - start_time < 10) {
-            // Wait for child
         }
 
         int passed = (result == 0);

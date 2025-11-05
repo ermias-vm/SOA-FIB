@@ -107,7 +107,7 @@ void keyboard_routine() {
 void clock_routine(void) {
     zeos_ticks++;
     zeos_show_clock();
-    schedule();
+    scheduler();
 }
 
 void pageFault_routine(unsigned int eip) {
