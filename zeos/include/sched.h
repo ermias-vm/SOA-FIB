@@ -15,6 +15,9 @@
 /* Size of the kernel stack for each process in words */
 #define KERNEL_STACK_SIZE 1024
 
+/* Default quantum assigned to new processes */
+#define DEFAULT_QUANTUM 1000
+
 /* Process states for scheduling */
 enum state_t {
     ST_RUN,    /* Currently running */
@@ -24,21 +27,22 @@ enum state_t {
 
 /* Process control block structure */
 struct task_struct {
-    /* Process identifier - MUST be first field for current() function */
+    /* Process identifier*/
     int PID;
 
-    /* Memory management */
-    page_table_entry *dir_pages_baseAddr; /* Page directory base address */
+    /* Page directory base address */
+    page_table_entry *dir_pages_baseAddr;
 
-    /* Process lists management */
-    struct list_head list; /* Entry in process queues */
+    /* Entry in process queues */
+    struct list_head list;
 
-    /* Context switching */
-    unsigned long kernel_esp; /* Kernel stack pointer */
+    /* Kernel stack pointer */
+    unsigned long kernel_esp;
 
-    /* Round-robin scheduling fields */
-    int quantum;         /* Time quantum for this process */
-    enum state_t status; /* Current process state */
+    /* Time quantum for this process */
+    int quantum;
+    /* Current process state */
+    enum state_t status;
 
     /* Process hierarchy fields */
     struct task_struct *parent;  /* Pointer to parent process */
@@ -51,8 +55,10 @@ struct task_struct {
 
 /* Union for process data and stack */
 union task_union {
-    struct task_struct task;                /* Process control block */
-    unsigned long stack[KERNEL_STACK_SIZE]; /* Kernel stack for the process */
+    /* Process control block */
+    struct task_struct task;
+    /* Kernel stack for the process */
+    unsigned long stack[KERNEL_STACK_SIZE];
 };
 
 /* Global array of all possible tasks in the system */
@@ -65,7 +71,7 @@ extern struct task_struct *idle_task;
 extern struct task_struct *init_task;
 
 /* Calculate kernel stack pointer for a task */
-#define KERNEL_ESP(t) (DWord) & (t)->stack[KERNEL_STACK_SIZE]
+#define KERNEL_ESP(task) (DWord) & (task)->stack[KERNEL_STACK_SIZE]
 
 /* Initial ESP for the first user process */
 #define INITIAL_ESP KERNEL_ESP(&task[1])
@@ -85,9 +91,6 @@ void init_task1(void);
  * processes are ready to execute. The idle task runs with the lowest priority.
  */
 void init_idle(void);
-
-/* Default quantum assigned to new processes */
-#define DEFAULT_QUANTUM 100
 
 /* Global process queues - defined in sched.c, accessible from other modules */
 extern struct list_head freequeue;    /* Queue for free (unused) task structures */
@@ -166,30 +169,29 @@ struct task_struct *list_head_to_task_struct(struct list_head *l);
  *
  * This function allocates and initializes a page directory for the specified task.
  * Sets up the memory management structures for the process.
- * @param t Pointer to the task structure.
+ * @param task Pointer to the task structure.
  * @return 0 on success, negative error code on failure.
  */
-int allocate_DIR(struct task_struct *t);
+int allocate_DIR(struct task_struct *taskask);
 
 /**
  * @brief Get page table for a task.
  *
  * This function returns a pointer to the page table of the specified task.
- * @param t Pointer to the task structure.
+ * @param task Pointer to the task structure.
  * @return Pointer to the task's page table.
  */
-page_table_entry *get_PT(struct task_struct *t);
+page_table_entry *get_PT(struct task_struct *task);
 
 /**
  * @brief Get page directory for a task.
  *
  * This function returns a pointer to the page directory of the specified task.
- * @param t Pointer to the task structure.
+ * @param task Pointer to the task structure.
  * @return Pointer to the task's page directory.
  */
-page_table_entry *get_DIR(struct task_struct *t);
+page_table_entry *get_DIR(struct task_struct *task);
 
-/* Headers for the scheduling policy */
 /**
  * @brief Schedule next process using round-robin policy.
  *
@@ -203,10 +205,10 @@ void sched_next_rr();
  *
  * This function updates the state of a process and moves it to the
  * appropriate queue in the round-robin scheduler.
- * @param t Pointer to the task structure to update.
- * @param dest Destination queue for the process.
+ * @param task Pointer to the task structure to update.
+ * @param dest_queue Destination queue for the process.
  */
-void update_process_state_rr(struct task_struct *t, struct list_head *dest);
+void update_process_state_rr(struct task_struct *taskask, struct list_head *dest_queue);
 
 /**
  * @brief Check if scheduling is needed.
@@ -238,19 +240,19 @@ void scheduler();
  * @brief Get quantum value for a task.
  *
  * This function returns the quantum value assigned to the specified task.
- * @param t Pointer to the task structure.
+ * @param task Pointer to the task structure.
  * @return Quantum value of the task.
  */
-int get_quantum(struct task_struct *t);
+int get_quantum(struct task_struct *task);
 
 /**
  * @brief Set quantum value for a task.
  *
  * This function sets the quantum value for the specified task.
- * @param t Pointer to the task structure.
+ * @param task Pointer to the task structure.
  * @param new_quantum New quantum value to set.
  */
-void set_quantum(struct task_struct *t, int new_quantum);
+void set_quantum(struct task_struct *taskask, int new_quantum);
 
 /* PID management */
 /**

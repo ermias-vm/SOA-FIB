@@ -1,4 +1,5 @@
 #include <libc.h>
+#include <zeos_test.h>
 char buff[24];
 
 int pid;
@@ -14,9 +15,9 @@ __attribute__((__section__(".text.main"))) int main(void) {
      * privileged one, and so it will raise an exception */
     /* __asm__ __volatile__ ("mov %0, %%cr3"::"r" (0) ); */
 
-    // Execute comprehensive test suite
-    execute_zeos_tests();
-
+    // Execute test suite
+    // execute_zeos_tests();
+    fork();
     while (1) {
     }
 }

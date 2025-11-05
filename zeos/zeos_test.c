@@ -339,23 +339,6 @@ void test_getpid_syscall(void) {
     print_test_result("getpid() syscall", passed);
 }
 
-void test_pagefault_exception(void) {
-    print_test_header("PAGE FAULT EXCEPTION");
-    char *msg;
-
-    msg = "[TEST] Testing Page Fault Exception...\n";
-    write(1, msg, strlen(msg));
-
-    // This will cause a page fault and should not return
-    volatile char *p = (volatile char *)0x0;
-    *p = 'x';
-
-    // This line should never be reached
-    msg = "[TEST] ERROR: Page fault was not triggered!\n";
-    write(1, msg, strlen(msg));
-    print_test_result("Page Fault Exception", 0);
-}
-
 void test_fork_syscall(void) {
     RESET_ERRNO(); // Reset errno at the start of test
 
@@ -647,4 +630,21 @@ void test_block_unblock_syscalls(void) {
         write(1, msg, strlen(msg));
         print_test_result("block/unblock syscalls", 0);
     }
+}
+
+void test_pagefault_exception(void) {
+    print_test_header("PAGE FAULT EXCEPTION");
+    char *msg;
+
+    msg = "[TEST] Testing Page Fault Exception...\n";
+    write(1, msg, strlen(msg));
+
+    // This will cause a page fault and should not return
+    volatile char *p = (volatile char *)0x0;
+    *p = 'x';
+
+    // This line should never be reached
+    msg = "[TEST] ERROR: Page fault was not triggered!\n";
+    write(1, msg, strlen(msg));
+    print_test_result("Page Fault Exception", 0);
 }
