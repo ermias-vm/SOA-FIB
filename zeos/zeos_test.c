@@ -624,6 +624,13 @@ void test_block_unblock_syscalls(void) {
         msg = "[PARENT] Unblocking child process\n";
         write(1, msg, strlen(msg));
 
+        msg = "[PARENT] About to unblock PID: ";
+        write(1, msg, strlen(msg));
+        itoa(pid, buffer);
+        write(1, buffer, strlen(buffer));
+        msg = "\n";
+        write(1, msg, strlen(msg));
+
         int result = unblock(pid);
         if (result == 0) {
             msg = "[PARENT] Unblock successful\n";

@@ -147,8 +147,9 @@ extern void switch_context(unsigned long *current_esp, unsigned long new_esp);
  *
  * This function is used by child processes created by fork() to return
  * to user space with the appropriate return value (0 for child).
+ * @return Always returns 0 in the child process after fork.
  */
-extern void ret_from_fork(void);
+int ret_from_fork(void);
 
 /**
  * @brief Convert list_head to task_struct.

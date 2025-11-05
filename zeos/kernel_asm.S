@@ -43,8 +43,3 @@ ENTRY(switch_context)
     movl 8(%esp), %esp          # esp = new_esp
     popl %ebp
     ret
-
-
-ENTRY(ret_from_fork)
-    movl $0, %eax
-    ret

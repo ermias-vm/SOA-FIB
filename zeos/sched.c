@@ -252,8 +252,8 @@ void schedule(void) {
     /* Context switch is required */
     struct task_struct *current_task = current();
 
-    /* Update the readyqueue, if current process is not the idle process */
-    if (current_task != idle_task) {
+    /* Update the readyqueue, only if current process is not idle and not blocked */
+    if (current_task != idle_task && current_task->status != ST_BLOCKED) {
         current_task->status = ST_READY;
         update_process_state_rr(current_task, &readyqueue);
     }

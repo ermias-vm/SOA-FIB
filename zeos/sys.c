@@ -31,8 +31,15 @@ int sys_getpid() {
     return current()->PID;
 }
 
+int ret_from_fork() {
+    printk_color("FORK: Child process starting execution\n", INFO_COLOR);
+    return 0;
+}
+
 int sys_fork() {
     int PID = -1;
+
+    printk_color("FORK: Creating new process\n", INFO_COLOR);
 
     /*=== STEP a: Get a free task_struct ===*/
     if (list_empty(&freequeue)) {
@@ -133,23 +140,25 @@ int sys_fork() {
     child_task->pending_unblocks = 0;
 
     /* === STEP i & j: Prepare registers and child stack for task_switch === */
-    // We need to prepare the child's stack so that when task_switch occurs,
-    // the child can return correctly to user space with %eax = 0
+    // Use the same approach as backup: simple stack initialization
+    // The child will start execution from a clean state
 
-    // Place return address and fake ebp at the end of the stack
-    child_union->stack[KERNEL_STACK_SIZE - 1] = (unsigned long)ret_from_fork;
-    child_union->stack[KERNEL_STACK_SIZE - 2] = 0; // fake ebp
-    child_task->kernel_esp = (unsigned long)&child_union->stack[KERNEL_STACK_SIZE - 2];
+    union task_union *child_union_ptr = (union task_union *)child_task;
 
-    // When task_switch occurs to the child:
-    // 1. switch_context will restore ebp (fake ebp = 0)
-    // 2. ret will jump to ret_from_fork
-    // 3. ret_from_fork will restore the complete context and return to user space
+    // Set up fake ebp and return address like in backup
+    child_union_ptr->stack[KERNEL_STACK_SIZE - 19] = (unsigned long)0;             // fake ebp
+    child_union_ptr->stack[KERNEL_STACK_SIZE - 18] = (unsigned long)ret_from_fork; // return address
+    child_task->kernel_esp = (unsigned int)&(child_union_ptr->stack[KERNEL_STACK_SIZE - 19]);
 
     /* === STEP k: Insert into ready queue === */
     list_add_tail(&child_task->list, &readyqueue);
 
     /* === STEP l: Return child PID === */
+    printk_color("FORK: Child created with PID ", INFO_COLOR);
+    char buffer[12];
+    itoa(PID, buffer);
+    printk_color(buffer, INFO_COLOR);
+    printk_color("\n", INFO_COLOR);
     return PID; // Parent returns child's PID
 }
 
@@ -185,6 +194,12 @@ int sys_gettime() {
 
 void sys_exit() {
     struct task_struct *current_task = current();
+
+    printk_color("EXIT: Process ", INFO_COLOR);
+    char buffer[12];
+    itoa(current_task->PID, buffer);
+    printk_color(buffer, INFO_COLOR);
+    printk_color(" exiting\n", INFO_COLOR);
 
     /* === STEP a: Free process resources === */
     // Free data pages
@@ -223,25 +238,56 @@ void sys_exit() {
 void sys_block() {
     struct task_struct *current_task = current();
 
+    printk_color("BLOCK: Process attempting to block\n", INFO_COLOR);
+
     /* Check for pending unblocks */
     if (current_task->pending_unblocks > 0) {
         current_task->pending_unblocks--;
+        printk_color("BLOCK: Had pending unblocks, not blocking\n", WARNING_COLOR);
         return; // Don't block, continue execution
     }
 
     /* Block the process */
-    update_process_state_rr(current_task, &blockedqueue);
+    printk_color("BLOCK: Blocking process\n", INFO_COLOR);
+    current_task->status = ST_BLOCKED;
+    list_add_tail(&current_task->list, &blockedqueue);
 
     /* Schedule next process */
-    sched_next_rr();
+    schedule();
 }
-
 int sys_unblock(int pid) {
     struct task_struct *current_task = current();
     struct task_struct *target_task = NULL;
 
-    /* Find the target process in children list */
+    printk_color("UNBLOCK: Received PID parameter: ", WARNING_COLOR);
+    char buffer[12];
+    itoa(pid, buffer);
+    printk_color(buffer, WARNING_COLOR);
+    printk_color("\n", WARNING_COLOR);
+
+    printk_color("UNBLOCK: Looking for child with PID ", INFO_COLOR);
+    itoa(pid, buffer);
+    printk_color(buffer, INFO_COLOR);
+    printk_color("\n", INFO_COLOR);
+
+    // Count and list children for debugging
+    int child_count = 0;
     struct list_head *pos;
+    list_for_each(pos, &current_task->children) {
+        struct task_struct *child = list_entry(pos, struct task_struct, child_list);
+        child_count++;
+        printk_color("UNBLOCK: Found child with PID ", WARNING_COLOR);
+        itoa(child->PID, buffer);
+        printk_color(buffer, WARNING_COLOR);
+        printk_color("\n", WARNING_COLOR);
+    }
+
+    printk_color("UNBLOCK: Total children found: ", INFO_COLOR);
+    itoa(child_count, buffer);
+    printk_color(buffer, INFO_COLOR);
+    printk_color("\n", INFO_COLOR);
+
+    /* Find the target process in children list */
     list_for_each(pos, &current_task->children) {
         struct task_struct *child = list_entry(pos, struct task_struct, child_list);
         if (child->PID == pid) {
@@ -252,26 +298,21 @@ int sys_unblock(int pid) {
 
     /* Check if target is a child of current process */
     if (target_task == NULL) {
+        printk_color("UNBLOCK: Process not found or not a child\n", ERROR_COLOR);
         return -1; // Process not found or not a child
     }
 
-    /* Check if target is in blocked queue */
-    struct list_head *blocked_pos;
-    int is_blocked = 0;
-    list_for_each(blocked_pos, &blockedqueue) {
-        struct task_struct *blocked_task = list_head_to_task_struct(blocked_pos);
-        if (blocked_task == target_task) {
-            is_blocked = 1;
-            break;
-        }
-    }
-
-    if (is_blocked) {
+    /* Check if target is blocked */
+    if (target_task->status == ST_BLOCKED) {
         /* Unblock the process */
-        update_process_state_rr(target_task, &readyqueue);
+        target_task->status = ST_READY;
+        list_del(&target_task->list);
+        list_add_tail(&target_task->list, &readyqueue);
+        printk_color("UNBLOCK: Process successfully unblocked\n", DEFAULT_COLOR);
     } else {
         /* Process not blocked, increase pending unblocks */
         target_task->pending_unblocks++;
+        printk_color("UNBLOCK: Process not blocked, added pending unblock\n", WARNING_COLOR);
     }
 
     return 0;
