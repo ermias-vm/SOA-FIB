@@ -4,25 +4,28 @@
 
 #include <interrupt.h>
 #include <io.h>
+#include <libc.h>
 #include <mm.h>
 #include <sched.h>
 #include <segment.h>
+#include <utils.h>
 
+/* Global array of all task unions in the system */
 union task_union task[NR_TASKS] __attribute__((__section__(".data.task")));
 
-static int next_pid = 1; // Contador global de PIDs
+/* Global PID counter for assigning unique process identifiers */
+static int next_pid = 1;
 
 struct task_struct *list_head_to_task_struct(struct list_head *l) {
     return list_entry(l, struct task_struct, list);
 }
 
-extern struct list_head blocked;
 struct list_head freequeue;
 struct list_head readyqueue;
+struct list_head blockedqueue;
 
-/* Scheduling variables */
+/* Current quantum ticks remaining for the running process */
 static int current_quantum = 0;
-#define DEFAULT_QUANTUM 100
 
 /* get_DIR - Returns the Page Directory address for task 't' */
 page_table_entry *get_DIR(struct task_struct *t) {
@@ -52,7 +55,11 @@ void cpu_idle(void) {
     }
 }
 
-struct task_struct *idle_task, *init_task;
+/* Pointer to the idle task (PID 0) - runs when no other process is ready */
+struct task_struct *idle_task;
+
+/* Pointer to the initial user task (PID 1) - the first user process */
+struct task_struct *init_task;
 
 void init_idle(void) {
     struct list_head *free_task = freequeue.next;
@@ -63,6 +70,9 @@ void init_idle(void) {
 
     /* Initialize q*/
     idle_task->quantum = DEFAULT_QUANTUM;
+
+    /* Initialize status */
+    idle_task->status = ST_READY;
 
     /* Initialize process hierarchy */
     idle_task->parent = NULL;
@@ -93,6 +103,9 @@ void init_task1(void) {
     init_task->quantum = DEFAULT_QUANTUM;
     current_quantum = DEFAULT_QUANTUM;
 
+    /* Initialize status */
+    init_task->status = ST_RUN;
+
     /* Initialize process hierarchy */
     init_task->parent = NULL;
     INIT_LIST_HEAD(&init_task->children);
@@ -114,7 +127,7 @@ void init_task1(void) {
 void init_queues() {
     INIT_LIST_HEAD(&freequeue);
     INIT_LIST_HEAD(&readyqueue);
-    INIT_LIST_HEAD(&blocked);
+    INIT_LIST_HEAD(&blockedqueue);
     for (int i = 0; i < NR_TASKS; ++i) {
         list_add_tail(&task[i].task.list, &freequeue);
     }
@@ -157,7 +170,11 @@ void update_sched_data_rr(void) {
 }
 
 int needs_sched_rr(void) {
-    return (current_quantum <= 0 && !list_empty(&readyqueue));
+    if ((current_quantum <= 0 && !list_empty(&readyqueue)) || (current()->status == ST_BLOCKED)) {
+        return 1;
+    } else {
+        return 0;
+    }
 }
 
 void update_process_state_rr(struct task_struct *t, struct list_head *dst_queue) {
@@ -174,10 +191,14 @@ void update_process_state_rr(struct task_struct *t, struct list_head *dst_queue)
 
 void sched_next_rr(void) {
     if (list_empty(&readyqueue)) {
-        /* No processes in ready queue, keep current or switch to idle */
+        /* No processes in ready queue, switch to idle if not already */
         if (current() != idle_task) {
+            idle_task->status = ST_RUN;
             current_quantum = get_quantum(idle_task);
             task_switch((union task_union *)idle_task);
+        } else {
+            /* Already idle, just reset quantum */
+            current_quantum = get_quantum(idle_task);
         }
         return;
     }
@@ -187,7 +208,8 @@ void sched_next_rr(void) {
     list_del(next_node);
     struct task_struct *next_task = list_head_to_task_struct(next_node);
 
-    /* Restore quantum for the new process */
+    /* Update status and restore quantum for the new process */
+    next_task->status = ST_RUN;
     current_quantum = get_quantum(next_task);
 
     /* Simple debug message */
@@ -205,19 +227,37 @@ void sched_next_rr(void) {
 }
 
 void schedule(void) {
-    /* Update scheduling data */
+    /* Update scheduling data - decrease global quantum variable */
     update_sched_data_rr();
 
-    /* Check if scheduling is needed */
+    /* Simple debug every 100 ticks */
+    static int debug_counter = 0;
+    debug_counter++;
+    if (debug_counter % 100 == 0) {
+        char buffer[12];
+        printk_color("TICK: current_quantum=", INFO_COLOR);
+        itoa(current_quantum, buffer);
+        printk_color(buffer, INFO_COLOR);
+        printk_color(" PID=", INFO_COLOR);
+        itoa(current()->PID, buffer);
+        printk_color(buffer, INFO_COLOR);
+        printk_color("\n", INFO_COLOR);
+    }
+
+    /* Decide if a context switch is required */
     if (!needs_sched_rr()) {
         return;
     }
 
-    /* If current is not idle, put it back in ready queue */
-    if (current() != idle_task) {
-        update_process_state_rr(current(), &readyqueue);
+    /* Context switch is required */
+    struct task_struct *current_task = current();
+
+    /* Update the readyqueue, if current process is not the idle process */
+    if (current_task != idle_task) {
+        current_task->status = ST_READY;
+        update_process_state_rr(current_task, &readyqueue);
     }
 
-    /* Schedule next process */
+    /* Extract the first process of the readyqueue and perform context switch */
     sched_next_rr();
 }

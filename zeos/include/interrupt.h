@@ -7,10 +7,17 @@
 
 #include <types.h>
 
+/* Maximum number of entries in the Interrupt Descriptor Table */
 #define IDT_ENTRIES 256
 
+/* Interrupt Descriptor Table - array of interrupt/trap gates */
 extern Gate idt[IDT_ENTRIES];
+
+/* IDT register structure for loading the IDT */
 extern Register idtR;
+
+/* Global system tick counter - incremented on each clock interrupt */
+extern int zeos_ticks;
 
 /**
  * @brief Set an interrupt handler in the IDT

@@ -3,6 +3,7 @@
  */
 #include <devices.h>
 #include <errno.h>
+#include <interrupt.h>
 #include <io.h>
 #include <mm.h>
 #include <mm_address.h>
@@ -15,8 +16,6 @@
 #define BUFFER_SIZE 256
 
 char buffer_k[BUFFER_SIZE];
-
-extern int zeos_ticks;
 
 int check_fd(int fd, int permissions) {
     if (fd != 1) return -9;                    /*EBADF*/
@@ -231,7 +230,7 @@ void sys_block() {
     }
 
     /* Block the process */
-    update_process_state_rr(current_task, &blocked);
+    update_process_state_rr(current_task, &blockedqueue);
 
     /* Schedule next process */
     sched_next_rr();
@@ -259,7 +258,7 @@ int sys_unblock(int pid) {
     /* Check if target is in blocked queue */
     struct list_head *blocked_pos;
     int is_blocked = 0;
-    list_for_each(blocked_pos, &blocked) {
+    list_for_each(blocked_pos, &blockedqueue) {
         struct task_struct *blocked_task = list_head_to_task_struct(blocked_pos);
         if (blocked_task == target_task) {
             is_blocked = 1;

@@ -9,39 +9,65 @@
 #include <mm_address.h>
 #include <types.h>
 
+/* Maximum number of tasks in the system */
 #define NR_TASKS 10
+
+/* Size of the kernel stack for each process in words */
 #define KERNEL_STACK_SIZE 1024
 
-enum state_t { ST_RUN, ST_READY, ST_BLOCKED };
-struct task_struct {
-    int PID; /* Process ID. This MUST be the first field of the struct. */
-    page_table_entry *dir_pages_baseAddr;
-    struct list_head list;
-    unsigned long kernel_esp;
+/* Process states for scheduling */
+enum state_t {
+    ST_RUN,    /* Currently running */
+    ST_READY,  /* Ready to run, in ready queue */
+    ST_BLOCKED /* Blocked waiting for an event */
+};
 
-    /* Scheduling fields for round-robin */
-    int quantum;
+/* Process control block structure */
+struct task_struct {
+    /* Process identifier - MUST be first field for current() function */
+    int PID;
+
+    /* Memory management */
+    page_table_entry *dir_pages_baseAddr; /* Page directory base address */
+
+    /* Process lists management */
+    struct list_head list; /* Entry in process queues */
+
+    /* Context switching */
+    unsigned long kernel_esp; /* Kernel stack pointer */
+
+    /* Round-robin scheduling fields */
+    int quantum;         /* Time quantum for this process */
+    enum state_t status; /* Current process state */
 
     /* Process hierarchy fields */
-    struct task_struct *parent;
+    struct task_struct *parent;  /* Pointer to parent process */
     struct list_head children;   /* List of child processes */
     struct list_head child_list; /* Entry in parent's children list */
 
-    /* Blocking mechanism */
-    int pending_unblocks;
+    /* Process synchronization */
+    int pending_unblocks; /* Number of pending unblock operations */
 };
 
+/* Union for process data and stack */
 union task_union {
-    struct task_struct task;
-    unsigned long stack[KERNEL_STACK_SIZE]; /* pila de sistema, per procés */
+    struct task_struct task;                /* Process control block */
+    unsigned long stack[KERNEL_STACK_SIZE]; /* Kernel stack for the process */
 };
 
-extern union task_union task[NR_TASKS]; /* Vector de tasques */
+/* Global array of all possible tasks in the system */
+extern union task_union task[NR_TASKS];
+
+/* Pointer to the idle task (PID 0) */
 extern struct task_struct *idle_task;
+
+/* Pointer to the initial user task (PID 1) */
 extern struct task_struct *init_task;
 
+/* Calculate kernel stack pointer for a task */
 #define KERNEL_ESP(t) (DWord) & (t)->stack[KERNEL_STACK_SIZE]
 
+/* Initial ESP for the first user process */
 #define INITIAL_ESP KERNEL_ESP(&task[1])
 
 /**
@@ -60,10 +86,17 @@ void init_task1(void);
  */
 void init_idle(void);
 
-/* Global queues for process management */
-extern struct list_head freequeue;
-extern struct list_head readyqueue;
-extern struct list_head blocked;
+/* Default quantum assigned to new processes */
+#define DEFAULT_QUANTUM 100
+
+/* Global process queues - defined in sched.c, accessible from other modules */
+extern struct list_head freequeue;    /* Queue for free (unused) task structures */
+extern struct list_head readyqueue;   /* Queue for ready-to-run processes */
+extern struct list_head blockedqueue; /* Queue for blocked processes */
+
+/* Special task pointers - defined in sched.c, accessible from other modules */
+extern struct task_struct *idle_task; /* Pointer to the idle task (PID 0) */
+extern struct task_struct *init_task; /* Pointer to the init task (PID 1) */
 
 /**
  * @brief Initialize the scheduler.

@@ -10,11 +10,16 @@
 #include <utils.h>
 #include <zeos_interrupt.h>
 
+/* Interrupt Descriptor Table - array of interrupt/trap gates */
 Gate idt[IDT_ENTRIES];
+
+/* IDT register structure containing IDT base address and limit */
 Register idtR;
 
+/* Global system tick counter - incremented on each clock interrupt */
 int zeos_ticks = 0;
 
+/* Keyboard scancode to ASCII character mapping table */
 char char_map[] = {'\0', '\0', '1',  '2',  '3',  '4',  '5',  '6',  '7',  '8',  '9',  '0',  '\'',
                    '\0', '\0', '\0', 'q',  'w',  'e',  'r',  't',  'y',  'u',  'i',  'o',  'p',
                    '`',  '+',  '\0', '\0', 'a',  's',  'd',  'f',  'g',  'h',  'j',  'k',  'l',

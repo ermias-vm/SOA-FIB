@@ -8,8 +8,13 @@
 /** System types definition **/
 /*****************************/
 
+/* 8-bit unsigned integer */
 typedef unsigned char Byte;
+
+/* 16-bit unsigned integer */
 typedef unsigned short int Word;
+
+/* 32-bit unsigned integer */
 typedef unsigned long DWord;
 
 #define highWord(address) (Word)(((address) >> 16) & 0xFFFF)
@@ -18,24 +23,27 @@ typedef unsigned long DWord;
 #define highByte(address) (Byte)(((address) >> (16 + 8)) & 0xFF)
 #define high4Bits(limit) (Byte)(((limit) >> 16) & 0x0F)
 
+/* Segment Descriptor structure for GDT/LDT entries */
 typedef struct /* Segment Descriptor */
 {
-    Word limit;
-    Word lowBase;
-    Byte midBase;
-    Byte flags1;
-    Byte flags2;
-    Byte highBase;
-} Descriptor; /* R1: pg. 3-11, 4-3 */
+    Word limit;    /* Segment limit (low 16 bits) */
+    Word lowBase;  /* Base address (low 16 bits) */
+    Byte midBase;  /* Base address (middle 8 bits) */
+    Byte flags1;   /* Access rights and type flags */
+    Byte flags2;   /* Granularity and limit (high 4 bits) */
+    Byte highBase; /* Base address (high 8 bits) */
+} Descriptor;      /* R1: pg. 3-11, 4-3 */
 
+/* Interrupt/Trap Gate structure for IDT entries */
 typedef struct /* Gate */
 {
-    Word lowOffset;
-    Word segmentSelector;
-    Word flags;
-    Word highOffset;
-} Gate; /* R1: pg. 5-11 */
+    Word lowOffset;       /* Handler offset (low 16 bits) */
+    Word segmentSelector; /* Code segment selector */
+    Word flags;           /* Gate type and access flags */
+    Word highOffset;      /* Handler offset (high 16 bits) */
+} Gate;                   /* R1: pg. 5-11 */
 
+/* Task State Segment structure for hardware task switching */
 typedef struct               /* TASK STATE SEGMENT      */
 {                            /*                         */
     Word PreviousTaskLink;   /* 0          R1: pg. 6-5  */
@@ -81,21 +89,17 @@ typedef struct               /* TASK STATE SEGMENT      */
 
 /** Registers: **/
 /****************/
+
+/* Structure for loading GDTR/IDTR registers */
 typedef struct {
-    Word limit __attribute__((packed));
-    DWord base __attribute__((packed));
-} Register; /* GDTR, IDTR */
-/*                                            */
-/*  /--------------------------------------\  */
-/* |      Base Address       |     Limit    | */
-/*  \--------------------------------------/  */
-/* 47                       16            0   */
-/*                             R1: pg. 2-10   */
-/**********************************************/
+    Word limit __attribute__((packed)); /* Table limit (size - 1) */
+    DWord base __attribute__((packed)); /* Table base address */
+} Register;                             /* GDTR, IDTR */
 
 /** Segment Selector **/
 /**********************/
 
+/* 16-bit segment selector for accessing GDT/LDT entries */
 typedef Word Selector;
 /*                                                     */
 /*  /--------------------------------------\           */
@@ -128,24 +132,27 @@ typedef Word Selector;
 /** IOPL: I/O Privilege Level                                            **/
 /**                                                                      **/
 /**************************************************************************/
+/* Initial EFLAGS value with interrupts enabled */
 #define INITIAL_EFLAGS 0x00000200
 
+/* NULL pointer definition */
 #define NULL 0
 
+/* Page table entry union for x86 paging */
 typedef union {
-    unsigned int entry;
+    unsigned int entry; /* Raw 32-bit page table entry */
     struct {
-        unsigned int present : 1;
-        unsigned int rw : 1;
-        unsigned int user : 1;
-        unsigned int write_t : 1;
-        unsigned int cache_d : 1;
-        unsigned int accessed : 1;
-        unsigned int dirty : 1;
-        unsigned int ps_pat : 1;
-        unsigned int global : 1;
-        unsigned int avail : 3;
-        unsigned int pbase_addr : 20;
+        unsigned int present : 1;     /* Page present in memory */
+        unsigned int rw : 1;          /* Read/write permission */
+        unsigned int user : 1;        /* User/supervisor access */
+        unsigned int write_t : 1;     /* Write-through caching */
+        unsigned int cache_d : 1;     /* Cache disabled */
+        unsigned int accessed : 1;    /* Page accessed flag */
+        unsigned int dirty : 1;       /* Page dirty flag */
+        unsigned int ps_pat : 1;      /* Page size/PAT */
+        unsigned int global : 1;      /* Global page */
+        unsigned int avail : 3;       /* Available for OS use */
+        unsigned int pbase_addr : 20; /* Physical base address */
     } bits;
 } page_table_entry;
 
