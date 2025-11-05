@@ -228,7 +228,7 @@ void sched_next_rr(void) {
     task_switch((union task_union *)next_task);
 }
 
-void schedule(void) {
+void scheduler(void) {
     /* Update scheduling data - decrease global quantum variable */
     update_sched_data_rr();
 
