@@ -44,7 +44,19 @@ ENTRY(switch_context)
     popl %ebp
     ret
 
-
-ENTRY(ret_from_fork)
-    movl $0, %eax
-    ret
+    # STACK LAYOUT:
+    # +------------------+
+    # | return address   | <- esp + 0
+    # +------------------+
+    # | &current()->esp  | <- esp + 4
+    # +------------------+
+    # | new_esp          | <- esp + 8
+    # +------------------+
+    # | %ebx             |
+    # +------------------+
+    # | %esi             |
+    # +------------------+
+    # | %edi             |
+    # +------------------+
+    # | %ebp             |
+    # +------------------+              

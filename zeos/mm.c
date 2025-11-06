@@ -116,8 +116,8 @@ void init_mm() {
     init_table_pages();
     init_frames();
     init_dir_pages();
-    allocate_DIR(&task[0].task);
-    set_cr3(get_DIR(&task[0].task));
+    allocate_DIR(&tasks[0].task);
+    set_cr3(get_DIR(&tasks[0].task));
     set_pe_flag();
 }
 /***********************************************/

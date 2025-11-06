@@ -9,28 +9,72 @@
 #include <mm_address.h>
 #include <types.h>
 
+/* Maximum number of tasks in the system */
 #define NR_TASKS 10
+
+/* Size of the kernel stack for each process in words */
 #define KERNEL_STACK_SIZE 1024
 
-enum state_t { ST_RUN, ST_READY, ST_BLOCKED };
+/* Default quantum assigned to new processes */
+#define DEFAULT_QUANTUM 1000
 
+/* Process states for scheduling */
+enum state_t {
+    ST_RUN,    /* Currently running */
+    ST_READY,  /* Ready to run, in ready queue */
+    ST_BLOCKED /* Blocked waiting for an event */
+};
+
+/* Process control block structure */
 struct task_struct {
-    int PID; /* Process ID. This MUST be the first field of the struct. */
+    /* Process identifier*/
+    int PID;
+
+    /* Page directory base address */
     page_table_entry *dir_pages_baseAddr;
+
+    /* Entry in process queues */
     struct list_head list;
+
+    /* Kernel stack pointer */
     unsigned long kernel_esp;
+
+    /* Time quantum for this process */
+    int quantum;
+    /* Current process state */
+    enum state_t status;
+
+    /* Process hierarchy fields */
+    struct task_struct *parent;  /* Pointer to parent process */
+    struct list_head children;   /* List of child processes */
+    struct list_head child_list; /* Entry in parent's children list */
+
+    /* Process synchronization */
+    int pending_unblocks; /* Number of pending unblock operations */
 };
 
+/* Union for process data and stack */
 union task_union {
+    /* Process control block */
     struct task_struct task;
-    unsigned long stack[KERNEL_STACK_SIZE]; /* pila de sistema, per procés */
+    /* Kernel stack for the process */
+    unsigned long stack[KERNEL_STACK_SIZE];
 };
 
-extern union task_union task[NR_TASKS]; /* Vector de tasques */
+/* Global array of all possible tasks in the system */
+extern union task_union tasks[NR_TASKS];
 
-#define KERNEL_ESP(t) (DWord) & (t)->stack[KERNEL_STACK_SIZE]
+/* Pointer to the idle task (PID 0) */
+extern struct task_struct *idle_task;
 
-#define INITIAL_ESP KERNEL_ESP(&task[1])
+/* Pointer to the initial user task (PID 1) */
+extern struct task_struct *init_task;
+
+/* Calculate kernel stack pointer for a task */
+#define KERNEL_ESP(task) (DWord) & (task)->stack[KERNEL_STACK_SIZE]
+
+/* Initial ESP for the first user process */
+#define INITIAL_ESP KERNEL_ESP(&tasks[1])
 
 /**
  * @brief Initialize the initial process task.
@@ -47,12 +91,15 @@ void init_task1(void);
  * processes are ready to execute. The idle task runs with the lowest priority.
  */
 void init_idle(void);
-extern struct task_struct *idle_task;
-extern struct task_struct *init_task;
 
-/* Global queues for process management */
-extern struct list_head freequeue;
-extern struct list_head readyqueue;
+/* Global process queues - defined in sched.c, accessible from other modules */
+extern struct list_head freequeue;    /* Queue for free (unused) task structures */
+extern struct list_head readyqueue;   /* Queue for ready-to-run processes */
+extern struct list_head blockedqueue; /* Queue for blocked processes */
+
+/* Special task pointers - defined in sched.c, accessible from other modules */
+extern struct task_struct *idle_task; /* Pointer to the idle task (PID 0) */
+extern struct task_struct *init_task; /* Pointer to the init task (PID 1) */
 
 /**
  * @brief Initialize the scheduler.
@@ -99,14 +146,6 @@ extern void task_switch(union task_union *new);
 extern void switch_context(unsigned long *current_esp, unsigned long new_esp);
 
 /**
- * @brief Return from fork system call for child process.
- *
- * This function is used by child processes created by fork() to return
- * to user space with the appropriate return value (0 for child).
- */
-extern void ret_from_fork(void);
-
-/**
  * @brief Convert list_head to task_struct.
  *
  * This function converts a list_head pointer to its containing task_struct.
@@ -121,30 +160,29 @@ struct task_struct *list_head_to_task_struct(struct list_head *l);
  *
  * This function allocates and initializes a page directory for the specified task.
  * Sets up the memory management structures for the process.
- * @param t Pointer to the task structure.
+ * @param task Pointer to the task structure.
  * @return 0 on success, negative error code on failure.
  */
-int allocate_DIR(struct task_struct *t);
+int allocate_DIR(struct task_struct *taskask);
 
 /**
  * @brief Get page table for a task.
  *
  * This function returns a pointer to the page table of the specified task.
- * @param t Pointer to the task structure.
+ * @param task Pointer to the task structure.
  * @return Pointer to the task's page table.
  */
-page_table_entry *get_PT(struct task_struct *t);
+page_table_entry *get_PT(struct task_struct *task);
 
 /**
  * @brief Get page directory for a task.
  *
  * This function returns a pointer to the page directory of the specified task.
- * @param t Pointer to the task structure.
+ * @param task Pointer to the task structure.
  * @return Pointer to the task's page directory.
  */
-page_table_entry *get_DIR(struct task_struct *t);
+page_table_entry *get_DIR(struct task_struct *task);
 
-/* Headers for the scheduling policy */
 /**
  * @brief Schedule next process using round-robin policy.
  *
@@ -158,10 +196,10 @@ void sched_next_rr();
  *
  * This function updates the state of a process and moves it to the
  * appropriate queue in the round-robin scheduler.
- * @param t Pointer to the task structure to update.
- * @param dest Destination queue for the process.
+ * @param task Pointer to the task structure to update.
+ * @param dest_queue Destination queue for the process.
  */
-void update_process_state_rr(struct task_struct *t, struct list_head *dest);
+void update_process_state_rr(struct task_struct *taskask, struct list_head *dest_queue);
 
 /**
  * @brief Check if scheduling is needed.
@@ -180,20 +218,32 @@ int needs_sched_rr();
  */
 void update_sched_data_rr();
 
-/* TEST FUNCTIONS */
 /**
- * @brief Initialize test function.
+ * @brief Main scheduler function.
  *
- * This function initializes test-related functionality for the scheduler.
+ * This function implements the main scheduling logic, calling the
+ * appropriate scheduling policy functions to determine if a context
+ * switch is needed and performing it if necessary.
  */
-void init_function(void);
+void scheduler();
 
 /**
- * @brief Test function for idle to init transition.
+ * @brief Get quantum value for a task.
  *
- * This function tests the transition from idle task to init task.
+ * This function returns the quantum value assigned to the specified task.
+ * @param task Pointer to the task structure.
+ * @return Quantum value of the task.
  */
-void idle_to_init_test(void);
+int get_quantum(struct task_struct *task);
+
+/**
+ * @brief Set quantum value for a task.
+ *
+ * This function sets the quantum value for the specified task.
+ * @param task Pointer to the task structure.
+ * @param new_quantum New quantum value to set.
+ */
+void set_quantum(struct task_struct *taskask, int new_quantum);
 
 /* PID management */
 /**

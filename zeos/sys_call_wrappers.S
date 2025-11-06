@@ -104,3 +104,64 @@ fork_error:
     movl %eax, errno
     movl $-1, %eax
     ret
+
+
+ENTRY(exit)
+    pushl %ebp
+    movl %esp, %ebp
+    movl $1, %eax
+    
+    pushl $exit_return
+    pushl %ebp
+    movl %esp, %ebp
+    sysenter
+
+exit_return:
+    popl %ebp
+    addl $4, %esp
+    popl %ebp
+    ret
+
+
+ENTRY(block)
+    pushl %ebp
+    movl %esp, %ebp
+    movl $12, %eax
+    
+    pushl $block_return
+    pushl %ebp
+    movl %esp, %ebp
+    sysenter
+
+block_return:
+    popl %ebp
+    addl $4, %esp
+    popl %ebp
+    ret
+
+
+ENTRY(unblock)
+    pushl %ebp
+    movl %esp, %ebp
+    pushl 8(%ebp)
+    movl $13, %eax
+    
+    pushl $unblock_return
+    pushl %ebp
+    movl %esp, %ebp
+    sysenter
+
+unblock_return:
+    popl %ebp
+    addl $4, %esp
+    popl %ebp
+    addl $4, %esp
+    cmpl $0, %eax
+    jl unblock_error
+    ret
+
+unblock_error:
+    negl %eax
+    movl %eax, errno
+    movl $-1, %eax
+    ret

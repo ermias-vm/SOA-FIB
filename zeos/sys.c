@@ -3,7 +3,9 @@
  */
 #include <devices.h>
 #include <errno.h>
+#include <interrupt.h>
 #include <io.h>
+#include <libc.h> // itoa, write helpers
 #include <mm.h>
 #include <mm_address.h>
 #include <sched.h>
@@ -15,8 +17,6 @@
 #define BUFFER_SIZE 256
 
 char buffer_k[BUFFER_SIZE];
-
-extern int zeos_ticks;
 
 int check_fd(int fd, int permissions) {
     if (fd != 1) return -9;                    /*EBADF*/
@@ -32,8 +32,14 @@ int sys_getpid() {
     return current()->PID;
 }
 
+int ret_from_fork() {
+    return 0;
+}
+
 int sys_fork() {
     int PID = -1;
+
+    printk_color("FORK: Creating new process\n", INFO_COLOR);
 
     /*=== STEP a: Get a free task_struct ===*/
     if (list_empty(&freequeue)) {
@@ -119,24 +125,44 @@ int sys_fork() {
     // Fields already copied from parent need to be modified for child
     INIT_LIST_HEAD(&child_task->list); // New list
 
+    /* Initialize scheduling fields - inherit from parent */
+    child_task->quantum = current()->quantum;
+    child_task->status = ST_READY; // new task is ready to run
+
+    /* Initialize process hierarchy */
+    child_task->parent = current();
+    INIT_LIST_HEAD(&child_task->children);
+    INIT_LIST_HEAD(&child_task->child_list);
+
+    /* Add child to parent's children list */
+    list_add_tail(&child_task->child_list, &current()->children);
+
+    /* Initialize blocking mechanism */
+    child_task->pending_unblocks = 0;
+
     /* === STEP i & j: Prepare registers and child stack for task_switch === */
-    // We need to prepare the child's stack so that when task_switch occurs,
-    // the child can return correctly to user space with %eax = 0
+    // Rebuild child's kernel stack so that when
+    // switch_context pops EBP and returns, it jumps to ret_from_fork.
+    // ret_from_fork sets EAX=0 and falls into the syscall return path
+    // already present in the copied parent frame (sysexit to user).
 
-    // Place return address and fake ebp at the end of the stack
-    child_union->stack[KERNEL_STACK_SIZE - 1] = (unsigned long)ret_from_fork;
-    child_union->stack[KERNEL_STACK_SIZE - 2] = 0; // fake ebp
-    child_task->kernel_esp = (unsigned long)&child_union->stack[KERNEL_STACK_SIZE - 2];
-
-    // When task_switch occurs to the child:
-    // 1. switch_context will restore ebp (fake ebp = 0)
-    // 2. ret will jump to ret_from_fork
-    // 3. ret_from_fork will restore the complete context and return to user space
-
+   
+    // We place a fake EBP and ret_from_fork as the return address, but we must
+    // point into the copied syscall frame so that ret_from_fork "returns" into
+    // the syscall epilogue. Offsets -19/-18 match the saved frame layout.
+    child_union->stack[KERNEL_STACK_SIZE - 19] = (unsigned long)0;             // fake EBP
+    child_union->stack[KERNEL_STACK_SIZE - 18] = (unsigned long)ret_from_fork; // return to stub
+    child_task->kernel_esp = (unsigned int)&(child_union->stack[KERNEL_STACK_SIZE - 19]);
+    
     /* === STEP k: Insert into ready queue === */
     list_add_tail(&child_task->list, &readyqueue);
 
     /* === STEP l: Return child PID === */
+    printk_color("FORK: Child created with PID ", INFO_COLOR);
+    char buffer[12];
+    itoa(PID, buffer);
+    printk_color(buffer, INFO_COLOR);
+    printk_color("\n", INFO_COLOR);
     return PID; // Parent returns child's PID
 }
 
@@ -171,4 +197,83 @@ int sys_gettime() {
 }
 
 void sys_exit() {
+    struct task_struct *current_task = current();
+
+    printk_color("EXIT: Process ", INFO_COLOR);
+    char buffer[12];
+    itoa(current_task->PID, buffer);
+    printk_color(buffer, INFO_COLOR);
+    printk_color(" exiting\n", INFO_COLOR);
+
+    // If the process is task 1, it cannot exit
+    if (current_task->PID == 1) {
+        printk("The task 1 cannot exit\n");
+        return;
+    }
+
+    /* === STEP 1: Handle orphaned children === */
+    // Move children to idle process
+    struct list_head *pos, *tmp;
+    list_for_each_safe(pos, tmp, &current_task->children) {
+        struct task_struct *child = list_entry(pos, struct task_struct, child_list);
+        list_del(&child->child_list);
+        child->parent = idle_task;
+        list_add_tail(&child->child_list, &idle_task->children);
+    }
+
+    /* === STEP 2: Remove from parent's children list === */
+    if (current_task->parent != NULL) {
+        list_del(&current_task->child_list);
+    }
+
+    /* === STEP 3: Free process resources === */
+    // Free data pages and clear page table entries
+    page_table_entry *PT = get_PT(current_task);
+    for (int page = 0; page < NUM_PAG_DATA; page++) {
+        int frame = get_frame(PT, PAG_LOG_INIT_DATA + page);
+        if (frame >= 0) {
+            free_frame(frame);
+            del_ss_pag(PT, PAG_LOG_INIT_DATA + page);
+        }
+    }
+
+    /* === STEP 4: Return task_struct to free queue === */
+    list_add_tail(&current_task->list, &freequeue);
+
+    /* === STEP 5: Schedule new process === */
+    sched_next_rr();
+}
+
+void sys_block() {
+    struct task_struct *current_task = current();
+
+    int pending = current_task->pending_unblocks;
+    if (pending == 0) {
+        current_task->status = ST_BLOCKED;
+        list_add_tail(&current_task->list, &blockedqueue);
+        scheduler();
+    } else {
+        current_task->pending_unblocks--;
+    }
+}
+int sys_unblock(int pid) {
+    struct task_struct *current_task = current();
+    struct list_head *pos;
+
+    /* Search for child with given PID */
+    list_for_each(pos, &current_task->children) {
+        struct task_struct *child = list_entry(pos, struct task_struct, child_list);
+        if (child->PID == pid) {
+            if (child->status == ST_BLOCKED) {
+                child->status = ST_READY;
+                list_del(&child->list);
+                list_add_tail(&child->list, &readyqueue);
+                return 0;
+            } else {
+                child->pending_unblocks++;
+                return 0;
+            }
+        }
+    }
+    return -1;
 }

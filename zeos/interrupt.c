@@ -10,11 +10,16 @@
 #include <utils.h>
 #include <zeos_interrupt.h>
 
+/* Interrupt Descriptor Table - array of interrupt/trap gates */
 Gate idt[IDT_ENTRIES];
+
+/* IDT register structure containing IDT base address and limit */
 Register idtR;
 
+/* Global system tick counter - incremented on each clock interrupt */
 int zeos_ticks = 0;
 
+/* Keyboard scancode to ASCII character mapping table */
 char char_map[] = {'\0', '\0', '1',  '2',  '3',  '4',  '5',  '6',  '7',  '8',  '9',  '0',  '\'',
                    '\0', '\0', '\0', 'q',  'w',  'e',  'r',  't',  'y',  'u',  'i',  'o',  'p',
                    '`',  '+',  '\0', '\0', 'a',  's',  'd',  'f',  'g',  'h',  'j',  'k',  'l',
@@ -95,7 +100,6 @@ void keyboard_routine() {
             pressedKey = 'C';
         }
 
-        testTaskSwitch(pressedKey); // Test de cambio de contexto
         printc_xy(0, 0, pressedKey, INFO_COLOR);
     }
 }
@@ -103,6 +107,7 @@ void keyboard_routine() {
 void clock_routine(void) {
     zeos_ticks++;
     zeos_show_clock();
+    scheduler();
 }
 
 void pageFault_routine(unsigned int eip) {
@@ -119,21 +124,5 @@ void pageFault_routine(unsigned int eip) {
     printk_color("  memory address and will be terminated.\n", INFO_COLOR);
     printk_color("===============================================\n", ERROR_COLOR);
     while (1) {
-    }
-}
-
-void testTaskSwitch(char key) {
-    if (key == '0') {
-        printk_color("\n[BEFORE_TASK_SWITCH] Switching to idle task\n", INFO_COLOR);
-        task_switch((union task_union *)idle_task);
-        printk_color("\n[AFTER_TASK_SWITCH] Switched to idle task\n",
-                     INFO_COLOR); // Should not reach here
-    }
-
-    else if (key == '1') {
-        printk_color("\n[BEFORE_TASK_SWITCH] Switching to init task\n", INFO_COLOR);
-        task_switch((union task_union *)init_task);
-        printk_color("\n[AFTER_TASK_SWITCH] Switched to init task\n",
-                     INFO_COLOR); // Should not reach here
     }
 }

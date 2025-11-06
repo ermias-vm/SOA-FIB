@@ -1,5 +1,13 @@
 /*
- * io.c -
+ * io.c - Input/Output operations module for ZeOS
+ *
+ * This module provides low-level I/O operations including:
+ * - Port I/O operations (inb)
+ * - Screen/video memory management
+ * - Character printing and screen manipulation functions
+ *
+ * The module handles text mode video operations using VGA text mode
+ * with 80x25 character resolution and manages cursor positioning.
  */
 
 #include <io.h>
@@ -9,14 +17,26 @@
 /** Screen  ***/
 /**************/
 
-#define NUM_COLUMNS 80
-#define NUM_ROWS 25
-#define VIDEO_MEMORY_BASE 0xb8000
+/* VGA text mode constants */
+#define NUM_COLUMNS 80            /* Number of columns in text mode (80 chars per row) */
+#define NUM_ROWS 25               /* Number of rows in text mode (25 rows total) */
+#define VIDEO_MEMORY_BASE 0xb8000 /* Base address of VGA text mode video memory */
 
+/* Current cursor column position (0-79) */
 Byte x = 0;
+
+/* Current cursor row position (starts at row 19) */
 Byte y = 19;
 
-/* Read a byte from 'port' */
+/**
+ * inb - Read a byte from an I/O port
+ * @port: The I/O port number to read from
+ *
+ * This function performs a low-level port input operation using inline assembly.
+ * It reads a single byte from the specified hardware port.
+ *
+ * Return: The byte value read from the port
+ */
 Byte inb(unsigned short port) {
     Byte v;
 

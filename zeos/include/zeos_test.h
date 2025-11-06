@@ -5,20 +5,24 @@
 #ifndef __ZEOS_TEST_H__
 #define __ZEOS_TEST_H__
 
-// Test configuration macros
+/* Test configuration macros */
+
 // clang-format off
 #define WRITE_TEST              1
 #define GETTIME_TEST            1
 #define GETPID_TEST             1
-#define FORK_TEST               1  // Activado para pruebas
+#define FORK_TEST               1
+#define EXIT_TEST               1
+#define BLOCK_UNBLOCK_TEST      1
 #define PAGEFAULT_TEST          0
 // clang-format on
 
-// Utility macros
+/* Reset errno macro */
 #define RESET_ERRNO() errno = 0
 
-// Buffer sizes
+/* Default Buffer size */
 #define BUFFER_SIZE 256
+/* Large Buffer size for write tests */
 #define LARGE_BUFFER_SIZE 300
 
 // Main test execution function
@@ -71,6 +75,20 @@ void test_fork_syscall(void);
  * correctly when accessing invalid memory addresses.
  */
 void test_pagefault_exception(void);
+
+/**
+ * @brief Test exit system call functionality.
+ *
+ * This function tests the exit() system call.
+ */
+void test_exit_syscall(void);
+
+/**
+ * @brief Test block/unblock system calls functionality.
+ *
+ * This function tests the block() and unblock() system calls.
+ */
+void test_block_unblock_syscalls(void);
 
 // Helper functions
 /**
