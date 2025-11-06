@@ -3,13 +3,133 @@
 #include <zeos_test.h>
 
 char buffer[BUFFER_SIZE];
-char large_buffer[LARGE_BUFFER_SIZE]; // For testing large writes
+char large_buffer[LARGE_BUFFER_SIZE];
+char *msg;
 
 static int tests_run = 0;
 static int tests_passed = 0;
 static int subtests_run = 0;
 static int subtests_passed = 0;
 extern int errno;
+
+void test_basic_process_operations(void) {
+    print_test_header("BASIC PROCESS OPERATIONS");
+
+    msg = "[TEST] Starting Basic Process Operations Test\n";
+    write(1, msg, strlen(msg));
+
+    write_current_pid();
+    write(1, "Initial process starting test\n", 30);
+
+    int pid = fork();
+
+    if (pid == 0) {
+        // First child
+        write_current_pid();
+        write(1, "First child process created\n", 28);
+
+        int pid2 = fork();
+
+        if (pid2 > 0) {
+            // First child (parent of second child)
+            write_current_pid();
+            write(1, "Created second child, PID: ", 27);
+            itoa(pid2, buffer);
+            write(1, buffer, strlen(buffer));
+            write(1, "\n", 1);
+
+            // Wait longer to ensure second child blocks first
+            for (volatile int i = 0; i < 50000000; i++)
+                ;
+
+            write_current_pid();
+            write(1, "Attempting to unblock PID: ", 27);
+            itoa(pid2, buffer);
+            write(1, buffer, strlen(buffer));
+            write(1, "\n", 1);
+
+            if (unblock(pid2) == 0) {
+                write_current_pid();
+                write(1, "Successfully unblocked process\n", 31);
+
+                // Give time for unblocked process to execute
+                for (volatile int i = 0; i < 10000000; i++)
+                    ;
+            } else {
+                write_current_pid();
+                write(1, "Failed to unblock process\n", 26);
+            }
+
+            // First child continues in limited loop
+            for (int counter = 0; counter < 3; counter++) {
+                for (volatile int i = 0; i < 20000000; i++)
+                    ;
+                write_current_pid();
+                write(1, "First child cycle ", 18);
+                itoa(counter + 1, buffer);
+                write(1, buffer, strlen(buffer));
+                write(1, "\n", 1);
+            }
+
+        } else if (pid2 == 0) {
+            // Second child
+            write_current_pid();
+            write(1, "Second child process created\n", 29);
+
+            for (int j = 0; j < 2; j++) {
+                for (volatile int i = 0; i < 15000000; i++)
+                    ;
+                write_current_pid();
+                write(1, "Working before blocking...\n", 27);
+            }
+
+            write_current_pid();
+            write(1, "Blocking myself now\n", 20);
+            block();
+
+            write_current_pid();
+            write(1, "I have been unblocked! Exiting...\n", 34);
+            exit();
+        }
+
+    } else if (pid > 0) {
+        // Parent process
+        write_current_pid();
+        write(1, "Parent created child, PID: ", 27);
+        itoa(pid, buffer);
+        write(1, buffer, strlen(buffer));
+        write(1, "\n", 1);
+
+        write_current_pid();
+        write(1, "Parent continuing execution\n", 28);
+
+        // Parent runs limited cycles for test completion
+        for (int counter = 0; counter < 8; counter++) {
+            for (volatile int i = 0; i < 25000000; i++)
+                ;
+            write_current_pid();
+            write(1, "Parent cycle ", 13);
+            itoa(counter + 1, buffer);
+            write(1, buffer, strlen(buffer));
+            write(1, "\n", 1);
+        }
+
+    } else {
+        write_current_pid();
+        write(1, "Fork failed\n", 12);
+        print_test_result("Basic Process Operations", 0);
+        return;
+    }
+
+    // Additional delay to ensure all child processes complete
+    for (volatile int i = 0; i < 30000000; i++)
+        ;
+    write_current_pid();
+    msg = "[TEST] Basic Process Operations completed-----------------------------\n\n\n\n";
+    write(1, msg, strlen(msg));
+
+    print_test_result("Basic Process Operations", 1);
+}
 
 void execute_zeos_tests(void) {
     char *msg = "\n";
@@ -61,88 +181,13 @@ void execute_zeos_tests(void) {
     print_final_summary();
 }
 
-// Helper functions
-void print_test_header(char *test_name) {
-    char *msg = "\n--- Testing: ";
-    write(1, msg, strlen(msg));
-    write(1, test_name, strlen(test_name));
-    msg = " ---\n";
-    write(1, msg, strlen(msg));
-}
-
-void print_test_result(char *test_name, int passed) {
-    char *msg;
-    tests_run++;
-    if (passed) {
-        tests_passed++;
-        msg = "\n[RESULT] ";
-        write(1, msg, strlen(msg));
-        write(1, test_name, strlen(test_name));
-        msg = ": PASSED\n";
-        write(1, msg, strlen(msg));
-    } else {
-        msg = "[RESULT] ";
-        write(1, msg, strlen(msg));
-        write(1, test_name, strlen(test_name));
-        msg = ": FAILED\n";
-        write(1, msg, strlen(msg));
-    }
-}
-
-void print_final_summary(void) {
-    char *msg;
-
-    msg = "\n\n";
-    write(1, msg, strlen(msg));
-
-    msg = "=========================================\n";
-    write(1, msg, strlen(msg));
-
-    msg = "           TEST SUMMARY                  \n";
-    write(1, msg, strlen(msg));
-
-    msg = "=========================================\n";
-    write(1, msg, strlen(msg));
-
-    msg = "Tests run: ";
-    write(1, msg, strlen(msg));
-    itoa(tests_run, buffer);
-    write(1, buffer, strlen(buffer));
-    msg = "\n";
-    write(1, msg, strlen(msg));
-
-    msg = "Tests passed: ";
-    write(1, msg, strlen(msg));
-    itoa(tests_passed, buffer);
-    write(1, buffer, strlen(buffer));
-    msg = "\n";
-    write(1, msg, strlen(msg));
-
-    msg = "Tests failed: ";
-    write(1, msg, strlen(msg));
-    itoa(tests_run - tests_passed, buffer);
-    write(1, buffer, strlen(buffer));
-    msg = "\n";
-    write(1, msg, strlen(msg));
-
-    if (tests_passed == tests_run) {
-        msg = "\n*** ALL TESTS PASSED! ***\n";
-        write(1, msg, strlen(msg));
-    } else {
-        msg = "\n*** SOME TESTS FAILED! ***\n";
-        write(1, msg, strlen(msg));
-    }
-
-    msg = "=========================================\n";
-    write(1, msg, strlen(msg));
-}
+/* ---- Sys call test functions ---- */
 
 void test_write_syscall(void) {
     print_test_header("WRITE SYSCALL");
 
     subtests_run = 0;
     subtests_passed = 0;
-    char *msg;
 
     // Test 1: Normal write
     msg = "[TEST 1] Normal write test...\n";
@@ -286,7 +331,6 @@ void test_write_syscall(void) {
 
 void test_gettime_syscall(void) {
     print_test_header("GETTIME SYSCALL");
-    char *msg;
 
     msg = "[TEST] Testing gettime() syscall...\n";
     write(1, msg, strlen(msg));
@@ -321,7 +365,6 @@ void test_getpid_syscall(void) {
     RESET_ERRNO(); // Reset errno at the start of test
 
     print_test_header("GETPID SYSCALL");
-    char *msg;
 
     msg = "[TEST] Testing getpid() syscall...\n";
     write(1, msg, strlen(msg));
@@ -346,7 +389,6 @@ void test_fork_syscall(void) {
 
     int parent_subtests_run = 0;
     int parent_subtests_passed = 0;
-    char *msg;
 
     // Test 1: Basic fork test - create a child process
     msg = "[TEST 1] Basic fork test...\n";
@@ -543,7 +585,6 @@ void test_fork_syscall(void) {
 
 void test_exit_syscall(void) {
     print_test_header("EXIT SYSCALL");
-    char *msg;
 
     msg = "[TEST] Testing exit() syscall with child process...\n";
     write(1, msg, strlen(msg));
@@ -577,7 +618,6 @@ void test_exit_syscall(void) {
 
 void test_block_unblock_syscalls(void) {
     print_test_header("BLOCK/UNBLOCK SYSCALLS");
-    char *msg;
 
     msg = "[TEST] Testing block() and unblock() syscalls...\n";
     write(1, msg, strlen(msg));
@@ -634,7 +674,6 @@ void test_block_unblock_syscalls(void) {
 
 void test_pagefault_exception(void) {
     print_test_header("PAGE FAULT EXCEPTION");
-    char *msg;
 
     msg = "[TEST] Testing Page Fault Exception...\n";
     write(1, msg, strlen(msg));
@@ -647,4 +686,87 @@ void test_pagefault_exception(void) {
     msg = "[TEST] ERROR: Page fault was not triggered!\n";
     write(1, msg, strlen(msg));
     print_test_result("Page Fault Exception", 0);
+}
+
+/* -- Helper functions -- */
+
+void write_current_pid() {
+    write(1, "[PID ", 5);
+    itoa(getpid(), buffer);
+    write(1, buffer, strlen(buffer));
+    write(1, "] ", 2);
+}
+
+void print_test_header(char *test_name) {
+    char *msg = "\n--- Testing: ";
+    write(1, msg, strlen(msg));
+    write(1, test_name, strlen(test_name));
+    msg = " ---\n";
+    write(1, msg, strlen(msg));
+}
+
+void print_test_result(char *test_name, int passed) {
+
+    tests_run++;
+    if (passed) {
+        tests_passed++;
+        msg = "\n[RESULT] ";
+        write(1, msg, strlen(msg));
+        write(1, test_name, strlen(test_name));
+        msg = ": PASSED\n";
+        write(1, msg, strlen(msg));
+    } else {
+        msg = "[RESULT] ";
+        write(1, msg, strlen(msg));
+        write(1, test_name, strlen(test_name));
+        msg = ": FAILED\n";
+        write(1, msg, strlen(msg));
+    }
+}
+
+void print_final_summary(void) {
+
+    msg = "\n\n";
+    write(1, msg, strlen(msg));
+
+    msg = "=========================================\n";
+    write(1, msg, strlen(msg));
+
+    msg = "           TEST SUMMARY                  \n";
+    write(1, msg, strlen(msg));
+
+    msg = "=========================================\n";
+    write(1, msg, strlen(msg));
+
+    msg = "Tests run: ";
+    write(1, msg, strlen(msg));
+    itoa(tests_run, buffer);
+    write(1, buffer, strlen(buffer));
+    msg = "\n";
+    write(1, msg, strlen(msg));
+
+    msg = "Tests passed: ";
+    write(1, msg, strlen(msg));
+    itoa(tests_passed, buffer);
+    write(1, buffer, strlen(buffer));
+    msg = "\n";
+    write(1, msg, strlen(msg));
+
+    msg = "Tests failed: ";
+    write(1, msg, strlen(msg));
+    itoa(tests_run - tests_passed, buffer);
+    write(1, buffer, strlen(buffer));
+    msg = "\n";
+    write(1, msg, strlen(msg));
+
+    if (tests_passed == tests_run) {
+        msg = "\n*** ALL TESTS PASSED! ***\n";
+        write(1, msg, strlen(msg));
+    } else {
+        msg = "\n*** SOME TESTS FAILED! ***\n";
+        write(1, msg, strlen(msg));
+    }
+
+    msg = "=========================================\n";
+    write(1, msg, strlen(msg));
 }

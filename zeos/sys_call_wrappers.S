@@ -1,5 +1,8 @@
 #include <asm.h>
 
+# caller-saved registers: eax, ecx, edx
+# callee-saved registers: ebp, edi, esi, ebx
+
 ENTRY(write)
     pushl %ebp
     movl %esp,%ebp
@@ -143,9 +146,9 @@ block_return:
 ENTRY(unblock)
     pushl %ebp
     movl %esp, %ebp
-    pushl 8(%ebp)
     movl $13, %eax
     
+    movl 0x08(%ebp), %ebx 
     pushl $unblock_return
     pushl %ebp
     movl %esp, %ebp
@@ -155,7 +158,6 @@ unblock_return:
     popl %ebp
     addl $4, %esp
     popl %ebp
-    addl $4, %esp
     cmpl $0, %eax
     jl unblock_error
     ret

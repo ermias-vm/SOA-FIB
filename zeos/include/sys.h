@@ -9,7 +9,7 @@
  * KERNEL STACK LAYOUT FOR CHILD PROCESS (sys_fork)
  * ================================================
  * Lower memory addresses (bottom of stack)
- * 
+ *
  *    +--------------------+ <- &child_union->stack[0] (lowest address)
  *    |                    |
  *    |   UNUSED SPACE     |
@@ -24,7 +24,7 @@
  *    |                    |
  *    |   CTX SW (11 regs) | <- Software context saved by SAVE_ALL macro
  *    |   EBX              | <- General purpose registers
- *    |   ECX, EDX, ESI    | <- General purpose registers  
+ *    |   ECX, EDX, ESI    | <- General purpose registers
  *    |   EDI, EBP, EAX    | <- General purpose registers
  *    |   DS, ES, FS, GS   | <- Segment registers
  *    +--------------------+ <- stack[KERNEL_STACK_SIZE - 6] (approx)
@@ -33,14 +33,14 @@
  *    |   user EIP         | <- User instruction pointer
  *    |   user CS          | <- User code segment
  *    |   user EFLAGS      | <- User flags
- *    |   user ESP         | <- User stack pointer  
+ *    |   user ESP         | <- User stack pointer
  *    |   user SS          | <- User stack segment
  *    +--------------------+
  *    |                    |
  *    |   UNUSED SPACE     |
  *    |                    |
  *    +--------------------+ <- &child_union->stack[KERNEL_STACK_SIZE-1] (highest address)
- * 
+ *
  * Higher memory addresses (top of stack)
  */
 

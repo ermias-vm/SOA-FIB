@@ -146,14 +146,13 @@ int sys_fork() {
     // ret_from_fork sets EAX=0 and falls into the syscall return path
     // already present in the copied parent frame (sysexit to user).
 
-   
     // We place a fake EBP and ret_from_fork as the return address, but we must
     // point into the copied syscall frame so that ret_from_fork "returns" into
     // the syscall epilogue. Offsets -19/-18 match the saved frame layout.
     child_union->stack[KERNEL_STACK_SIZE - 19] = (unsigned long)0;             // fake EBP
     child_union->stack[KERNEL_STACK_SIZE - 18] = (unsigned long)ret_from_fork; // return to stub
     child_task->kernel_esp = (unsigned int)&(child_union->stack[KERNEL_STACK_SIZE - 19]);
-    
+
     /* === STEP k: Insert into ready queue === */
     list_add_tail(&child_task->list, &readyqueue);
 
@@ -247,15 +246,14 @@ void sys_exit() {
 void sys_block() {
     struct task_struct *current_task = current();
 
-    int pending = current_task->pending_unblocks;
-    if (pending == 0) {
-        current_task->status = ST_BLOCKED;
-        list_add_tail(&current_task->list, &blockedqueue);
+    if (current_task->pending_unblocks == 0) {
+        update_process_state_rr(current_task, &blockedqueue);
         scheduler();
     } else {
         current_task->pending_unblocks--;
     }
 }
+
 int sys_unblock(int pid) {
     struct task_struct *current_task = current();
     struct list_head *pos;
@@ -265,9 +263,7 @@ int sys_unblock(int pid) {
         struct task_struct *child = list_entry(pos, struct task_struct, child_list);
         if (child->PID == pid) {
             if (child->status == ST_BLOCKED) {
-                child->status = ST_READY;
-                list_del(&child->list);
-                list_add_tail(&child->list, &readyqueue);
+                update_process_state_rr(child, &readyqueue);
                 return 0;
             } else {
                 child->pending_unblocks++;
