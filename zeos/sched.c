@@ -235,24 +235,9 @@ void sched_next_rr(void) {
 void scheduler(void) {
     update_sched_data_rr();
 
-    if (current_quantum <= 0) {
-        char buffer[12];
-        printk_color("[SCHED]: current_quantum = ", INFO_COLOR);
-        itoa(current_quantum, buffer);
-        printk_color(buffer, DEFAULT_COLOR);
-        printk_color("; PID=", INFO_COLOR);
-        itoa(current()->PID, buffer);
-        printk_color(buffer, DEFAULT_COLOR);
-        printk_color("; Ready queue: ", INFO_COLOR);
-        if (list_empty(&readyqueue)) {
-            printk_color("empty\n", WARNING_COLOR);
-        } else {
-            printk_color("not empty\n", DEFAULT_COLOR);
-        }
-    }
-
     if (needs_sched_rr()) {
-        update_process_state_rr(current(), &readyqueue);
+        struct task_struct *task = (struct task_struct *)current();
+        update_process_state_rr(task, &readyqueue);
         sched_next_rr();
     }
 }

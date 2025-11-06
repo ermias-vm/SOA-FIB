@@ -11,8 +11,8 @@
 #define WRITE_TEST              1
 #define GETTIME_TEST            1
 #define GETPID_TEST             1
-#define FORK_TEST               1
-#define EXIT_TEST               1
+#define FORK_TEST               0
+#define EXIT_TEST               0
 #define BLOCK_UNBLOCK_TEST      1
 #define PAGEFAULT_TEST          0
 // clang-format on
@@ -25,7 +25,21 @@
 /* Large Buffer size for write tests */
 #define LARGE_BUFFER_SIZE 300
 
-// Main test execution function
+/**
+ * @brief Test basic process operations comprehensively.
+ *
+ * This function performs test of basic process operations
+ * including fork(), block(), unblock(), and exit().
+ * It creates a process hierarchy where:
+ * - Parent process creates a first child
+ * - First child creates a second child (grandchild)
+ * - Second child blocks itself after showing activity
+ * - First child unblocks the second child
+ * - Second child exits gracefully after being unblocked
+ * - All processes show their PID in a consistent format [PID X]
+ */
+void test_basic_process_operations(void);
+
 /**
  * @brief Execute all ZeOS test suites.
  *
@@ -35,7 +49,8 @@
  */
 void execute_zeos_tests(void);
 
-// Sys call test functions
+/* ---- Sys call test functions ---- */
+
 /**
  * @brief Test write system call functionality.
  *
@@ -90,7 +105,16 @@ void test_exit_syscall(void);
  */
 void test_block_unblock_syscalls(void);
 
-// Helper functions
+/* ---- Helper functions ---- */
+
+/**
+ * @brief Write the current process ID in a formatted manner.
+ *
+ * This function writes the current process ID to standard output
+ * in the format: [PID X]
+ */
+void write_current_pid();
+
 /**
  * @brief Print formatted test header.
  *
