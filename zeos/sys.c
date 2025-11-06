@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <interrupt.h>
 #include <io.h>
+#include <libc.h> // itoa, write helpers
 #include <mm.h>
 #include <mm_address.h>
 #include <sched.h>
@@ -126,6 +127,7 @@ int sys_fork() {
 
     /* Initialize scheduling fields - inherit from parent */
     child_task->quantum = current()->quantum;
+    child_task->status = ST_READY; // new task is ready to run
 
     /* Initialize process hierarchy */
     child_task->parent = current();
@@ -139,16 +141,19 @@ int sys_fork() {
     child_task->pending_unblocks = 0;
 
     /* === STEP i & j: Prepare registers and child stack for task_switch === */
-    // Use the same approach as backup: simple stack initialization
-    // The child will start execution from a clean state
+    // Rebuild child's kernel stack so that when
+    // switch_context pops EBP and returns, it jumps to ret_from_fork.
+    // ret_from_fork sets EAX=0 and falls into the syscall return path
+    // already present in the copied parent frame (sysexit to user).
 
-    union task_union *child_union_ptr = (union task_union *)child_task;
-
-    // Set up fake ebp and return address like in backup
-    child_union_ptr->stack[KERNEL_STACK_SIZE - 19] = (unsigned long)0;             // fake ebp
-    child_union_ptr->stack[KERNEL_STACK_SIZE - 18] = (unsigned long)ret_from_fork; // return address
-    child_task->kernel_esp = (unsigned int)&(child_union_ptr->stack[KERNEL_STACK_SIZE - 19]);
-
+   
+    // We place a fake EBP and ret_from_fork as the return address, but we must
+    // point into the copied syscall frame so that ret_from_fork "returns" into
+    // the syscall epilogue. Offsets -19/-18 match the saved frame layout.
+    child_union->stack[KERNEL_STACK_SIZE - 19] = (unsigned long)0;             // fake EBP
+    child_union->stack[KERNEL_STACK_SIZE - 18] = (unsigned long)ret_from_fork; // return to stub
+    child_task->kernel_esp = (unsigned int)&(child_union->stack[KERNEL_STACK_SIZE - 19]);
+    
     /* === STEP k: Insert into ready queue === */
     list_add_tail(&child_task->list, &readyqueue);
 
@@ -237,8 +242,6 @@ void sys_exit() {
 
     /* === STEP 5: Schedule new process === */
     sched_next_rr();
-
-    // This point should never be reached
 }
 
 void sys_block() {

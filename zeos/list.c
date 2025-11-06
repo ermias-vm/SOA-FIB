@@ -74,6 +74,7 @@ void list_del(struct list_head *entry) {
  * list_is_last - tests whether @list is the last entry in list @head
  * @list: the entry to test
  * @head: the head of the list
+ * @return: 1 if @list is the last entry, 0 otherwise
  */
 int list_is_last(const struct list_head *list, const struct list_head *head) {
     return list->next == head;
@@ -82,6 +83,7 @@ int list_is_last(const struct list_head *list, const struct list_head *head) {
 /**
  * list_empty - tests whether a list is empty
  * @head: the list to test.
+ * @return: 1 if the list is empty, 0 otherwise
  */
 int list_empty(const struct list_head *head) {
     return head->next == head;

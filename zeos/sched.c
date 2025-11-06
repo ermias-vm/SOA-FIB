@@ -66,9 +66,6 @@ void init_idle(void) {
     /* Initialize quantum */
     idle_task->quantum = DEFAULT_QUANTUM;
 
-    /* Initialize status */
-    idle_task->status = ST_READY;
-
     /* Initialize process hierarchy */
     idle_task->parent = NULL;
     INIT_LIST_HEAD(&idle_task->children);
@@ -164,37 +161,31 @@ void update_sched_data_rr(void) {
 }
 
 int needs_sched_rr(void) {
-    if ((current_quantum <= 0 && !list_empty(&readyqueue)) || (current()->status == ST_BLOCKED)) {
-        return 1;
-    } else {
-        return 0;
+    if (current_quantum <= 0) {
+        current_quantum = get_quantum(current());
+        // Need to switch if there are ready processes and quantum expired
+        if (!list_empty(&readyqueue)) {
+            return 1;
+        }
     }
+    // Need to switch if the current process is blocked
+    return (current()->status == ST_BLOCKED);
 }
 
 void update_process_state_rr(struct task_struct *task, struct list_head *dest_queue) {
     struct list_head *task_list = &task->list;
 
-    // Only remove from current queue if not running
-    // (running processes aren't in any queue)
+    // Remove from current queue only if not running
     if (task->status != ST_RUN) {
-        // printk("Updating process state\n");
-        // Remove from current queue
         list_del(task_list);
     }
 
-    // Handle destination queue and state update
+    // Update state and queue based on destination
     if (dest_queue != NULL) {
-        // Add to destination queue
         list_add_tail(task_list, dest_queue);
-
-        // Update state based on destination queue
-        if (dest_queue == &readyqueue) {
-            task->status = ST_READY;
-        } else {
-            task->status = ST_BLOCKED;
-        }
+        task->status = (dest_queue == &readyqueue) ? ST_READY : ST_BLOCKED;
     } else {
-        // No destination queue = running state
+        // No destination queue means the task is now running
         task->status = ST_RUN;
     }
 }
@@ -243,19 +234,20 @@ void scheduler(void) {
         char buffer[12];
         printk_color("[SCHED]: current_quantum = ", INFO_COLOR);
         itoa(current_quantum, buffer);
-        printk_color(buffer, INFO_COLOR);
-        printk_color(" PID=", INFO_COLOR);
+        printk_color(buffer, DEFAULT_COLOR);
+        printk_color("; PID=", INFO_COLOR);
         itoa(current()->PID, buffer);
-        printk_color(buffer, INFO_COLOR);
-        printk_color("Process  in ready_queue = ", INFO_COLOR);
-        itoa(list_empty(&readyqueue), buffer);
-        printk_color(buffer, INFO_COLOR);
-        printk_color("\n", INFO_COLOR);
+        printk_color(buffer, DEFAULT_COLOR);
+        printk_color("; Ready queue: ", INFO_COLOR);
+        if (list_empty(&readyqueue)) {
+            printk_color("empty\n", WARNING_COLOR);
+        } else {
+            printk_color("not empty\n", DEFAULT_COLOR);
+        }
     }
 
     if (needs_sched_rr()) {
-        struct task_struct *up = (struct task_struct *)current();
-        update_process_state_rr(up, &readyqueue);
+        update_process_state_rr(current(), &readyqueue);
         sched_next_rr();
     }
 }

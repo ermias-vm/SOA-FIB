@@ -16,7 +16,7 @@
 #define KERNEL_STACK_SIZE 1024
 
 /* Default quantum assigned to new processes */
-#define DEFAULT_QUANTUM 1000
+#define DEFAULT_QUANTUM 100
 
 /* Process states for scheduling */
 enum state_t {
@@ -144,15 +144,6 @@ extern void task_switch(union task_union *new);
  * @param new_esp New ESP value to load.
  */
 extern void switch_context(unsigned long *current_esp, unsigned long new_esp);
-
-/**
- * @brief Return from fork system call for child process.
- *
- * This function is used by child processes created by fork() to return
- * to user space with the appropriate return value (0 for child).
- * @return Always returns 0 in the child process after fork.
- */
-int ret_from_fork(void);
 
 /**
  * @brief Convert list_head to task_struct.

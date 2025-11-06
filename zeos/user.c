@@ -18,6 +18,7 @@ __attribute__((__section__(".text.main"))) int main(void) {
     // Execute test suite
     // execute_zeos_tests();
     fork();
+
     while (1) {
     }
 }
