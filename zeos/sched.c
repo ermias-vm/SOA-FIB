@@ -11,7 +11,7 @@
 #include <utils.h>
 
 /* Global array of all task unions in the system */
-union task_union task[NR_TASKS] __attribute__((__section__(".data.task")));
+union task_union tasks[NR_TASKS] __attribute__((__section__(".data.task")));
 
 /* Global PID counter for assigning unique process identifiers */
 static int next_pid = 1;
@@ -36,8 +36,9 @@ page_table_entry *get_PT(struct task_struct *task) {
 }
 
 int allocate_DIR(struct task_struct *task) {
-    int pos;
-    pos = ((int)task - (int)task) / sizeof(union task_union);
+    unsigned long base = (unsigned long)&tasks[0].task;
+    unsigned long current_task = (unsigned long)task;
+    int pos = (current_task - base) / sizeof(union task_union); // Index in tasks[]
     task->dir_pages_baseAddr = (page_table_entry *)&dir_pages[pos];
     return 1;
 }
@@ -122,7 +123,7 @@ void init_queues() {
     INIT_LIST_HEAD(&blockedqueue);
 
     for (int i = 0; i < NR_TASKS; ++i) {
-        list_add_tail(&task[i].task.list, &freequeue);
+        list_add_tail(&tasks[i].task.list, &freequeue);
     }
 }
 
@@ -138,10 +139,13 @@ struct task_struct *current() {
 }
 
 void inner_task_switch(union task_union *new) {
+    printk_color("<SCHED>: In inner_task_switch\n", INFO_COLOR);
     tss.esp0 = KERNEL_ESP(new);
     writeMSR(0x175, (int)tss.esp0);
     set_cr3(get_DIR(&new->task));
+    printk_color("<SCHED>: BEFORE Switching context...\n", INFO_COLOR);
     switch_context(&current()->kernel_esp, new->task.kernel_esp);
+    printk_color("<SCHED>: Switching context done\n", INFO_COLOR);
 }
 
 int get_next_pid(void) {
@@ -223,8 +227,9 @@ void sched_next_rr(void) {
 
     // Reset quantum counter for the next process
     current_quantum = next_task->quantum;
-
+    printk_color("<SCHED>: Switching to process...\n", INFO_COLOR);
     task_switch((union task_union *)next_task);
+    printk_color("done\n", INFO_COLOR);
 }
 
 void scheduler(void) {

@@ -63,7 +63,7 @@ __attribute__((__section__(".text.main"))) int main(void) {
     // compiler will know its final memory location. Otherwise it will try to
     // use the 'ds' register to access the address... but we are not ready for
     // that yet (we are still in real mode).
-    set_seg_regs(__KERNEL_DS, __KERNEL_DS, (DWord)&task[4]);
+    set_seg_regs(__KERNEL_DS, __KERNEL_DS, (DWord)&tasks[4]);
 
     /*** DO *NOT* ADD ANY CODE IN THIS ROUTINE BEFORE THIS POINT ***/
 

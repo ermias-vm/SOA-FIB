@@ -16,7 +16,7 @@
 #define KERNEL_STACK_SIZE 1024
 
 /* Default quantum assigned to new processes */
-#define DEFAULT_QUANTUM 100
+#define DEFAULT_QUANTUM 1000
 
 /* Process states for scheduling */
 enum state_t {
@@ -62,7 +62,7 @@ union task_union {
 };
 
 /* Global array of all possible tasks in the system */
-extern union task_union task[NR_TASKS];
+extern union task_union tasks[NR_TASKS];
 
 /* Pointer to the idle task (PID 0) */
 extern struct task_struct *idle_task;
@@ -74,7 +74,7 @@ extern struct task_struct *init_task;
 #define KERNEL_ESP(task) (DWord) & (task)->stack[KERNEL_STACK_SIZE]
 
 /* Initial ESP for the first user process */
-#define INITIAL_ESP KERNEL_ESP(&task[1])
+#define INITIAL_ESP KERNEL_ESP(&tasks[1])
 
 /**
  * @brief Initialize the initial process task.
