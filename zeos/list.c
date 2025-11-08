@@ -1,3 +1,11 @@
+/**
+ * @file list.c
+ * @brief Doubly-linked list implementation for ZeOS.
+ *
+ * This file provides a generic doubly-linked list implementation
+ * used for process queues and kernel data structure management.
+ */
+
 #include <list.h>
 
 /*

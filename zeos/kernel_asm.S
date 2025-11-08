@@ -1,5 +1,9 @@
-/*
- * kernel_asm.S - Assembly routines for kernel operations
+/**
+ * @file kernel_asm.S
+ * @brief Low-level assembly routines for kernel operations in ZeOS.
+ * 
+ * This file contains critical assembly functions for memory management,
+ * CPU control operations, and hardware-specific kernel functionality.
  */
 
 #include <asm.h>

@@ -1,5 +1,9 @@
-/*
- * zeos_test.h - Header for ZeOS test suite
+/**
+ * @file zeos_test.h
+ * @brief Test suite interface definitions for ZeOS.
+ *
+ * This header defines test function prototypes and testing
+ * utilities for ZeOS functionality verification.
  */
 
 #ifndef __ZEOS_TEST_H__
@@ -11,8 +15,8 @@
 #define WRITE_TEST              1
 #define GETTIME_TEST            1
 #define GETPID_TEST             1
-#define FORK_TEST               0
-#define EXIT_TEST               0
+#define FORK_TEST               1
+#define EXIT_TEST               1
 #define BLOCK_UNBLOCK_TEST      1
 #define PAGEFAULT_TEST          0
 // clang-format on
@@ -26,7 +30,7 @@
 #define LARGE_BUFFER_SIZE 300
 
 /**
- * @brief Test basic process operations comprehensively.
+ * @brief Test basic process operations.
  *
  * This function performs test of basic process operations
  * including fork(), block(), unblock(), and exit().
@@ -45,7 +49,7 @@ void test_basic_process_operations(void);
  *
  * This function runs all enabled test suites for system calls and exceptions.
  * It coordinates the execution of individual test functions and provides
- * a comprehensive test summary.
+ * a test summary.
  */
 void execute_zeos_tests(void);
 
@@ -108,6 +112,15 @@ void test_block_unblock_syscalls(void);
 /* ---- Helper functions ---- */
 
 /**
+ * @brief Work for a specified number of ticks.
+ *
+ * This function makes the current process work (busy wait) for a specified
+ * number of system ticks. 1000 ticks approximately corresponds to 1 second.
+ * @param ticks Number of system ticks to work for.
+ */
+void work(int ticks);
+
+/**
  * @brief Write the current process ID in a formatted manner.
  *
  * This function writes the current process ID to standard output
@@ -135,7 +148,7 @@ void print_test_result(char *test_name, int passed);
 /**
  * @brief Print final test summary.
  *
- * This function prints a comprehensive summary of all executed tests
+ * This function prints a summary of all executed tests
  * including total tests run, passed, and failed counts.
  */
 void print_final_summary(void);

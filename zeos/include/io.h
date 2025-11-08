@@ -1,5 +1,9 @@
-/*
- * io.h - Definició de l'entrada/sortida per pantalla en mode sistema
+/**
+ * @file io.h
+ * @brief Input/Output interface definitions for ZeOS.
+ *
+ * This header defines I/O functions, screen management interfaces,
+ * and console operations for the ZeOS kernel.
  */
 
 #ifndef __IO_H__

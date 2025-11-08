@@ -1,5 +1,13 @@
-#ifndef MM_ADDRESS_H
-#define MM_ADDRESS_H
+/**
+ * @file mm_address.h
+ * @brief Memory address layout and page management constants for ZeOS.
+ *
+ * This header defines memory layout constants, page sizes, and address
+ * calculations for memory management in the ZeOS kernel.
+ */
+
+#ifndef __MM_ADDRESS_H__
+#define __MM_ADDRESS_H__
 
 /* Page directory entry index for page directory pages */
 #define ENTRY_DIR_PAGES 0
@@ -28,9 +36,6 @@
 /* Size of a page in bytes (4KB) */
 #define PAGE_SIZE 0x1000
 
-/* Memory distribution */
-/***********************/
-
 /* Physical address where kernel starts (64KB) */
 #define KERNEL_START 0x10000
 
@@ -46,4 +51,4 @@
 /* Convert virtual address to page number */
 #define PH_PAGE(x) (x >> 12)
 
-#endif
+#endif /* __MM_ADDRESS_H__ */

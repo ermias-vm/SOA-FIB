@@ -1,3 +1,11 @@
+/**
+ * @file errno.h
+ * @brief Error code definitions and errno interface for ZeOS.
+ *
+ * This header defines standard error codes and errno variable
+ * for system call error reporting in ZeOS.
+ */
+
 #ifndef _ERRNO_H_
 #define _ERRNO_H_
 

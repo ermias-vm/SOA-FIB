@@ -1,5 +1,18 @@
+/**
+ * @file utils.h
+ * @brief Utility function interfaces and helper definitions for ZeOS.
+ *
+ * This header defines utility functions, memory operations,
+ * and general-purpose helper routines for the ZeOS kernel.
+ */
+
 #ifndef UTILS_H
 #define UTILS_H
+
+/* Memory access verification types */
+
+#define VERIFY_READ 0
+#define VERIFY_WRITE 1
 
 /**
  * @brief Copy data between memory locations.
@@ -9,7 +22,7 @@
  * @param dest Destination memory address.
  * @param size Number of bytes to copy.
  */
-void copy_data(void *start, void *dest, int size);
+extern void copy_data(void *start, void *dest, int size);
 
 /**
  * @brief Copy data from user space to kernel space.
@@ -21,7 +34,7 @@ void copy_data(void *start, void *dest, int size);
  * @param size Number of bytes to copy.
  * @return Number of bytes copied, or negative error code.
  */
-int copy_from_user(void *start, void *dest, int size);
+extern int copy_from_user(void *start, void *dest, int size);
 
 /**
  * @brief Copy data from kernel space to user space.
@@ -33,10 +46,8 @@ int copy_from_user(void *start, void *dest, int size);
  * @param size Number of bytes to copy.
  * @return Number of bytes copied, or negative error code.
  */
-int copy_to_user(void *start, void *dest, int size);
+extern int copy_to_user(void *start, void *dest, int size);
 
-#define VERIFY_READ 0
-#define VERIFY_WRITE 1
 /**
  * @brief Check if memory access is allowed.
  *
@@ -47,8 +58,9 @@ int copy_to_user(void *start, void *dest, int size);
  * @param size Size of the memory region to check.
  * @return 1 if access is allowed, 0 otherwise.
  */
-int access_ok(int type, const void *addr, unsigned long size);
+extern int access_ok(int type, const void *addr, unsigned long size);
 
+/* Minimum value macro */
 #define min(a, b) (a < b ? a : b)
 
 /**
@@ -57,7 +69,7 @@ int access_ok(int type, const void *addr, unsigned long size);
  * This function returns the current system timer ticks.
  * @return Current system ticks.
  */
-unsigned long get_ticks(void);
+extern unsigned long get_ticks(void);
 
 /**
  * @brief Convert integer to hexadecimal string.
@@ -67,14 +79,14 @@ unsigned long get_ticks(void);
  * @param num Unsigned integer to convert.
  * @param buffer Buffer to store the hexadecimal string.
  */
-void itoa_hex(unsigned int num, char *buffer);
+extern void itoa_hex(unsigned int num, char *buffer);
 
 /**
  * @brief Print system splash screen.
  *
  * This function prints the ZeOS startup splash screen with system information.
  */
-void print_splash_screen(void);
+extern void print_splash_screen(void);
 
 /**
  * @brief Wait for specified number of ticks.
@@ -83,5 +95,6 @@ void print_splash_screen(void);
  * of timer ticks.
  * @param ticks_to_wait Number of ticks to wait.
  */
-void wait_ticks(int ticks_to_wait);
+extern void wait_ticks(int ticks_to_wait);
+
 #endif // UTILS_H

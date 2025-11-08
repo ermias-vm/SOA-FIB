@@ -1,5 +1,13 @@
-#ifndef DEVICES_H__
-#define DEVICES_H__
+/**
+ * @file devices.h
+ * @brief Device driver interface definitions for ZeOS.
+ *
+ * This header defines device driver functions and interfaces
+ * for hardware device access and management in ZeOS.
+ */
+
+#ifndef __DEVICES_H__
+#define __DEVICES_H__
 
 /**
  * @brief Write data to console device.
@@ -11,4 +19,5 @@
  * @return Number of bytes written to console.
  */
 int sys_write_console(char *buffer, int size);
-#endif /* DEVICES_H__*/
+
+#endif /* __DEVICES_H__ */

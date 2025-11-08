@@ -1,3 +1,11 @@
+/**
+ * @file list.h
+ * @brief Doubly-linked list interface definitions for ZeOS.
+ *
+ * This header defines list structures and manipulation macros
+ * for generic doubly-linked list operations in the kernel.
+ */
+
 #ifndef _LINUX_LIST_H
 #define _LINUX_LIST_H
 

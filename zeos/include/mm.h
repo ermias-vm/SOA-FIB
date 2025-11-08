@@ -1,5 +1,9 @@
-/*
- * mm.h - Capçalera del mòdul de gestió de memòria
+/**
+ * @file mm.h
+ * @brief Memory management interface and definitions for ZeOS.
+ *
+ * This header defines memory management functions, data structures,
+ * and constants for paging, virtual memory, and frame allocation.
  */
 
 #ifndef __MM_H__
@@ -11,10 +15,13 @@
 
 #define FREE_FRAME 0
 #define USED_FRAME 1
+
 /* Bytemap to mark the free physical pages */
 extern Byte phys_mem[TOTAL_PAGES];
 
+/* Page directories for each task */
 extern page_table_entry dir_pages[NR_TASKS][TOTAL_PAGES];
+/* User page tables for each task */
 extern page_table_entry pagusr_table[NR_TASKS][TOTAL_PAGES];
 
 /**
@@ -57,9 +64,45 @@ void free_frame(unsigned int frame);
  */
 void set_user_pages(struct task_struct *task);
 
+/* Global Descriptor Table pointer for memory segmentation */
 extern Descriptor *gdt;
 
+/* Task State Segment structure used for hardware task switching */
 extern TSS tss;
+
+/**
+ * @brief Initialize directory pages for all tasks
+ *
+ * Sets up the page directory entries for all tasks in the system,
+ * configuring the mapping to user page tables with proper permissions.
+ */
+void init_dir_pages();
+
+/**
+ * @brief Initialize page tables with kernel pages
+ *
+ * Sets up the page tables for all tasks with kernel page mappings.
+ * Initializes kernel pages as present and accessible.
+ */
+void init_table_pages();
+
+/**
+ * @brief Enable paging by setting the PE flag in CR0
+ *
+ * Modifies the CR0 register to enable paging in the processor,
+ * activating virtual memory management.
+ */
+void set_pe_flag();
+
+/**
+ * @brief Free user pages allocated to a task
+ *
+ * Releases all user memory pages (data pages) allocated to a task
+ * back to the free frame pool and clears the page table entries.
+ *
+ * @param task Pointer to the task structure whose pages should be freed
+ */
+void free_user_pages(struct task_struct *task);
 
 /**
  * @brief Initialize memory management subsystem

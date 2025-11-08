@@ -1,6 +1,9 @@
-/*
- * libc.h - macros per fer els traps amb diferents arguments
- *          definició de les crides a sistema
+/**
+ * @file libc.h
+ * @brief Standard C library interface definitions for ZeOS.
+ *
+ * This header defines standard C library functions, string operations,
+ * memory functions, and system call wrappers for user applications.
  */
 
 #ifndef __LIBC_H__
@@ -108,7 +111,7 @@ int unblock(int pid);
 /**
  * @brief Execute ZeOS test suite.
  *
- * This function runs the comprehensive ZeOS test suite.
+ * This function runs the ZeOS test suite.
  */
 void execute_zeos_tests(void);
 

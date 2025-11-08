@@ -1,3 +1,11 @@
+/**
+ * @file utils.c
+ * @brief Utility functions and helper routines for ZeOS.
+ *
+ * This file contains general-purpose utility functions including
+ * memory operations, copying routines, and system helper functions.
+ */
+
 #include <io.h>
 #include <mm_address.h>
 #include <types.h>
@@ -17,7 +25,7 @@ void copy_data(void *start, void *dest, int size) {
         size--;
     }
 }
-/* Copia de espacio de usuario a espacio de kernel, devuelve 0 si ok y -1 si
+/* Copy from user space to kernel space, returns 0 if ok and -1 if
  * error*/
 int copy_from_user(void *start, void *dest, int size) {
     DWord *p = start, *q = dest;
@@ -34,7 +42,7 @@ int copy_from_user(void *start, void *dest, int size) {
     }
     return 0;
 }
-/* Copia de espacio de kernel a espacio de usuario, devuelve 0 si ok y -1 si
+/* Copy from kernel space to user space, returns 0 if ok and -1 if
  * error*/
 int copy_to_user(void *start, void *dest, int size) {
     DWord *p = start, *q = dest;
@@ -179,5 +187,5 @@ void print_splash_screen(void) {
     printk_color("                   =========================\n", MAKE_COLOR(BLACK, DARK_GRAY));
     // clang-format on
     printk("\n");
-    wait_ticks(1000);
+    wait_ticks(1500);
 }

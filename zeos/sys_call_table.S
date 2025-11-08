@@ -1,3 +1,11 @@
+/**
+ * @file sys_call_table.S
+ * @brief System call dispatch table for ZeOS.
+ * 
+ * This file defines the system call table that maps system call
+ * numbers to their corresponding kernel implementation functions.
+ */
+
 #include <asm.h>
 #include <segment.h>
 

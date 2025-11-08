@@ -1,3 +1,11 @@
+/**
+ * @file sys_call_wrappers.S
+ * @brief System call wrapper functions for ZeOS user-kernel interface.
+ * 
+ * This file contains optimized assembly wrappers for system calls using
+ * SYSENTER/SYSEXIT instructions for fast user-kernel mode transitions.
+ */
+
 #include <asm.h>
 
 # caller-saved registers: eax, ecx, edx
@@ -23,8 +31,8 @@ wr_return:
     addl $4, %esp
     popl %ebx
     popl %ebp
-    cmpl $0, %eax
-    jl wr_error
+    test %eax, %eax
+    js wr_error
     ret
     
 wr_error:
@@ -48,8 +56,8 @@ gt_return:
     popl %ebp
     addl $4, %esp
     popl %ebp
-    cmpl $0, %eax
-    jl gt_error
+    test %eax, %eax
+    js gt_error
     ret
 
 gt_error:
@@ -73,8 +81,8 @@ gp_return:
     popl %ebp
     addl $4, %esp
     popl %ebp
-    cmpl $0, %eax
-    jl gp_error
+    test %eax, %eax
+    js gp_error
     ret
  
 gp_error:
@@ -146,6 +154,7 @@ block_return:
 ENTRY(unblock)
     pushl %ebp
     movl %esp, %ebp
+    pushl %ebx
     movl $13, %eax
     
     movl 0x08(%ebp), %ebx 
@@ -157,9 +166,10 @@ ENTRY(unblock)
 unblock_return:
     popl %ebp
     addl $4, %esp
+    popl %ebx
     popl %ebp
-    cmpl $0, %eax
-    jl unblock_error
+    test %eax, %eax
+    js unblock_error
     ret
 
 unblock_error:

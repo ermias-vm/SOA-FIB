@@ -54,7 +54,6 @@ docs/*.txt
 *.backup
 
 # Other files
-ZeOSInternalArchitecture.md
 docs/*.txt
 docs/img
 /backup

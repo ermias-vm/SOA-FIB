@@ -1,5 +1,9 @@
-/*
- * segment.h - Constants de segment per a les entrades de la GDT
+/**
+ * @file segment.h
+ * @brief Memory segmentation constants and GDT definitions for ZeOS.
+ *
+ * This header defines segment selectors, GDT entry constants,
+ * and memory segmentation parameters for the ZeOS kernel.
  */
 
 #ifndef __SEGMENT_H__

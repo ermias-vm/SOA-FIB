@@ -1,27 +1,19 @@
-# ZeOS - Advanced Operating Systems (SOA) - FIB
+# ZeOS Operating System
 
-Advanced Operating Systems project for developing a custom kernel (ZeOS), implemented in C and x86 assembly.
-
-## Project Overview
-This project involves creating a basic operating system kernel with:
-- Process management and scheduling
-- Memory management 
-- System calls implementation
-- Interrupt handling
-- Hardware abstraction layer
+## Overview
+ZeOS is a Unix-like operating system built for educational purposes. It implements process management, memory management, fast system calls via SYSENTER, interrupt handling, and includes a test framework. The system is designed for x86 architecture and runs on the Bochs emulator with debugging support.
 
 ## Project Structure
-- `ConfigZeos.md`: **[Bochs Configuration Guide](ConfigZeos.md)**
-- `zeos/`: Contains the ZeOS kernel source code and build files
-  - `include/`: Header files and system definitions
-  - `Makefile`: Build system configuration
-  - Various `.c` and `.S` files: Kernel implementation
-- `docs/`: Project documentation and specifications
-  - `Zeos.pdf`: [ZeOS Project Specification](docs/Zeos.pdf)
-  - `BochsInternalDebuggerGuide.md`: [Bochs Internal Debugger Guide](docs/BochsInternalDebuggerGuide.md)
-- `bochs-2.6.7/`: Bochs emulator source code (for compilation)
 
-
+- **[`Makefile`](Makefile)** - Root Makefile that redirects commands to zeos/ directory
+- **[`README.md`](README.md)** - Project documentation
+- **[`ConfigZeos.md`](ConfigZeos.md)** - Configuration details for ZeOS setup
+- **[`zeos/`](zeos/)** - Main ZeOS source code and build directory
+- **[`docs/`](docs/)** - Documentation and guides
+- **[`bochs-2.6.7/`](bochs-2.6.7/)** - Bochs emulator source and binaries
+- **`backup/`** - Automatically created backup directory containing:
+  - **`zeos_versions/`** - Timestamped .tar.gz backups of the ZeOS directory
+  - **`project_versions/`** - Timestamped .tar.gz backups of the complete project
 
 
 ## Development Environment
@@ -30,8 +22,12 @@ This project involves creating a basic operating system kernel with:
 - **Languages**: C, x86 Assembly
 - **Build System**: GNU Make
 
-
 ## Course Information
 **Subject**: Sistemas Operatius Avançats (SOA)  
 **Institution**: Facultat d'Informàtica de Barcelona (FIB) - UPC  
 **Academic Year**: 2025-2026
+
+# 👥 Credits 
+
+- [Marc De Rialp](https://github.com/Derri725)
+- [Ermias Valls](https://github.com/ermias-vm)

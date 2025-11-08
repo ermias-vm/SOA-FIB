@@ -1,5 +1,9 @@
-/*
- * mm.c - Memory Management: Paging & segment memory management
+/**
+ * @file mm.c
+ * @brief Memory management implementation for ZeOS.
+ *
+ * This file implements paging, virtual memory management, frame allocation,
+ * page table handling, and memory segmentation for the ZeOS kernel.
  */
 
 #include <hardware.h>
@@ -30,8 +34,6 @@ TSS tss;
 /************** PAGING MANAGEMENT **************/
 /***********************************************/
 
-/* Init page table directory */
-
 void init_dir_pages() {
     int i;
 
@@ -44,7 +46,6 @@ void init_dir_pages() {
     }
 }
 
-/* Initializes the page table (kernel pages only) */
 void init_table_pages() {
     int i, j;
     /* reset all entries */
@@ -64,7 +65,6 @@ void init_table_pages() {
     }
 }
 
-/* Initialize pages for initial process (user pages) */
 void set_user_pages(struct task_struct *task) {
     int pag;
     int new_ph_pag;
@@ -91,6 +91,7 @@ void set_user_pages(struct task_struct *task) {
 }
 
 /* Writes on CR3 register producing a TLB flush */
+
 void set_cr3(page_table_entry *dir) {
     asm volatile("movl %0,%%cr3" : : "r"(dir));
 }
@@ -104,14 +105,12 @@ void set_cr3(page_table_entry *dir) {
     })
 #define write_cr0(x) __asm__("movl %0,%%cr0" : : "r"(x));
 
-/* Enable paging, modifying the CR0 register */
 void set_pe_flag() {
     unsigned int cr0 = read_cr0();
     cr0 |= 0x80000000;
     write_cr0(cr0);
 }
 
-/* Initializes paging for the system address space */
 void init_mm() {
     init_table_pages();
     init_frames();
@@ -170,8 +169,6 @@ void setTSS() {
     set_task_reg(KERNEL_TSS);
 }
 
-/* Initializes the ByteMap of free physical pages.
- * The kernel pages are marked as used */
 int init_frames(void) {
     int i;
     /* Mark pages as Free */
@@ -185,8 +182,6 @@ int init_frames(void) {
     return 0;
 }
 
-/* alloc_frame - Search a free physical page (== frame) and mark it as USED_FRAME.
- * Returns the frame number or -1 if there isn't any frame available. */
 int alloc_frame(void) {
     int i;
     for (i = NUM_PAG_KERNEL; i < TOTAL_PAGES;) {
@@ -211,12 +206,10 @@ void free_user_pages(struct task_struct *task) {
     }
 }
 
-/* free_frame - Mark as FREE_FRAME the frame  'frame'.*/
 void free_frame(unsigned int frame) {
     if ((frame > NUM_PAG_KERNEL) && (frame < TOTAL_PAGES)) phys_mem[frame] = FREE_FRAME;
 }
 
-/* set_ss_pag - Associates logical page 'page' with physical page 'frame' */
 void set_ss_pag(page_table_entry *PT, unsigned page, unsigned frame) {
     PT[page].entry = 0;
     PT[page].bits.pbase_addr = frame;
@@ -225,12 +218,10 @@ void set_ss_pag(page_table_entry *PT, unsigned page, unsigned frame) {
     PT[page].bits.present = 1;
 }
 
-/* del_ss_pag - Removes mapping from logical page 'logical_page' */
 void del_ss_pag(page_table_entry *PT, unsigned logical_page) {
     PT[logical_page].entry = 0;
 }
 
-/* get_frame - Returns the physical frame associated to page 'logical_page' */
 unsigned int get_frame(page_table_entry *PT, unsigned int logical_page) {
     return PT[logical_page].bits.pbase_addr;
 }

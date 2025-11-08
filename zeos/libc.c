@@ -1,5 +1,10 @@
-/*
- * libc.c
+/**
+ * @file libc.c
+ * @brief Standard C library functions for ZeOS.
+ *
+ * This file provides basic C library functions including string
+ * manipulation, memory operations, and utility functions for
+ * both kernel and user space code.
  */
 
 #include <errno.h>

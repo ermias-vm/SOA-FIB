@@ -1,12 +1,20 @@
+/**
+ * @file bootsect.S
+ * @brief Boot sector code for ZeOS system initialization.
+ * 
+ * This file contains the boot sector assembly code that loads
+ * the kernel and transitions from real mode to protected mode.
+ */
+
 !
 !	bootsect.s    
 !
-! bootsect.s � la versi�simplificada del bootsect.s original de Linux.
-! L'arxiu compilat hauria d'ocupar, sense les capceleres, exactament 512
-! bytes, que � la longitud del sector 0 d'un disquet.
+! bootsect.s is a simplified version of the original Linux bootsect.s.
+! The compiled file should occupy, without headers, exactly 512
+! bytes, which is the length of sector 0 of a diskette.
 
-#define SEC_PISTA            18	! Modificar en cas d'utilitzar disquets
-				! diferents de 1.44Mb:
+#define SEC_PISTA            18	! Modify when using diskettes
+				! different from 1.44Mb:
 				! 38: 2.88Mb; 18: 1.44Mb; 15: 1.2Mb; 9: 720kb
 .text
 
@@ -24,7 +32,7 @@ SWAP_DEV = 0
 .globl	_main
 _main:
 !
-! ZEUS: 1. Movemos el sector 0 a la direccion 0x90000
+! ZEUS: 1. Move sector 0 to address 0x90000
 !
 	mov	ax,#BOOTSEG
 	mov	ds,ax
@@ -38,7 +46,7 @@ _main:
 	movsw			! Moving boot sector from 0x07C00 to 0x90000
 	jmpi	go,INITSEG
 
-! ZEUS: Ejecutamos esto ya en la direccion 0x90000+go
+! ZEUS: Execute this at address 0x90000+go
 ! ax and es already contain INITSEG
 
 go:	mov	di,#0x4000-12	! 0x4000 is arbitrary value >= length of
@@ -46,14 +54,14 @@ go:	mov	di,#0x4000-12	! 0x4000 is arbitrary value >= length of
 				! 12 is disk parm size
 
 !
-! ZEUS: 2. Configuramos la pila de usuario en la direcci� 0x3ff40
+! ZEUS: 2. Configure user stack at address 0x3ff40
 !
 	mov	ds,ax
 	mov	ss,ax		! put stack at INITSEG:0x4000-12.
 	mov	sp,di
 
 !
-! ZEUS: 3. Imprimimos el mensaje "Carregant"
+! ZEUS: 3. Print "Loading" message
 !
 
 	mov	ah,#0x03	! read cursor pos
@@ -72,8 +80,8 @@ go:	mov	di,#0x4000-12	! 0x4000 is arbitrary value >= length of
 ! ok, we've written the message, now
 ! we want to load the system (at 0x10000)
 !
-! ZEUS: 4. Cargamos el sistema a partir de la 0x10000 utilizando una
-!          rutina de la BIOS.
+! ZEUS: 4. Load the system starting at 0x10000 using a
+!          BIOS routine.
 !
 	mov	ax,#SYSSEG
 	mov	es,ax		! segment of 0x010000
@@ -159,7 +167,7 @@ a20_wait:
 	mov	ax,cs
 	mov	ds,ax
 !
-! ZEUS: Carreguem els valors de les taules IDT i GDT
+! ZEUS: Load IDT and GDT table values
 !
 	lidt	idt_48		! load idt with 0,0
 	lgdt	gdt_48		! load gdt with whatever appropriate
@@ -190,7 +198,7 @@ a20_wait:
 !	take our 48 bit far pointer. (INTeL 80386 Programmer's Reference
 !	Manual, Mixing 16-bit and 32-bit code, page 16-6)
 !
-! ZEUS: Saltamos al main()!!
+! ZEUS: Jump to main()!!
 !
 	db	0x66,0xea	! prefix + jmpi-opcode
 code32:	dd	0x10010		! will be set to 0x100000 for big kernels
@@ -329,7 +337,7 @@ empty_8042_end_loop:
 ret
 
 sectors:
-	.word SEC_PISTA  ! 18 sectores por pista: t�ico disquet de 1.44Mb
+	.word SEC_PISTA  ! 18 sectors per track: typical 1.44Mb diskette
 
 msg1:
 	.byte 13,10
@@ -339,7 +347,7 @@ msg1:
 gdt:		/* GLOBAL DESCRIPTOR TABLE */
   .word  0,0,0,0          ! dummy
                                  /*    Table Indicator RPL */
-  .word  0,0,0,0          ! sin usar
+  .word  0,0,0,0          ! unused
       /* pointed by __KERNEL_CS = 0x10 = 0000 0000 0001 0 0 00 */
   .word  0xFFFF           ! 4Gb - (0x100000*0x1000 = 4Gb)
   .word  0x0000           ! base address=0

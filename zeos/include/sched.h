@@ -1,5 +1,9 @@
-/*
- * sched.h - Estructures i macros pel tractament de processos
+/**
+ * @file sched.h
+ * @brief Process scheduling and task management definitions for ZeOS.
+ *
+ * This header defines task structures, process states, scheduling
+ * functions, and process management interfaces for the ZeOS kernel.
  */
 
 #ifndef __SCHED_H__
@@ -16,7 +20,7 @@
 #define KERNEL_STACK_SIZE 1024
 
 /* Default quantum assigned to new processes */
-#define DEFAULT_QUANTUM 100
+#define DEFAULT_QUANTUM 1000
 
 /* Process states for scheduling */
 enum state_t {
@@ -27,48 +31,34 @@ enum state_t {
 
 /* Process control block structure */
 struct task_struct {
-    /* Process identifier*/
-    int PID;
-
-    /* Page directory base address */
-    page_table_entry *dir_pages_baseAddr;
-
-    /* Entry in process queues */
-    struct list_head list;
-
-    /* Kernel stack pointer */
-    unsigned long kernel_esp;
-
-    /* Time quantum for this process */
-    int quantum;
-    /* Current process state */
-    enum state_t status;
-
-    /* Process hierarchy fields */
-    struct task_struct *parent;  /* Pointer to parent process */
-    struct list_head children;   /* List of child processes */
-    struct list_head child_list; /* Entry in parent's children list */
-
-    /* Process synchronization */
-    int pending_unblocks; /* Number of pending unblock operations */
+    int PID;                              /* Process identifier*/
+    page_table_entry *dir_pages_baseAddr; /* Page directory base address */
+    struct list_head list;                /* Entry in process queues */
+    unsigned long kernel_esp;             /* Kernel stack pointer */
+    int quantum;                          /* Current process state */
+    enum state_t status;                  /* Current process state */
+    struct task_struct *parent;           /* Pointer to parent process */
+    struct list_head children;            /* List of child processes */
+    struct list_head child_list;          /* Entry in parent's children list */
+    int pending_unblocks;                 /* Number of pending unblock operations */
 };
 
 /* Union for process data and stack */
 union task_union {
-    /* Process control block */
-    struct task_struct task;
-    /* Kernel stack for the process */
-    unsigned long stack[KERNEL_STACK_SIZE];
+    struct task_struct task;                /* Process control block */
+    unsigned long stack[KERNEL_STACK_SIZE]; /* Kernel stack for the process */
 };
 
-/* Global array of all possible tasks in the system */
-extern union task_union tasks[NR_TASKS];
+extern union task_union tasks[NR_TASKS]; /* Global array of all possible tasks in the system */
 
-/* Pointer to the idle task (PID 0) */
-extern struct task_struct *idle_task;
+extern struct task_struct *idle_task; /* Pointer to the idle task (PID 0) */
+extern struct task_struct *init_task; /* Pointer to the initial user task (PID 1) */
 
-/* Pointer to the initial user task (PID 1) */
-extern struct task_struct *init_task;
+extern struct task_struct *current_task; /* Pointer to current running task (optimization) */
+
+extern struct list_head freequeue;    /* Queue for free (unused) task structures */
+extern struct list_head readyqueue;   /* Queue for ready-to-run processes */
+extern struct list_head blockedqueue; /* Queue for blocked processes */
 
 /* Calculate kernel stack pointer for a task */
 #define KERNEL_ESP(task) (DWord) & (task)->stack[KERNEL_STACK_SIZE]
@@ -91,15 +81,6 @@ void init_task1(void);
  * processes are ready to execute. The idle task runs with the lowest priority.
  */
 void init_idle(void);
-
-/* Global process queues - defined in sched.c, accessible from other modules */
-extern struct list_head freequeue;    /* Queue for free (unused) task structures */
-extern struct list_head readyqueue;   /* Queue for ready-to-run processes */
-extern struct list_head blockedqueue; /* Queue for blocked processes */
-
-/* Special task pointers - defined in sched.c, accessible from other modules */
-extern struct task_struct *idle_task; /* Pointer to the idle task (PID 0) */
-extern struct task_struct *init_task; /* Pointer to the init task (PID 1) */
 
 /**
  * @brief Initialize the scheduler.
@@ -125,6 +106,25 @@ void init_queues(void);
  * @return Pointer to the current task's task_struct.
  */
 struct task_struct *current();
+
+/**
+ * @brief CPU idle function executed by the idle task.
+ *
+ * This function implements the idle process behavior - enables interrupts
+ * and enters an infinite loop, consuming minimal CPU cycles.
+ */
+void cpu_idle(void);
+
+/**
+ * @brief Low-level task context switch implementation.
+ *
+ * This function performs the low-level context switching operations including
+ * updating the TSS ESP0, setting MSR for SYSENTER, switching page directory,
+ * and calling the assembly context switch routine.
+ *
+ * @param new Pointer to the task union of the new task to switch to.
+ */
+void inner_task_switch(union task_union *new);
 
 /**
  * @brief Switch to a new task.
@@ -254,5 +254,16 @@ void set_quantum(struct task_struct *taskask, int new_quantum);
  * @return The next available PID.
  */
 int get_next_pid(void);
+
+/* test functions */
+/**
+ * @brief Print debug information before context switch.
+ *
+ * This function prints scheduler debug information showing the context
+ * switch from current process to target process and ready queue status.
+ * @param from_pid PID of the current process being switched from.
+ * @param to_pid PID of the target process being switched to.
+ */
+void printDebugInfoSched(int from_pid, int to_pid);
 
 #endif /* __SCHED_H__ */

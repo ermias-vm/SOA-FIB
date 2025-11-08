@@ -54,9 +54,13 @@ LIBZEOS = -L . -l zeos
 #add to USROBJ any object files required to complete the user program
 USROBJ = \
 	libc.o \
-	suma.o \
 	sys_call_wrappers.o \
 	zeos_test.o
+
+
+################################################################################
+#                           COMPILATION TARGETS                               #
+################################################################################
 
 all: zeos.bin
 
@@ -89,23 +93,29 @@ sys_call_wrappers.s: sys_call_wrappers.S $(INCLUDEDIR)/asm.h $(INCLUDEDIR)/segme
 kernel_asm.s: kernel_asm.S $(INCLUDEDIR)/asm.h $(INCLUDEDIR)/segment.h
 	$(CPP) $(ASMFLAGS) -o $@ $<
 
-user.o:user.c $(INCLUDEDIR)/libc.h
+user.o:user.c $(INCLUDEDIR)/libc.h $(INCLUDEDIR)/zeos_test.h
 
-interrupt.o:interrupt.c $(INCLUDEDIR)/interrupt.h $(INCLUDEDIR)/segment.h $(INCLUDEDIR)/types.h
+interrupt.o:interrupt.c $(INCLUDEDIR)/entry.h $(INCLUDEDIR)/hardware.h $(INCLUDEDIR)/interrupt.h $(INCLUDEDIR)/io.h $(INCLUDEDIR)/sched.h $(INCLUDEDIR)/segment.h $(INCLUDEDIR)/types.h $(INCLUDEDIR)/utils.h $(INCLUDEDIR)/zeos_interrupt.h
 
-io.o:io.c $(INCLUDEDIR)/io.h
+io.o:io.c $(INCLUDEDIR)/io.h $(INCLUDEDIR)/types.h
 
-sched.o:sched.c $(INCLUDEDIR)/sched.h
+sched.o:sched.c $(INCLUDEDIR)/debug.h $(INCLUDEDIR)/interrupt.h $(INCLUDEDIR)/io.h $(INCLUDEDIR)/libc.h $(INCLUDEDIR)/mm.h $(INCLUDEDIR)/sched.h $(INCLUDEDIR)/segment.h $(INCLUDEDIR)/utils.h
 
 libc.o:libc.c $(INCLUDEDIR)/libc.h
 
-zeos_test.o:zeos_test.c $(INCLUDEDIR)/libc.h
+zeos_test.o:zeos_test.c $(INCLUDEDIR)/errno.h $(INCLUDEDIR)/libc.h $(INCLUDEDIR)/zeos_test.h
 
-mm.o:mm.c $(INCLUDEDIR)/types.h $(INCLUDEDIR)/mm.h
+mm.o:mm.c $(INCLUDEDIR)/hardware.h $(INCLUDEDIR)/mm.h $(INCLUDEDIR)/sched.h $(INCLUDEDIR)/segment.h $(INCLUDEDIR)/types.h
 
-sys.o:sys.c $(INCLUDEDIR)/devices.h
+sys.o:sys.c $(INCLUDEDIR)/debug.h $(INCLUDEDIR)/devices.h $(INCLUDEDIR)/errno.h $(INCLUDEDIR)/interrupt.h $(INCLUDEDIR)/io.h $(INCLUDEDIR)/libc.h $(INCLUDEDIR)/mm.h $(INCLUDEDIR)/mm_address.h $(INCLUDEDIR)/sched.h $(INCLUDEDIR)/sys.h $(INCLUDEDIR)/utils.h
 
-utils.o:utils.c $(INCLUDEDIR)/utils.h
+utils.o:utils.c $(INCLUDEDIR)/io.h $(INCLUDEDIR)/mm_address.h $(INCLUDEDIR)/types.h $(INCLUDEDIR)/utils.h
+
+hardware.o:hardware.c $(INCLUDEDIR)/types.h
+
+list.o:list.c $(INCLUDEDIR)/list.h
+
+devices.o:devices.c $(INCLUDEDIR)/io.h $(INCLUDEDIR)/list.h $(INCLUDEDIR)/utils.h
 
 system.o:system.c $(INCLUDEDIR)/hardware.h system.lds $(SYSOBJ) $(INCLUDEDIR)/segment.h $(INCLUDEDIR)/types.h $(INCLUDEDIR)/interrupt.h $(INCLUDEDIR)/system.h $(INCLUDEDIR)/sched.h $(INCLUDEDIR)/mm.h $(INCLUDEDIR)/io.h $(INCLUDEDIR)/mm_address.h 
 
@@ -115,39 +125,50 @@ system: system.o system.lds $(SYSOBJ)
 user: user.o user.lds $(USROBJ) 
 	$(LD) $(LDFLAGS) -T user.lds -o $@ $< $(USROBJ)
 
-suma.o: suma.S $(INCLUDEDIR)/asm.h
-	$(CC) $(CFLAGS) -c -o $@ $<
 
+################################################################################
+#                            UTILITY TARGETS                                  #
+################################################################################
+
+# Remove all generated files (object files, binaries, temporary files)
 clean:
 	rm -f *.o *.s bochsout.txt parport.out system.out system bootsect zeos.bin user user.out *~ build
 
+# Clean everything, rebuild the system, and start debugging session
 restart:
 	make clean && make all && make gdb
 
+# Create a timestamped backup of the ZeOS project in compressed format
 backup: clean
-	@mkdir -p ../backup
+	@mkdir -p ../backup/zeos_versions
+	@mkdir -p ../backup/project_versions
 	@TIMESTAMP=$$(date +%Y%m%d_%H%M%S) && \
 	BACKUP_NAME="zeos_v$$TIMESTAMP.tar.gz" && \
-	if [ -f ../backup/$$BACKUP_NAME ]; then \
+	if [ -f ../backup/zeos_versions/$$BACKUP_NAME ]; then \
 		echo "Error: File $$BACKUP_NAME already exists!"; \
 		exit 1; \
 	fi && \
-	echo "Creating backup: $$BACKUP_NAME" && \
-	cd .. && tar -czvf backup/VERSIONS/$$BACKUP_NAME zeos/
+	echo "Creating ZeOS backup: $$BACKUP_NAME" && \
+	cd .. && tar -czvf backup/zeos_versions/$$BACKUP_NAME zeos/
 
+# Write the ZeOS binary image to floppy disk device (legacy target, requires floppy drive)
 disk: zeos.bin
 	dd if=zeos.bin of=/dev/fd0
 
+# Start Bochs emulator to run ZeOS in a virtual machine
 emul: zeos.bin
 	/opt/bochs/bin/bochs -q -f .bochsrc
 
+# Start Bochs with GDB stub and connect GDB debugger for kernel debugging
 gdb: zeos.bin
 	bochs -q -f .bochsrc_gdb &
 	gdb -x .gdbcmd system
 
+# Start Bochs emulator with debugging interface (no GDB connection)
 emuldbg: zeos.bin
 	bochs_nogdb -q -f .bochsrc
 
+# Format all C and header files using clang-format and ensure proper line endings
 format:
 	@echo "Formatting all source files..."
 	@modified_files=""; \
@@ -189,7 +210,3 @@ format:
 		echo "  No files were modified."; \
 	fi
 
-format-check:
-	@echo "Checking formatting..."
-	@find . -maxdepth 1 -name "*.c" -exec clang-format --dry-run --Werror {} \; 2>/dev/null || true
-	@find include/ -name "*.h" -exec clang-format --dry-run --Werror {} \; 2>/dev/null || true

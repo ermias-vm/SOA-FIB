@@ -1,5 +1,9 @@
-/*
- * asm.h - Definició de variable global als fitxers .s
+/**
+ * @file asm.h
+ * @brief Assembly language macros and definitions for ZeOS.
+ *
+ * This header provides macros and definitions for assembly
+ * files, including function entry/exit macros and constants.
  */
 
 #ifndef __ASM_H__

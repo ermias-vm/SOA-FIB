@@ -1,5 +1,9 @@
-/*
- * sys.h - Header for system call functions
+/**
+ * @file sys.h
+ * @brief System call interface definitions for ZeOS.
+ *
+ * This header defines system call function prototypes and
+ * interfaces for user-kernel communication in ZeOS.
  */
 
 #ifndef __SYS_H__
@@ -134,5 +138,17 @@ int sys_ni_syscall(void);
  * @return The process identifier (PID) of the current process.
  */
 int sys_getpid(void);
+
+/**
+ * @brief Check file descriptor validity and permissions.
+ *
+ * This function validates a file descriptor and checks if the requested
+ * permissions are allowed for that descriptor.
+ *
+ * @param fd File descriptor to check.
+ * @param permissions Requested permissions to check.
+ * @return 0 if valid, negative error code otherwise.
+ */
+int check_fd(int fd, int permissions);
 
 #endif /* __SYS_H__ */

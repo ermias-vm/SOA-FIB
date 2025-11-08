@@ -1,5 +1,9 @@
-/*
- * hardware.h - Rutines hardware per manegar els accesos a baix nivell
+/**
+ * @file hardware.h
+ * @brief Hardware abstraction layer definitions for ZeOS.
+ *
+ * This header defines low-level hardware access functions
+ * and hardware-specific constants for the ZeOS kernel.
  */
 
 #ifndef __HARDWARE_H__

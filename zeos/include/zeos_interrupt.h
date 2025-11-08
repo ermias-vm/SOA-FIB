@@ -1,3 +1,13 @@
+
+
+/**
+ * @file zeos_interrupt.h
+ * @brief ZeOS-specific interrupt and exception handler definitions.
+ *
+ * This header defines interrupt handlers, exception routines, and
+ * system-specific interrupt processing functions for the ZeOS kernel.
+ */
+
 #ifndef __ZEOS_INTERRUPT_H__
 #define __ZEOS_INTERRUPT_H__
 

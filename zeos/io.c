@@ -1,13 +1,10 @@
-/*
- * io.c - Input/Output operations module for ZeOS
+/**
+ * @file io.c
+ * @brief Input/Output operations and screen management for ZeOS.
  *
- * This module provides low-level I/O operations including:
- * - Port I/O operations (inb)
- * - Screen/video memory management
- * - Character printing and screen manipulation functions
- *
- * The module handles text mode video operations using VGA text mode
- * with 80x25 character resolution and manages cursor positioning.
+ * This file implements low-level I/O operations including port access,
+ * VGA text mode screen management, character printing, and cursor control
+ * for 80x25 character resolution display.
  */
 
 #include <io.h>

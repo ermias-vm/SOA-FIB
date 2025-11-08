@@ -1,5 +1,9 @@
-/*
- * types.h - Definició de tipus i estructures de dades
+/**
+ * @file types.h
+ * @brief Basic type definitions and data structures for ZeOS.
+ *
+ * This header defines fundamental data types, structures, and
+ * constants used throughout the ZeOS kernel and system components.
  */
 
 #ifndef __TYPES_H__

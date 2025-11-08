@@ -1,11 +1,17 @@
-/*
- * sys.c - Syscalls implementation
+/**
+ * @file sys.c
+ * @brief System call implementations for ZeOS.
+ *
+ * This file contains the kernel-side implementation of system calls
+ * including process management (fork, exit), I/O operations (write),
+ * process synchronization (block, unblock), and system information.
  */
+#include <debug.h>
 #include <devices.h>
 #include <errno.h>
 #include <interrupt.h>
 #include <io.h>
-#include <libc.h> // itoa, write helpers
+#include <libc.h>
 #include <mm.h>
 #include <mm_address.h>
 #include <sched.h>
@@ -29,7 +35,7 @@ int sys_ni_syscall() {
 }
 
 int sys_getpid() {
-    return current()->PID;
+    return current_task->PID;
 }
 
 int ret_from_fork() {
@@ -38,8 +44,6 @@ int ret_from_fork() {
 
 int sys_fork() {
     int PID = -1;
-
-    printk_color("FORK: Creating new process\n", INFO_COLOR);
 
     /*=== STEP a: Get a free task_struct ===*/
     if (list_empty(&freequeue)) {
@@ -53,7 +57,7 @@ int sys_fork() {
 
     /*=== STEP b: Inherit system data === */
     // Copy the entire task_union from parent to child
-    copy_data(current(), child_union, sizeof(union task_union));
+    copy_data(current_task, child_union, sizeof(union task_union));
 
     /* === STEP c: Get new page directory === */
     // Assign a new page directory to the child
@@ -78,7 +82,7 @@ int sys_fork() {
 
     /* === STEP e: Initialize child's address space === */
     page_table_entry *child_PT = get_PT(child_task);
-    page_table_entry *parent_PT = get_PT(current());
+    page_table_entry *parent_PT = get_PT(current_task);
 
     /* e.i) Copy entries for system code, system data and user code (shared) */
     for (int page = 0; page < NUM_PAG_KERNEL; page++) {
@@ -115,7 +119,7 @@ int sys_fork() {
     }
 
     // Flush TLB to ensure parent cannot access child's pages
-    set_cr3(get_DIR(current()));
+    set_cr3(get_DIR(current_task));
 
     /* === STEP g: Assign new PID === */
     child_task->PID = get_next_pid();
@@ -126,16 +130,16 @@ int sys_fork() {
     INIT_LIST_HEAD(&child_task->list); // New list
 
     /* Initialize scheduling fields - inherit from parent */
-    child_task->quantum = current()->quantum;
+    child_task->quantum = current_task->quantum;
     child_task->status = ST_READY; // new task is ready to run
 
     /* Initialize process hierarchy */
-    child_task->parent = current();
+    child_task->parent = current_task;
     INIT_LIST_HEAD(&child_task->children);
     INIT_LIST_HEAD(&child_task->child_list);
 
     /* Add child to parent's children list */
-    list_add_tail(&child_task->child_list, &current()->children);
+    list_add_tail(&child_task->child_list, &current_task->children);
 
     /* Initialize blocking mechanism */
     child_task->pending_unblocks = 0;
@@ -157,11 +161,6 @@ int sys_fork() {
     list_add_tail(&child_task->list, &readyqueue);
 
     /* === STEP l: Return child PID === */
-    printk_color("FORK: Child created with PID ", INFO_COLOR);
-    char buffer[12];
-    itoa(PID, buffer);
-    printk_color(buffer, INFO_COLOR);
-    printk_color("\n", INFO_COLOR);
     return PID; // Parent returns child's PID
 }
 
@@ -196,17 +195,8 @@ int sys_gettime() {
 }
 
 void sys_exit() {
-    struct task_struct *current_task = current();
-
-    printk_color("EXIT: Process ", INFO_COLOR);
-    char buffer[12];
-    itoa(current_task->PID, buffer);
-    printk_color(buffer, INFO_COLOR);
-    printk_color(" exiting\n", INFO_COLOR);
-
     // If the process is task 1, it cannot exit
     if (current_task->PID == 1) {
-        printk("The task 1 cannot exit\n");
         return;
     }
 
@@ -244,8 +234,6 @@ void sys_exit() {
 }
 
 void sys_block() {
-    struct task_struct *current_task = current();
-
     if (current_task->pending_unblocks == 0) {
         update_process_state_rr(current_task, &blockedqueue);
         scheduler();
@@ -255,7 +243,6 @@ void sys_block() {
 }
 
 int sys_unblock(int pid) {
-    struct task_struct *current_task = current();
     struct list_head *pos;
 
     /* Search for child with given PID */

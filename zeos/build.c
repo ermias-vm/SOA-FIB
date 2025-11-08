@@ -1,10 +1,18 @@
+/**
+ * @file build.c
+ * @brief Boot sector and system image building utility for ZeOS.
+ *
+ * This file creates the bootable system image by combining
+ * boot sector, setup, and kernel components into a single image.
+ */
+
 /*
  *  $Id: build.c,v 1.1.1.1 2006-09-04 15:05:34 jcosta Exp $
  *
  *  Copyright (C) 1991, 1992  Linus Torvalds
  *  Copyright (C) 1997 Martin Mares
- *  2003 Modificat per Zeus Gómez per insertar el codi d'usuari
- *       també a la imatge del nucli en espai d'adreces separat.
+ *  2003 Modified by Zeus GÃ³mez to insert user code
+ *       also in the kernel image in separate address space.
  */
 
 /*

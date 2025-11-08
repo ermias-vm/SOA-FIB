@@ -1,5 +1,9 @@
-/*
- * entry.S - Entry point to system mode from user mode
+/**
+ * @file entry.S
+ * @brief Low-level interrupt and system call entry points for ZeOS.
+ * 
+ * This file contains assembly routines for interrupt handling, system call
+ * processing, context switching, and user-kernel mode transitions.
  */
 
 #include <asm.h>
@@ -66,6 +70,8 @@
 #define EOI \
     movb $0x20, %al; \
     outb %al, $0x20;
+
+
 
 ENTRY(syscall_handler_sysenter)
     push $__USER_DS

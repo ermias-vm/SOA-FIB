@@ -1,5 +1,6 @@
 # Root Makefile - Redirects all commands to specific project directory
 
+# Specify the project directory
 PROJECT_DIR = zeos
 
 # Default target

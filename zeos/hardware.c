@@ -1,5 +1,9 @@
-/*
- * hardware.c
+/**
+ * @file hardware.c
+ * @brief Hardware abstraction and low-level hardware access for ZeOS.
+ *
+ * This file provides hardware-specific functions and definitions
+ * for system initialization and hardware resource management.
  */
 
 #include <types.h>

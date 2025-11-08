@@ -1,7 +1,13 @@
-/*
- * sched.c - initializes struct for task 0 anda task 1
+/**
+ * @file sched.c
+ * @brief Process scheduler and task management for ZeOS.
+ *
+ * This file implements the process scheduler, task initialization,
+ * context switching, and process state management using round-robin
+ * scheduling with process queues and memory management integration.
  */
 
+#include <debug.h>
 #include <interrupt.h>
 #include <io.h>
 #include <libc.h>
@@ -10,22 +16,26 @@
 #include <segment.h>
 #include <utils.h>
 
-/* Global array of all task unions in the system */
 union task_union tasks[NR_TASKS] __attribute__((__section__(".data.task")));
 
 /* Global PID counter for assigning unique process identifiers */
 static int next_pid = 1;
 
-struct task_struct *list_head_to_task_struct(struct list_head *l) {
-    return list_entry(l, struct task_struct, list);
-}
+/* Current quantum ticks remaining for the running process */
+static int current_quantum = 0;
+
+struct task_struct *current_task = NULL;
+
+struct task_struct *idle_task;
+struct task_struct *init_task;
 
 struct list_head freequeue;
 struct list_head readyqueue;
 struct list_head blockedqueue;
 
-/* Current quantum ticks remaining for the running process */
-static int current_quantum = 0;
+struct task_struct *list_head_to_task_struct(struct list_head *l) {
+    return list_entry(l, struct task_struct, list);
+}
 
 page_table_entry *get_DIR(struct task_struct *task) {
     return task->dir_pages_baseAddr;
@@ -50,12 +60,6 @@ void cpu_idle(void) {
         ;
     }
 }
-
-/* Pointer to the idle task (PID 0) - runs when no other process is ready */
-struct task_struct *idle_task;
-
-/* Pointer to the initial user task (PID 1) - the first user process */
-struct task_struct *init_task;
 
 void init_idle(void) {
     struct list_head *free_task = freequeue.next;
@@ -96,6 +100,9 @@ void init_task1(void) {
     init_task->quantum = DEFAULT_QUANTUM;
     current_quantum = DEFAULT_QUANTUM;
 
+    /* Set as current running task */
+    current_task = init_task;
+
     /* Initialize status */
     init_task->status = ST_RUN;
 
@@ -122,6 +129,7 @@ void init_queues() {
     INIT_LIST_HEAD(&readyqueue);
     INIT_LIST_HEAD(&blockedqueue);
 
+    /* Initialize free queue with all available task structures */
     for (int i = 0; i < NR_TASKS; ++i) {
         list_add_tail(&tasks[i].task.list, &freequeue);
     }
@@ -139,13 +147,19 @@ struct task_struct *current() {
 }
 
 void inner_task_switch(union task_union *new) {
-    printk_color("<SCHED>: In inner_task_switch\n", INFO_COLOR);
+    struct task_struct *old_task = current();
+
+#if DEBUG_INFO_TASK_SWITCH
+    printDebugInfoSched(old_task->PID, new->task.PID);
+#endif
+
+    /* Update global current_task pointer */
+    current_task = &new->task;
+
     tss.esp0 = KERNEL_ESP(new);
     writeMSR(0x175, (int)tss.esp0);
     set_cr3(get_DIR(&new->task));
-    printk_color("<SCHED>: BEFORE Switching context...\n", INFO_COLOR);
-    switch_context(&current()->kernel_esp, new->task.kernel_esp);
-    printk_color("<SCHED>: Switching context done\n", INFO_COLOR);
+    switch_context(&old_task->kernel_esp, new->task.kernel_esp);
 }
 
 int get_next_pid(void) {
@@ -166,14 +180,14 @@ void update_sched_data_rr(void) {
 
 int needs_sched_rr(void) {
     if (current_quantum <= 0) {
-        current_quantum = get_quantum(current());
+        current_quantum = get_quantum(current_task);
         // Need to switch if there are ready processes and quantum expired
         if (!list_empty(&readyqueue)) {
             return 1;
         }
     }
     // Need to switch if the current process is blocked
-    return (current()->status == ST_BLOCKED);
+    return (current_task->status == ST_BLOCKED);
 }
 
 void update_process_state_rr(struct task_struct *task, struct list_head *dest_queue) {
@@ -201,25 +215,12 @@ void sched_next_rr(void) {
     /* Select next process: from ready queue if possible, idle process otherwise */
     if (!list_empty(&readyqueue)) {
 
-        printk_color("SCHED: Scheduling next process\n", INFO_COLOR);
-
         next = list_first(&readyqueue);
         next_task = list_head_to_task_struct(next);
         // Remove from the ready queue
         update_process_state_rr(next_task, NULL);
 
-        // Simple debug message
-        char buffer[12];
-        printk_color("SCHED: ", INFO_COLOR);
-        itoa(current()->PID, buffer);
-        printk_color(buffer, INFO_COLOR);
-        printk_color("->", INFO_COLOR);
-        itoa(next_task->PID, buffer);
-        printk_color(buffer, INFO_COLOR);
-        printk_color("\n", INFO_COLOR);
-
     } else {
-        printk_color("SCHED: No ready processes, scheduling idle task\n", WARNING_COLOR);
 
         // Switch to idle task if no processes are ready
         next_task = idle_task;
@@ -227,17 +228,34 @@ void sched_next_rr(void) {
 
     // Reset quantum counter for the next process
     current_quantum = next_task->quantum;
-    printk_color("<SCHED>: Switching to process...\n", INFO_COLOR);
     task_switch((union task_union *)next_task);
-    printk_color("done\n", INFO_COLOR);
 }
 
 void scheduler(void) {
     update_sched_data_rr();
 
     if (needs_sched_rr()) {
-        struct task_struct *task = (struct task_struct *)current();
-        update_process_state_rr(task, &readyqueue);
+        update_process_state_rr(current_task, &readyqueue);
         sched_next_rr();
+    }
+}
+
+/* ---- Test functions ---- */
+
+void printDebugInfoSched(int from_pid, int to_pid) {
+    char buffer[12];
+
+    printk_color("[SCHED] switch from PID ", INFO_COLOR);
+    itoa(from_pid, buffer);
+    printk_color(buffer, INFO_COLOR);
+    printk_color(" to PID ", INFO_COLOR);
+    itoa(to_pid, buffer);
+    printk_color(buffer, INFO_COLOR);
+    printk_color(" and ready: ", INFO_COLOR);
+
+    if (list_empty(&readyqueue)) {
+        printk_color("empty\n", WARNING_COLOR);
+    } else {
+        printk_color("NOT empty\n", INFO_COLOR);
     }
 }

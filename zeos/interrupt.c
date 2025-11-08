@@ -1,6 +1,11 @@
-/*
- * interrupt.c -
+/**
+ * @file interrupt.c
+ * @brief Interrupt handling and IDT management for ZeOS.
+ *
+ * This file implements interrupt descriptor table setup, interrupt handlers,
+ * keyboard processing, timer management, and system call entry points.
  */
+#include <entry.h>
 #include <hardware.h>
 #include <interrupt.h>
 #include <io.h>

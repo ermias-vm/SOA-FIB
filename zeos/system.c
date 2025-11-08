@@ -1,5 +1,10 @@
-/*
- * system.c -
+/**
+ * @file system.c
+ * @brief Core system initialization and main kernel entry point for ZeOS.
+ *
+ * This file contains the main kernel initialization sequence including
+ * hardware setup, memory management, interrupt configuration, and
+ * the transition to user mode execution.
  */
 
 #include <hardware.h>
@@ -11,7 +16,7 @@
 #include <system.h>
 #include <types.h>
 #include <utils.h>
-#include <zeos_mm.h> /* TO BE DELETED WHEN ADDED THE PROCESS MANAGEMENT CODE TO BECOME MULTIPROCESS */
+// #include <zeos_mm.h> /* DEPRECATED: TO BE DELETED WHEN PROCESS MANAGEMENT IS FULLY IMPLEMENTED */
 
 int (*usr_main)(void) = (void *)(PAG_LOG_INIT_CODE * PAGE_SIZE);
 unsigned int *p_sys_size = (unsigned int *)KERNEL_START;
