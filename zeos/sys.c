@@ -126,12 +126,13 @@ int sys_fork() {
     PID = child_task->PID;
 
     // === STEP h: Initialize task_struct fields ===
-    // Fields already copied from parent need to be modified for child
-    INIT_LIST_HEAD(&child_task->list); // New list
 
     /* Initialize scheduling fields - inherit from parent */
     child_task->quantum = current_task->quantum;
     child_task->status = ST_READY; // new task is ready to run
+
+    /* Fields already copied from parent need to be modified for child */
+    INIT_LIST_HEAD(&child_task->list);
 
     /* Initialize process hierarchy */
     child_task->parent = current_task;
@@ -155,7 +156,7 @@ int sys_fork() {
     // the syscall epilogue. Offsets -19/-18 match the saved frame layout.
     child_union->stack[KERNEL_STACK_SIZE - 19] = (unsigned long)0;             // fake EBP
     child_union->stack[KERNEL_STACK_SIZE - 18] = (unsigned long)ret_from_fork; // return to stub
-    child_task->kernel_esp = (unsigned int)&(child_union->stack[KERNEL_STACK_SIZE - 19]);
+    child_task->kernel_esp = (unsigned long)&(child_union->stack[KERNEL_STACK_SIZE - 19]);
 
     /* === STEP k: Insert into ready queue === */
     list_add_tail(&child_task->list, &readyqueue);

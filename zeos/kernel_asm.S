@@ -48,19 +48,76 @@ ENTRY(switch_context)
     popl %ebp
     ret
 
-    # STACK LAYOUT:
+
+    ################# STACK LAYOUT EXAMPLES #################
+
+
+    # PARENT PROCESS KERNEL STACK (Complete clock interrupt to switch_context flow):
+    # 
+    # Lower addresses (stack grows UP)
+    # +------------------+ 
+    # |      ......      |
     # +------------------+
-    # | return address   | <- esp + 0
+    # | @ret_scheduler   | <- return address (where switch_context returns)
+    # +------------------+ <- ESP points here before switch_context
+    # | &parent->k_esp   | <- esp + 4 (address to save parent's ESP)
     # +------------------+
-    # | &current()->esp  | <- esp + 4
+    # | child->k_esp     | <- esp + 8 (child's ESP = fake EBP address)
     # +------------------+
-    # | new_esp          | <- esp + 8
+    # | scheduler locals | <- Local vars from scheduler(), sched_next_rr()
     # +------------------+
-    # | %ebx             |
+    # | saved EBP        | <- pushl %ebp (clock_routine activation frame)
     # +------------------+
-    # | %esi             |
+    # | @ret_clock_rout  | <- return address back to clock_routine
     # +------------------+
-    # | %edi             |
+    # | saved EBP        | <- pushl %ebp (clock_routine activation frame)
     # +------------------+
-    # | %ebp             |
-    # +------------------+              
+    # | @ret_clock_hand  | <- return address back to clock_handler
+    # +------------------+
+    # | CTX SW (11 regs) | <- Software context: EBX,ECX,EDX,ESI,EDI,EBP,EAX,DS,ES,FS,GS
+    # +------------------+
+    # | CTX HW (5 regs)  | <- Hardware context: EIP,CS,EFLAGS,ESP,SS (saved by CPU)
+    # +------------------+
+    # Higher addresses
+
+
+    # PARENT PROCESS KERNEL STACK (Complete fork() to switch_context flow):
+    # 
+    # Lower addresses (stack grows UP)
+    # +------------------+ 
+    # | task_switch regs |
+    # | (EBX, ESI, EDI)  |
+    # +------------------+
+    # | inner_task_switch|
+    # | local vars       |
+    # +------------------+
+    # | @ret_scheduler   | <- return address (where switch_context returns)
+    # +------------------+ <- ESP points here before switch_context
+    # | &parent->k_esp   | <- esp + 4 (address to save parent's ESP)
+    # +------------------+
+    # | child->k_esp     | <- esp + 8 (child's ESP = fake EBP address)
+    # +------------------+
+    # | @sysenter_return | <- Return address for sysenter handler
+    # +------------------+
+    # | CTX SW (11 regs) | <- Software context: EBX,ECX,EDX,ESI,EDI,EBP,EAX,DS,ES,FS,GS
+    # +------------------+
+    # | CTX HW (5 regs)  | <- Hardware context: EIP,CS,EFLAGS,ESP,SS (saved by CPU)
+    # +------------------+
+    # Higher addresses
+
+
+    # CHILD PROCESS STACK (prepared by sys_fork):
+    #
+    # Lower addresses
+    # +------------------+ <- child->kernel_esp points here  
+    # | 0 (fake EBP)     | <- Will be popped into EBP by switch_context
+    # +------------------+
+    # | @ret_from_fork   | <- Return address for first child execution
+    # +------------------+
+    # | @sysenter_return | <- Return address for sysenter handler (Copied from parent)
+    # +------------------+
+    # | CTX SW (11 regs) | <- Software context: (Copied from parent)
+    # +------------------+
+    # | CTX HW (5 regs)  | <- Hardware context: (Copied from parent)
+    # +------------------+
+    # Higher addresses

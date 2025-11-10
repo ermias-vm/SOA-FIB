@@ -74,12 +74,12 @@
 
 
 ENTRY(syscall_handler_sysenter)
-    push $__USER_DS
-    pushl %ebp
-    pushfl
-    push $__USER_CS
-    pushl 4(%ebp)
-    SAVE_ALL
+    push $__USER_DS             # user SS (stack segment)
+    pushl %ebp                  # user ESP (EBP contains user ESP)
+    pushfl                      # save EFLAGS manually
+    push $__USER_CS             # user CS (code segment)
+    pushl 4(%ebp)               # user EIP (return address)
+    SAVE_ALL                    # save software context (all registers)
 
     cmpl $0, %eax
     jl sysenter_err
@@ -92,17 +92,17 @@ sysenter_err:
     movl $-ENOSYS, %eax
 
 sysenter_return:
-    movl %eax, 0x18(%esp)
-    RESTORE_ALL
-    movl (%esp), %edx       # edx = eip user 
-    movl 0x0c(%esp), %ecx   # ecx = oldesp user
+    movl %eax, 0x18(%esp)       # store return value in saved context
+    RESTORE_ALL                 # restore software context (all registers)
+    movl (%esp), %edx           # edx = eip user 
+    movl 0x0c(%esp), %ecx       # ecx = oldesp user
     sti
     sysexit                         
 
 
 ENTRY(clock_handler)
     SAVE_ALL
-    EOI                     # EOI before call 
+    EOI                         # EOI before call 
     call clock_routine
     RESTORE_ALL
     iret
@@ -110,7 +110,7 @@ ENTRY(clock_handler)
 ENTRY(keyboard_handler) 
     SAVE_ALL
     call keyboard_routine
-    EOI                     # EOI after call        
+    EOI                         # EOI after call        
     RESTORE_ALL
     iret
 

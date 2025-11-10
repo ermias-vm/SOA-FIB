@@ -27,7 +27,8 @@ ZeOS is a Unix-like operating system built for educational purposes. It implemen
 **Institution**: Facultat d'Informàtica de Barcelona (FIB) - UPC  
 **Academic Year**: 2025-2026
 
-# 👥 Credits 
+                           
+## 👥 Credits 
 
 - [Marc De Rialp](https://github.com/Derri725)
 - [Ermias Valls](https://github.com/ermias-vm)
