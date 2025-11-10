@@ -147,18 +147,24 @@ struct task_struct *current() {
 }
 
 void inner_task_switch(union task_union *new) {
+    
     struct task_struct *old_task = current();
+    
+    /* Update global current_task pointer */
+    current_task = &new->task;
 
 #if DEBUG_INFO_TASK_SWITCH
     printDebugInfoSched(old_task->PID, new->task.PID);
 #endif
 
-    /* Update global current_task pointer */
-    current_task = &new->task;
-
+    /* Update TSS stack pointer for the new task */
     tss.esp0 = KERNEL_ESP(new);
-    writeMSR(0x175, (int)tss.esp0);
+    writeMSR(0x175, (DWord)tss.esp0);
+
+    /* Switch to the new task's page directory */
     set_cr3(get_DIR(&new->task));
+
+    /* Perform context switch, execution continues in the new process */
     switch_context(&old_task->kernel_esp, new->task.kernel_esp);
 }
 
