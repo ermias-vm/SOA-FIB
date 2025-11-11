@@ -24,7 +24,6 @@ ENTRY(writeMSR)
 ENTRY(task_switch)
     pushl %ebp
     movl %esp, %ebp
-
     pushl %edi
     pushl %esi
     pushl %ebx

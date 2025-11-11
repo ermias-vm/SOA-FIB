@@ -88,8 +88,8 @@ void setIdt() {
     setInterruptHandler(33, keyboard_handler, 0);
     setInterruptHandler(14, pageFault_handler, 0);
 
-    writeMSR(0x174, __KERNEL_CS);
-    writeMSR(0x175, INITIAL_ESP);
+    writeMSR(0x174, __KERNEL_CS); // Set SYSENTER CS register - kernel code segment
+    writeMSR(0x175, INITIAL_ESP); // Set SYSENTER ESP register - kernel stack pointer
     writeMSR(0x176, (unsigned long)syscall_handler_sysenter);
 
     set_idt_reg(&idtR);

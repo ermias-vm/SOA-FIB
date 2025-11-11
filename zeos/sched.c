@@ -147,11 +147,8 @@ struct task_struct *current() {
 }
 
 void inner_task_switch(union task_union *new) {
-    
     struct task_struct *old_task = current();
-    
-    /* Update global current_task pointer */
-    current_task = &new->task;
+    current_task = &new->task; /* (Optimization) Update global current_task pointer */
 
 #if DEBUG_INFO_TASK_SWITCH
     printDebugInfoSched(old_task->PID, new->task.PID);

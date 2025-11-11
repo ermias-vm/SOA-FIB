@@ -74,11 +74,13 @@
 
 
 ENTRY(syscall_handler_sysenter)
+    # sysenter does not save hardware context automatically as INT
     push $__USER_DS             # user SS (stack segment)
     pushl %ebp                  # user ESP (EBP contains user ESP)
     pushfl                      # save EFLAGS manually
     push $__USER_CS             # user CS (code segment)
     pushl 4(%ebp)               # user EIP (return address)
+
     SAVE_ALL                    # save software context (all registers)
 
     cmpl $0, %eax

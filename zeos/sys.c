@@ -96,23 +96,20 @@ int sys_fork() {
                    get_frame(parent_PT, PAG_LOG_INIT_CODE + page));
     }
 
-    /* e.ii) Assign new frames for user data+stack */
-    for (int page = 0; page < NUM_PAG_DATA; page++) {
-        set_ss_pag(child_PT, PAG_LOG_INIT_DATA + page, new_frames[page]);
-    }
-
     /*=== STEP f: Inherit user data === */
     // Temporarily map child's pages in parent's address space
     int temp_pages = NUM_PAG_KERNEL + NUM_PAG_CODE + NUM_PAG_DATA; // Free pages
 
     for (int page = 0; page < NUM_PAG_DATA; page++) {
+        /* e.ii) Assign new frames for user data+stack */
+        set_ss_pag(child_PT, PAG_LOG_INIT_DATA + page, new_frames[page]);
+
         /* f.A) Temporary mapping in parent to access child's pages */
         set_ss_pag(parent_PT, temp_pages + page, new_frames[page]);
 
         /* f.B) Copy data+stack from parent to child */
-        void *src = (void *)((PAG_LOG_INIT_DATA + page) << 12); // Parent's original page
-        void *dst = (void *)((temp_pages + page) << 12);        // Child's temporary page
-        copy_data(src, dst, PAGE_SIZE);
+        copy_data((void *)((PAG_LOG_INIT_DATA + page) << 12), (void *)((temp_pages + page) << 12),
+                  PAGE_SIZE);
 
         /* f.C) Remove temporary mapping */
         del_ss_pag(parent_PT, temp_pages + page);
