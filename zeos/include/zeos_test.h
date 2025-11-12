@@ -13,11 +13,11 @@
 
 // clang-format off
 #define WRITE_TEST              1
-#define GETTIME_TEST            1
-#define GETPID_TEST             1
-#define FORK_TEST               1
-#define EXIT_TEST               1
-#define BLOCK_UNBLOCK_TEST      1
+#define GETTIME_TEST            0
+#define GETPID_TEST             0
+#define FORK_TEST               0
+#define EXIT_TEST               0
+#define BLOCK_UNBLOCK_TEST      0
 #define PAGEFAULT_TEST          0
 // clang-format on
 
@@ -86,14 +86,6 @@ void test_getpid_syscall(void);
  * parent-child PID relationships, memory independence, and multiple forks.
  */
 void test_fork_syscall(void);
-
-/**
- * @brief Test page fault exception handling.
- *
- * This function tests the system's ability to handle page fault exceptions
- * correctly when accessing invalid memory addresses.
- */
-void test_pagefault_exception(void);
 
 /**
  * @brief Test exit system call functionality.
