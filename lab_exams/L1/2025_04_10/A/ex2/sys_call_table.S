@@ -6,7 +6,7 @@ ENTRY (sys_call_table)
 	.long sys_exit		//1
 	.long sys_fork		//2
 	.long sys_ni_syscall	//3
-	.long sys_write		//4
+	.long sys_write_wrap	//4  # (mod) 2.e
 	.long sys_ni_syscall	//5
 	.long sys_ni_syscall	//6
 	.long sys_ni_syscall	//7

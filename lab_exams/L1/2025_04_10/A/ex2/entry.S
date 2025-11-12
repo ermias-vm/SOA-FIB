@@ -96,16 +96,14 @@ ENTRY(keyboard_handler)
       iret;
 
 ENTRY(system_call_handler)
-	push $__USER_DS
-	push %ebp
-	pushfl
-	push $__USER_CS
-	push 4(%ebp)
 	SAVE_ALL	// What about arg 6?
 	cmpl $0, %eax
 	jl sysenter_err
 	cmpl $MAX_SYSCALL, %eax
-	jg sysenter_err
+	jg sysenter_err         # (mod) 2.b
+      movl 0x8(%ebp), %ebx  // Primer parámetro (ej. fd)
+      movl 0xC(%ebp), %ecx  // Segundo parámetro (ej. buffer)
+      movl 0x10(%ebp), %edx // Tercer parámetro (ej. size)
 	call *sys_call_table(, %eax, 0x04)
 	jmp sysenter_fin
 sysenter_err:
@@ -113,7 +111,14 @@ sysenter_err:
 sysenter_fin:
 	movl %eax, 0x18(%esp)
 	RESTORE_ALL
-	movl (%esp), %edx // Return address
-	movl 12(%esp), %ecx	      // User stack address
 	sti
 	sysexit
+
+# (mod) 2.d
+ENTRY(sys_write_wrap)
+	pushl 0x10(%ebp)  // size
+	pushl 0xC(%ebp)   // buffer
+	pushl 0x8(%ebp)   // fd
+	call sys_write
+	addl $12, %esp
+	ret

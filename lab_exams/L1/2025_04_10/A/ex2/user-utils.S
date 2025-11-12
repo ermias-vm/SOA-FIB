@@ -1,30 +1,23 @@
 #include <asm.h>
-
+# (mod) 2.a
 ENTRY(syscall_sysenter)
-	push %ecx
-	push %edx
-	push $SYSENTER_RETURN
-	push %ebp
-	mov %esp, %ebp
+	movl $SYSENTER_RETURN, %edx  // Return address
+	movl %esp, %ecx              // User stack pointer
 	sysenter
 ENTRY(SYSENTER_RETURN)
-	pop %ebp
-	pop %edx
-	pop %edx
-	pop %ecx
 	ret
 
+# (mod) 2.b
 /* int write(int fd, char *buffer, int size) */
 ENTRY(write)
 	pushl %ebp
 	movl %esp, %ebp
-	pushl %ebx;  // Save EBX, ESI and EDI if modified
+
 	movl $4, %eax
-	movl 0x8(%ebp), %ebx;	//fd
-	movl 0xC(%ebp), %ecx;	//buffer
-	movl 0x10(%ebp), %edx;	//size
+	# movl 0x8(%ebp), %ebx;	//fd
+	# movl 0xC(%ebp), %ecx;	//buffer
+	# movl 0x10(%ebp), %edx;	//size
 	call syscall_sysenter
-	popl %ebx
 	test %eax, %eax
 	js nok	// if (eax < 0) -> 
 	popl %ebp
