@@ -9,8 +9,17 @@ int __attribute__((__section__(".text.main"))) main(void) {
      * it will raise an exception */
     /* __asm__ __volatile__ ("mov %0, %%cr3"::"r" (0) ); */
 
-    char *msg = "\nBAKA BAKA is back\n";
-    write(1, msg, strlen(msg));
+    char *msg = "\n\nBAKA BAKA is back\n";
+    int bytesTowrite = strlen(msg);
+    int ret = write(1, msg, bytesTowrite);
+
+    write(1, "bytes to write: ", 16);
+    itoa(bytesTowrite, buff);
+    write(1, buff, strlen(buff));
+
+    write(1, "\nbytes written: ", 16);
+    itoa(ret, buff);
+    write(1, buff, strlen(buff));
 
     while (1) {
     }

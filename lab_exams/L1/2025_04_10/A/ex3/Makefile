@@ -107,3 +107,47 @@ gdb: zeos.bin
 
 emuldbg: zeos.bin
 	bochs_nogdb -q -f .bochsrc
+
+reemul:
+	make clean && make emul
+
+format:
+	@echo "Formatting all source files..."
+	@modified_files=""; \
+	echo "  - Formatting C files with clang-format..."; \
+	for file in $$(find . -maxdepth 1 -name "*.c" -type f); do \
+		if [ -f "$$file" ]; then \
+			cp "$$file" "$$file.bak"; \
+			clang-format -i "$$file" 2>/dev/null || true; \
+			if ! cmp -s "$$file" "$$file.bak"; then \
+				modified_files="$$modified_files$$file (clang-format)\n"; \
+			fi; \
+			rm -f "$$file.bak"; \
+		fi; \
+	done; \
+	echo "  - Formatting header files with clang-format..."; \
+	for file in $$(find include/ -name "*.h" -type f); do \
+		if [ -f "$$file" ]; then \
+			cp "$$file" "$$file.bak"; \
+			clang-format -i "$$file" 2>/dev/null || true; \
+			if ! cmp -s "$$file" "$$file.bak"; then \
+				modified_files="$$modified_files$$file (clang-format)\n"; \
+			fi; \
+			rm -f "$$file.bak"; \
+		fi; \
+	done; \
+	echo "  - Ensuring all source files end with newline..."; \
+	for file in $$(find . -maxdepth 1 \( -name "*.c" -o -name "*.S" \) -type f) $$(find include/ -name "*.h" -type f); do \
+		if [ -s "$$file" ] && [ "$$(tail -c1 "$$file" | wc -l)" -eq 0 ]; then \
+			modified_files="$$modified_files$$file (added final newline)\n"; \
+			echo >> "$$file"; \
+		fi; \
+	done; \
+	echo "Formatting complete!"; \
+	echo ""; \
+	echo "Modified files:"; \
+	if [ -n "$$modified_files" ]; then \
+		printf "$$modified_files" | sed 's/^/  - /'; \
+	else \
+		echo "  No files were modified."; \
+	fi

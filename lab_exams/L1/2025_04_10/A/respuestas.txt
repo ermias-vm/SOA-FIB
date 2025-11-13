@@ -58,6 +58,7 @@ system: system.o system.lds $(SYSOBJ)
 
 -----------------------------------------------------------------------------------------------------------------------
 
+
 2. (4 puntos) Where are my args?
 
 a) Se modifica ENTRY(syscall_sysenter) en user-utils.S para guardar la dirección de retorno en %edx y la dirección de la 
@@ -138,8 +139,110 @@ f) Se simplifica el código para volver a modo usuario eliminando los pushes ini
 cargaba desde la pila, usando directamente sysexit con los valores en %ecx y %edx guardados por el wrapper.
 
 ENTRY(system_call_handler)
+    ...
     SAVE_ALL
     ...
     RESTORE_ALL
     sti
     sysexit
+
+-----------------------------------------------------------------------------------------------------------------------
+
+
+3. (3 puntos) Zero copy write
+
+a) Se reprograma `sys_write` en `sys.c` para usar zero copy, mapeando el buffer de usuario a la dirección lógica fija 0x3FF000. Se asume que la dirección del buffer está siempre alineada a página (offset=0).
+
+c
+int sys_write(int fd, char *buffer, int nbytes) {
+    int ret;
+    char *kernel_buffer = (char *)0x3FF000;  // Dirección lógica fija para zero copy
+    int bytes_left = nbytes;
+
+    if ((ret = check_fd(fd, ESCRIPTURA)))
+        return ret;
+    if (nbytes < 0)
+        return -EINVAL;
+    if (!access_ok(VERIFY_READ, buffer, nbytes))
+        return -EFAULT;
+
+    while (bytes_left > 0) {
+        int pag = ((unsigned int)buffer) >> 12;  // Página lógica del buffer
+        page_table_entry *PT = get_PT(current());
+        int frame = get_frame(PT, pag);  // Frame físico
+
+        if (frame == -1) return -EFAULT;
+
+        // Mapear frame a 0x3FF000
+        set_ss_pag(PT, 0x3FF, frame);
+
+        // Escribir directamente desde kernel_buffer
+        int to_write = min(PAGE_SIZE, bytes_left);
+        ret = sys_write_console(kernel_buffer, to_write);
+
+        // Desmapear
+        del_ss_pag(PT, 0x3FF);
+
+        if (ret < 0) return ret;
+
+        bytes_left -= ret;
+        buffer += PAGE_SIZE;
+    }
+
+    return nbytes - bytes_left;
+}
+
+
+b) Se modifica para permitir cualquier dirección de usuario, calculando el offset y ajustando el buffer para alinearlo a página.
+
+c
+int sys_write(int fd, char *buffer, int nbytes) {
+    int ret;
+    char *kernel_buffer = (char *)0x3FF000;  // Dirección lógica fija para zero copy (0x3FF000 - 0x3FFFFF)
+    int bytes_left = nbytes;
+    int offset = 0;  // Para b): manejar direcciones no alineadas
+
+    if ((ret = check_fd(fd, ESCRIPTURA)))
+        return ret;
+    if (nbytes < 0)
+        return -EINVAL;
+    if (!access_ok(VERIFY_READ, buffer, nbytes))
+        return -EFAULT;
+
+    // Para b): calcular offset si la dirección no está alineada a página
+    offset = (unsigned int)buffer % PAGE_SIZE;
+    buffer -= offset;  // Alinear buffer a página
+
+    while (bytes_left > 0) {
+        int pag = ((unsigned int)buffer) >> 12;  // Página lógica del buffer
+        page_table_entry *PT = get_PT(current());
+        int frame = get_frame(PT, pag);  // Frame físico del buffer de usuario
+
+        if (frame == -1) return -EFAULT;  // Error si no hay frame
+
+        // Mapear el frame físico a la dirección lógica fija 0x3FF000
+        set_ss_pag(PT, 0x3FF, frame);
+
+        // Calcular cuánto escribir en esta página
+        int to_write = min(PAGE_SIZE - offset, bytes_left);
+        ret = sys_write_console(kernel_buffer + offset, to_write);
+
+        // Desmapear la página para evitar conflictos
+        del_ss_pag(PT, 0x3FF);
+
+        if (ret < 0) return ret;  // Error en escritura
+
+        bytes_left -= ret;
+        buffer += PAGE_SIZE;  // Avanzar a la siguiente página
+        offset = 0;  // Después de la primera, offset=0
+    }
+
+    return nbytes - bytes_left;  // Retornar bytes escritos
+}
+
+
+////
+ nm  user | grep msg_aligned :
+
+0010a000 D msg_aligned -> 266
+00109000 D msg_aligned2 ->265

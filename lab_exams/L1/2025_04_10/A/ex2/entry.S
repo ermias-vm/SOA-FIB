@@ -96,14 +96,20 @@ ENTRY(keyboard_handler)
       iret;
 
 ENTRY(system_call_handler)
+      push $__USER_DS             # user SS (stack segment)
+      pushl %ebp                  # user ESP (EBP contains user ESP)
+      pushfl                      # save EFLAGS manually
+      push $__USER_CS             # user CS (code segment)
+      pushl 4(%ebp)               # user EIP (return address)
+      
 	SAVE_ALL	// What about arg 6?
 	cmpl $0, %eax
 	jl sysenter_err
 	cmpl $MAX_SYSCALL, %eax
-	jg sysenter_err         # (mod) 2.b
-      movl 0x8(%ebp), %ebx  // Primer parámetro (ej. fd)
-      movl 0xC(%ebp), %ecx  // Segundo parámetro (ej. buffer)
-      movl 0x10(%ebp), %edx // Tercer parámetro (ej. size)
+	jg sysenter_err         # (mod) 2.b se gestionan parametros en el sys_write_wrap -> (mmod) 2.d
+      # movl 0x8(%ebp), %ebx  // Primer parámetro (ej. fd) - Comentado, se hace en sys_write_wrap
+      # movl 0xC(%ebp), %ecx  // Segundo parámetro (ej. buffer) - Comentado, se hace en sys_write_wrap
+      # movl 0x10(%ebp), %edx // Tercer parámetro (ej. size) - Comentado, se hace en sys_write_wrap
 	call *sys_call_table(, %eax, 0x04)
 	jmp sysenter_fin
 sysenter_err:

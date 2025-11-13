@@ -2,7 +2,7 @@
  * libc.h - macros per fer els traps amb diferents arguments
  *          definició de les crides a sistema
  */
- 
+
 #ifndef __LIBC_H__
 #define __LIBC_H__
 
@@ -31,4 +31,4 @@ int get_stats(int pid, struct stats *st);
 void SAVE_REGS(void);
 void RESTORE_REGS(void);
 
-#endif  /* __LIBC_H__ */
+#endif /* __LIBC_H__ */

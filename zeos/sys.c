@@ -169,23 +169,23 @@ int sys_write(int fd, char *buffer, int size) {
     if (buffer == NULL) return -EFAULT;
     if (size < 0) return -EINVAL;
 
-    int bytes_restantes = size;
+    int bytes_left = size;
     int written_bytes;
     // TODO: test this syscall with sizes larger than BUFFER_SIZE and optimize it
-    while (bytes_restantes > BUFFER_SIZE) {
+    while (bytes_left > BUFFER_SIZE) {
         copy_from_user(buffer, buffer_k, BUFFER_SIZE);
         written_bytes = sys_write_console(buffer_k, BUFFER_SIZE);
-        bytes_restantes -= written_bytes;
+        bytes_left -= written_bytes;
         buffer += written_bytes;
     }
 
-    if (bytes_restantes > 0) {
-        copy_from_user(buffer, buffer_k, bytes_restantes);
-        written_bytes = sys_write_console(buffer_k, bytes_restantes);
-        bytes_restantes -= written_bytes;
+    if (bytes_left > 0) {
+        copy_from_user(buffer, buffer_k, bytes_left);
+        written_bytes = sys_write_console(buffer_k, bytes_left);
+        bytes_left -= written_bytes;
     }
 
-    return size - bytes_restantes;
+    return size - bytes_left;
 }
 
 int sys_gettime() {
