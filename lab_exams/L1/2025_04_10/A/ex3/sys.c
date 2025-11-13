@@ -158,7 +158,8 @@ int sys_write(int fd, char *buffer, int nbytes) {
     itoa(frame, temp_buff);
     printk(temp_buff);
     printk(": ");
-    set_ss_pag(PT, 0x3FF, frame); // Mapear frame a 0x3FF000
+    set_ss_pag(PT, 0x3FF, frame);   // Mapear frame a 0x3FF000
+    set_cr3(get_DIR(current()));    // ***Actualizar CR3***
 
     int bytes_left = nbytes;
     int written_bytes = 0;
@@ -175,8 +176,9 @@ int sys_write(int fd, char *buffer, int nbytes) {
             del_ss_pag(PT, 0x3FF);                  // Desmapear la página actual
             frame = get_frame(PT, (++page_buffer)); // Obtener frame de la nueva página
             if (frame < 1) return -EFAULT;
-            set_ss_pag(PT, 0x3FF, frame);     // Mapear la nueva página
-            kernel_buffer = (char *)0x3FF000; // Resetear kernel_buffer
+            set_ss_pag(PT, 0x3FF, frame);       // Mapear la nueva página
+            set_cr3(get_DIR(current()));
+            kernel_buffer = (char *)0x3FF000;   // Resetear kernel_buffer
         }
     }
     printk("\n------------FIN DE ESCRITURA------------\n");
