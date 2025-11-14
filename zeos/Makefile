@@ -136,7 +136,11 @@ clean:
 
 # Clean everything, rebuild the system, and start debugging session
 restart:
-	make clean && make all && make gdb
+	make clean && make gdb
+
+# Clean everything, rebuild the system, and emul
+reemul:
+	make clean && make emul
 
 # Create a timestamped backup of the ZeOS project in compressed format
 backup: clean

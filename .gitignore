@@ -25,6 +25,10 @@ zeos/*~
 *.a
 *.so
 *.dylib
+build
+user
+system
+bootsect
 
 # Build Directories
 build/
@@ -59,3 +63,5 @@ docs/img
 /backup
 /zeosBackup
 TODO
+ZeOSSysenter.tar.gz
+!lab_exams/L1/ZeOSSysenter.tar.gz

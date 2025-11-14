@@ -1,0 +1,260 @@
+1. (3 puntos) Comprensión de Zeos
+
+a)
+
+Comandos a usar :
+    nm system | grep funcionExamen
+    nm user | grep funcionExamen
+
+Si aparece una salida del tipo: "00010630 T init_stats" al  usar el primer comando, significa que la funcion esta 
+definida en el binario system  y sera de sistema. Si aparece al usar el segundo comando, sera de usuario.
+
+
+b)
+El PCB de init se encuentra en la misma pagina que protected_tasks[2], ya que protected_tasks[0] es de protecion 
+y protected_tasks[1] es de idle. Tambien sabemos que esta en la seccion .data.task por el atributo 
+__section__(".data.task")
+
+Para obtene la informacion de las secciones usamos el siguiente comando: nm  system | grep protected_tasks
+Obtenemos la siguiente salida relevante: 00015000 D protected_tasks
+
+La direcion de protected_tasks[2] sera:
+Direccion_base_de_protected_tasks + 2 * sizeof(union task_union) = 0x15000 + 2 * 0x1000 = 0x17000
+Su pagina es 0x17000 / 0x1000 = 0x17
+
+c)
+
+- 1 Preprocesar y ensamblar exam.S
+
+    El archivo exam.S está escrito en ensamblador pero usa directivas del preprocesador de C (como #include, #define).
+    Antes de ensamblar, debe pasarse por el preprocesador de C (cpp). Esto convierte macros y directivas en código 
+    ensamblador puro. En el Makefile, esto se hace con la regla:
+
+exam.s: exam.S $(INCLUDEDIR)/asm.h
+    $(CPP) $(ASMFLAGS) -o $@ $<
+
+
+- 2 Ensamblar exam.s
+
+El archivo exam.s se ensambla para generar el objeto exam.o
+
+exam.o: exam.s
+    $(AS) -o $@ $<
+
+
+- 3 Incluir exam.o en la compilación del kernel (system)
+Para que exam.o se linke con el binario de sistema, debe añadirse a la variable SYSOBJ en el Makefile:
+
+SYSOBJ = interrupt.o entry.o sys_call_table.o io.o sched.o sys.o mm.o devices.o utils.o hardware.o list.o 
+p_stats.o kernel-utils.o exam.o
+
+
+- 4 Linkar system con exam.o
+
+El Makefile linka el sistema con la regla:
+
+system: system.o system.lds $(SYSOBJ)
+    $(LD) $(LINKFLAGS) $(SYSLDFLAGS) -o $@ $< $(SYSOBJ) $(LIBZEOS)
+
+-----------------------------------------------------------------------------------------------------------------------
+
+
+2. (4 puntos) Where are my args?
+
+a) Se modifica ENTRY(syscall_sysenter) en user-utils.S para guardar la dirección de retorno en %edx y la dirección de la 
+pila de usuario en %ecx antes de sysenter, eliminando el código del falso enlace dinámico (pushes y pops).
+
+ENTRY(syscall_sysenter)
+    movl $SYSENTER_RETURN, %edx  // Return address
+    movl %esp, %ecx              // User stack pointer
+    sysenter
+ENTRY(SYSENTER_RETURN)
+    ret
+
+b) En el wrapper de write en user-utils.S, se eliminan las líneas que movían los parámetros a registros (%ebx, %ecx, %edx), 
+dejando los parámetros en la pila de usuario. En el handler en entry.S, se agregan cargas desde %ebp antes de call *sys_call_table.
+
+/* int write(int fd, char *buffer, int size) */
+ENTRY(write)
+    pushl %ebp
+    movl %esp, %ebp
+
+    movl $4, %eax
+    # movl 0x8(%ebp), %ebx;	//fd
+    # movl 0xC(%ebp), %ecx;	//buffer
+    # movl 0x10(%ebp), %edx;	//size
+    call syscall_sysenter
+    test %eax, %eax
+    js nok	// if (eax < 0) -> 
+    popl %ebp
+    ret
+
+En entry.S:
+
+ENTRY(system_call_handler)
+    SAVE_ALL	// What about arg 6?
+    cmpl $0, %eax
+    jl sysenter_err
+    cmpl $MAX_SYSCALL, %eax
+    jg sysenter_err         # (mod) 2.b
+    movl 0x8(%ebp), %ebx  // Primer parámetro (ej. fd)
+    movl 0xC(%ebp), %ecx  // Segundo parámetro (ej. buffer)
+    movl 0x10(%ebp), %edx // Tercer parámetro (ej. size)
+    call *sys_call_table(, %eax, 0x04)
+    jmp sysenter_fin
+
+c) Se agregan pushes al inicio de ENTRY(system_call_handler) en entry.S para simular el contenido de la pila como lo haría 
+el procesador ante una interrupción hardware (guardando SS, ESP, EFLAGS, CS y EIP).
+
+ENTRY(system_call_handler)
+    push $__USER_DS
+    push %ebp
+    pushfl
+    push $__USER_CS
+    push 4(%ebp)
+    SAVE_ALL
+    ...
+
+d) Se implementa ENTRY(sys_write_wrap) en entry.S, que apila los parámetros desde %ebp y llama a sys_write.
+
+ENTRY(sys_write_wrap)
+    pushl 0x10(%ebp)  // size
+    pushl 0xC(%ebp)   // buffer
+    pushl 0x8(%ebp)   // fd
+    call sys_write
+    addl $12, %esp
+    ret
+
+e) Se cambia la tabla sys_call_table en sys_call_table.S para usar sys_write_wrap en lugar de sys_write.
+
+ENTRY (sys_call_table)
+    .long sys_ni_syscall	//0
+    .long sys_exit		//1
+    .long sys_fork		//2
+    .long sys_ni_syscall	//3
+    .long sys_write_wrap	//4
+    .long sys_ni_syscall	//5
+
+f) Se simplifica el código para volver a modo usuario eliminando los pushes iniciales y el código al final que 
+cargaba desde la pila, usando directamente sysexit con los valores en %ecx y %edx guardados por el wrapper.
+
+ENTRY(system_call_handler)
+    ...
+    SAVE_ALL
+    ...
+    RESTORE_ALL
+    sti
+    sysexit
+
+-----------------------------------------------------------------------------------------------------------------------
+
+
+3. (3 puntos) Zero copy write
+
+a) Se reprograma sys_write en sys.c para usar zero copy, mapeando el buffer de usuario a la dirección lógica fija 0x3FF000. 
+Se asume que la dirección del buffer está siempre alineada a página (offset=0).
+
+#define TAM_BUFFER 512
+
+#define BUFFER_START 0x3FF000
+#define BUFFER_END 0x400000
+int sys_write(int fd, char *buffer, int nbytes) {
+    int ret;
+
+    if ((ret = check_fd(fd, ESCRIPTURA))) return ret;
+    if (nbytes < 0) return -EINVAL;
+    if (!access_ok(VERIFY_READ, buffer, nbytes)) return -EFAULT;
+
+    char *kernel_buffer = (char *)BUFFER_START; // Dirección lógica fija para zero copy
+    page_table_entry *PT = get_PT(current());
+    int page_buffer = ((unsigned int)buffer) >> 12;
+    int frame = get_frame(PT, page_buffer); // Pagina fisica de buffer
+    if (frame < 1) return -EFAULT;
+    set_ss_pag(PT, BUFFER_START >> 12, frame);   // Mapear frame a 0x3FF000
+    set_cr3(get_DIR(current()));    // ***Actualizar CR3***
+
+    int bytes_left = nbytes;
+    int written_bytes = 0;
+
+    while (bytes_left > 0) {
+        int to_write = min(bytes_left, TAM_BUFFER);
+        written_bytes = sys_write_console(kernel_buffer, to_write);
+        bytes_left -= written_bytes;
+        kernel_buffer += written_bytes;
+
+        // Si se alcanza el final de la página mapeada, remapear la siguiente página de usuario
+        if ((unsigned int)kernel_buffer >= (unsigned int)BUFFER_END && bytes_left > 0) {
+            del_ss_pag(PT, BUFFER_START >> 12);                  // Desmapear la página actual
+            frame = get_frame(PT, (++page_buffer)); // Obtener frame de la nueva página
+            if (frame < 1) return -EFAULT;
+            set_ss_pag(PT, BUFFER_START >> 12, frame);       // Mapear la nueva página
+            set_cr3(get_DIR(current()));
+            kernel_buffer = (char *)BUFFER_START;   // Resetear kernel_buffer
+        }
+    }
+    del_ss_pag(PT, BUFFER_START >> 12); // Desmapear
+    set_cr3(get_DIR(current()));
+
+    return nbytes - bytes_left; // Retornar total escrito
+}
+
+b) Se modifica para permitir cualquier dirección de usuario, calculando el offset y ajustando el buffer para alinearlo a página.
+
+
+#define TAM_BUFFER 512
+#define BUFFER_START 0x3FF000
+#define BUFFER_END 0x400000
+
+int sys_write(int fd, char *buffer, int nbytes) {
+    int ret;
+
+    if ((ret = check_fd(fd, ESCRIPTURA))) return ret;
+    if (nbytes < 0) return -EINVAL;
+    if (!access_ok(VERIFY_READ, buffer, nbytes)) return -EFAULT;
+
+    page_table_entry *PT = get_PT(current());
+    int page_buffer = ((unsigned int)buffer) >> 12;
+    int offset_buffer = ((unsigned int)buffer) & 0xFFF;
+
+    char *kernel_buffer = (char *)(BUFFER_START + offset_buffer); // Dirección lógica fija + offset
+    int frame = get_frame(PT, page_buffer);                       // Pagina fisica de buffer
+    if (frame < 1) return -EFAULT;
+    set_ss_pag(PT, BUFFER_START >> 12, frame); // Mapear frame a 0x3FF000
+    set_cr3(get_DIR(current()));               // ***Actualizar CR3***
+
+    int bytes_left = nbytes;
+    int written_bytes = 0;
+
+    while (bytes_left > 0) {
+        int bytesToEnd = (unsigned int)BUFFER_END - (unsigned int)kernel_buffer;
+        int to_write = min(min(bytes_left, bytesToEnd), TAM_BUFFER); // Minimo a escribir
+        written_bytes = sys_write_console(kernel_buffer, to_write);
+        bytes_left -= written_bytes;
+        kernel_buffer += written_bytes;
+
+        // Si se alcanza el final de la página mapeada, remapear la siguiente página de usuario
+        if ((unsigned int)kernel_buffer >= (unsigned int)BUFFER_END && bytes_left > 0) {
+            del_ss_pag(PT, BUFFER_START >> 12);     // Desmapear la página actual
+            frame = get_frame(PT, (++page_buffer)); // Obtener frame de la nueva página
+            if (frame < 1) return -EFAULT;
+            set_ss_pag(PT, BUFFER_START >> 12, frame); // Mapear la nueva página
+            set_cr3(get_DIR(current()));
+            kernel_buffer = (char *)BUFFER_START; // Resetear kernel_buffer
+        }
+    }
+    del_ss_pag(PT, BUFFER_START >> 12); // Desmapear
+    set_cr3(get_DIR(current()));
+
+    return nbytes - bytes_left; // Retornar total escrito
+}
+-------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+-- test para ver si las variables estan alineadas:
+
+nm  user | grep msg_aligned :
+
+0010a000 D msg_aligned -> 266
+00109000 D msg_aligned2 ->265
