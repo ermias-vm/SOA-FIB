@@ -13,7 +13,7 @@ typedef unsigned short int Word;
 typedef unsigned long DWord;
 
 #define highWord(address) (Word)(((address) >> 16) & 0xFFFF)
-#define lowWord(address) (Word)((address)&0xFFFF)
+#define lowWord(address) (Word)((address) & 0xFFFF)
 #define midByte(address) (Byte)(((address) >> 16) & 0xFF)
 #define highByte(address) (Byte)(((address) >> (16 + 8)) & 0xFF)
 #define high4Bits(limit) (Byte)(((limit) >> 16) & 0x0F)

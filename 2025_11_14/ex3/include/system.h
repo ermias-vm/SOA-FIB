@@ -7,7 +7,8 @@
 
 #include <types.h>
 
-extern TSS tss;
-extern Descriptor *gdt;
 
-#endif /* __SYSTEM_H__ */
+extern TSS         tss;
+extern Descriptor* gdt;
+
+#endif  /* __SYSTEM_H__ */
