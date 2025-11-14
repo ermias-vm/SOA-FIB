@@ -140,8 +140,9 @@ int sys_fork(void) {
 }
 
 #define TAM_BUFFER 512
+#define BUFFER_START 0x3FF000
+#define BUFFER_END 0x400000
 
-char temp_buff[24];
 int sys_write(int fd, char *buffer, int nbytes) {
     int ret;
 
@@ -149,40 +150,38 @@ int sys_write(int fd, char *buffer, int nbytes) {
     if (nbytes < 0) return -EINVAL;
     if (!access_ok(VERIFY_READ, buffer, nbytes)) return -EFAULT;
 
-    char *kernel_buffer = (char *)0x3FF000; // Dirección lógica fija para zero copy
     page_table_entry *PT = get_PT(current());
     int page_buffer = ((unsigned int)buffer) >> 12;
-    int frame = get_frame(PT, page_buffer); // Pagina fisica de buffer
+    int offset_buffer = ((unsigned int)buffer) & 0xFFF;
+
+    char *kernel_buffer = (char *)(BUFFER_START + offset_buffer); // Dirección lógica fija + offset
+    int frame = get_frame(PT, page_buffer);                       // Pagina fisica de buffer
     if (frame < 1) return -EFAULT;
-    printk("\n------------Frame inicial: ");
-    itoa(frame, temp_buff);
-    printk(temp_buff);
-    printk(": ");
-    set_ss_pag(PT, 0x3FF, frame);   // Mapear frame a 0x3FF000
-    set_cr3(get_DIR(current()));    // ***Actualizar CR3***
+    set_ss_pag(PT, BUFFER_START >> 12, frame); // Mapear frame a 0x3FF000
+    set_cr3(get_DIR(current()));               // ***Actualizar CR3***
 
     int bytes_left = nbytes;
     int written_bytes = 0;
 
     while (bytes_left > 0) {
-        int to_write = (bytes_left > TAM_BUFFER) ? TAM_BUFFER : bytes_left;
+        int bytesToEnd = (unsigned int)BUFFER_END - (unsigned int)kernel_buffer;
+        int to_write = min(min(bytes_left, bytesToEnd), TAM_BUFFER); // Minimo a escribir
         written_bytes = sys_write_console(kernel_buffer, to_write);
         bytes_left -= written_bytes;
         kernel_buffer += written_bytes;
 
         // Si se alcanza el final de la página mapeada, remapear la siguiente página de usuario
-        if (kernel_buffer >= (char *)0x400000) {
-            printk("\n------------REMAPAEO A NUEVA PAGINA------------\n");
-            del_ss_pag(PT, 0x3FF);                  // Desmapear la página actual
+        if ((unsigned int)kernel_buffer >= (unsigned int)BUFFER_END && bytes_left > 0) {
+            del_ss_pag(PT, BUFFER_START >> 12);     // Desmapear la página actual
             frame = get_frame(PT, (++page_buffer)); // Obtener frame de la nueva página
             if (frame < 1) return -EFAULT;
-            set_ss_pag(PT, 0x3FF, frame);       // Mapear la nueva página
+            set_ss_pag(PT, BUFFER_START >> 12, frame); // Mapear la nueva página
             set_cr3(get_DIR(current()));
-            kernel_buffer = (char *)0x3FF000;   // Resetear kernel_buffer
+            kernel_buffer = (char *)BUFFER_START; // Resetear kernel_buffer
         }
     }
-    printk("\n------------FIN DE ESCRITURA------------\n");
-    del_ss_pag(PT, 0x3FF); // Desmapear
+    del_ss_pag(PT, BUFFER_START >> 12); // Desmapear
+    set_cr3(get_DIR(current()));
 
     return nbytes - bytes_left; // Retornar total escrito
 }

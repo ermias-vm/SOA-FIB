@@ -3,6 +3,11 @@
 # Specify the project directory
 PROJECT_DIR = zeos
 
+TOPLEVEL_DIRS := zeos zeosBackup
+
+# Directory that contains many subfolders
+EXAM_DIR := lab_exams
+
 # Default target
 all:
 	$(MAKE) -C $(PROJECT_DIR)
@@ -34,6 +39,34 @@ backup:
 
 disk:
 	$(MAKE) -C $(PROJECT_DIR) disk
+
+global_clean:
+	@echo "=== Global clean ==="
+
+	# Clean zeos and zeosBackup normally
+	$(MAKE) -C zeos clean
+	$(MAKE) -C zeosBackup clean
+
+	# Recursively remove generated files inside lab_exams
+	@echo "Cleaning lab_exams recursively..."
+	@find lab_exams -type f \( \
+		-name "*.o" -o \
+		-name "*.s" -o \
+		-name "*~" -o \
+		-name "bochsout.txt" -o \
+		-name "parport.out" -o \
+		-name "system.out" -o \
+		-name "system" -o \
+		-name "user" -o \
+		-name "user.out" -o \
+		-name "zeos.bin" \
+	\) -delete
+
+	# Clean root directory
+	@echo "Cleaning root directory..."
+	@rm -f *~ *.o *.s bochsout.txt parport.out system.out system user user.out zeos.bin build
+
+	@echo "=== Done ==="
 
 # Redirect all other targets to the project directory
 %:
