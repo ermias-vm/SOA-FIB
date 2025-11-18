@@ -19,6 +19,9 @@ clean:
 restart:
 	$(MAKE) -C $(PROJECT_DIR) restart
 
+reemul:
+	$(MAKE) -C $(PROJECT_DIR) reemul
+
 emul:
 	$(MAKE) -C $(PROJECT_DIR) emul
 

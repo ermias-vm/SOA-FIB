@@ -156,8 +156,8 @@ void wait_ticks(int ticks_to_wait) {
 }
 
 void print_splash_screen(void) {
-    printk("\n\n");
-
+    clear_screen();
+    printk("\n");
     // clang-format off
     //ZEOS
     printk_color("             ###########    ########  #######    ######       \n", MAKE_COLOR(BLACK, LIGHT_CYAN));
@@ -167,7 +167,7 @@ void print_splash_screen(void) {
     printk_color("              ##        ##        ##     ##        ##         \n", MAKE_COLOR(BLACK, LIGHT_BLUE));
     printk_color("            ##         ##        ##     ##  ##    ##          \n", MAKE_COLOR(BLACK, CYAN));
     printk_color("          ##########  ########   #######    ######            \n", MAKE_COLOR(BLACK, LIGHT_CYAN));
-    printk_color("\n\n", DEFAULT_COLOR);
+    printk("\n\n");
     // SOA-FIB
     printk_color("        ####    #####     ###        #######  ##  ######      \n", MAKE_COLOR(BLACK, YELLOW));
     printk_color("       ##  ##  ##   ##   ## ##       ##       ##  ##   ##     \n", MAKE_COLOR(BLACK, LIGHT_RED));
@@ -175,17 +175,15 @@ void print_splash_screen(void) {
     printk_color("        ####   ##   ##  #######      #####    ##  ######      \n", MAKE_COLOR(BLACK, MAGENTA));
     printk_color("           ##  ##   ##  ##   ##      ##       ##  ##   ##     \n", MAKE_COLOR(BLACK, LIGHT_MAGENTA));
     printk_color("       ##  ##  ##   ##  ##   ##      ##       ##  ##   ##     \n", MAKE_COLOR(BLACK, LIGHT_RED));
-    printk_color("        ####    #####   ##   ##      ##       ##  ######      \n", MAKE_COLOR(BLACK, YELLOW));
-    
-    printk("\n"); 
+    printk_color("        ####    #####   ##   ##      ##       ##  ######      \n\n", MAKE_COLOR(BLACK, YELLOW));
     
     // 2025-2026
-    printk_color("                   =========================\n\n", MAKE_COLOR(BLACK, DARK_GRAY));
+    printk_color("                   =========================\n", MAKE_COLOR(BLACK, DARK_GRAY));
     printk_color("                       2 0 2 5", MAKE_COLOR(BLACK, LIGHT_GREEN));
     printk_color(" - ", MAKE_COLOR(BLACK, WHITE));
-    printk_color("2 0 2 6\n\n", MAKE_COLOR(BLACK, LIGHT_GREEN));
-    printk_color("                   =========================\n", MAKE_COLOR(BLACK, DARK_GRAY));
+    printk_color("2 0 2 6\n", MAKE_COLOR(BLACK, LIGHT_GREEN));
+    printk_color("                   =========================\n\n", MAKE_COLOR(BLACK, DARK_GRAY));
+    printk_color("                   Booting ZeOs by Baka Baka\n", WARNING_COLOR);
     // clang-format on
-    printk("\n");
-    wait_ticks(1500);
+    wait_ticks(22500);
 }
