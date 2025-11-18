@@ -223,3 +223,11 @@ doxygen:
 	else \
         echo "Error: Doxygen is not installed. Please install it with 'sudo apt install doxygen' (Ubuntu/Debian) or equivalent for your system."; \
     fi
+
+doxygen-pdf:
+	@if [ -d "../docs/doxygen/zeos/output/latex" ]; then \
+        cd ../docs/doxygen/zeos/output/latex && make; \
+        echo "PDF generated: ../docs/doxygen/zeos/output/latex/refman.pdf"; \
+	else \
+        echo "Run 'make doxygen' first to generate LaTeX files."; \
+    fi
