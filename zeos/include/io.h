@@ -93,4 +93,12 @@ void printk(char *string);
  */
 void printk_color(char *string, Word color);
 
+/**
+ * @brief Clear the screen.
+ *
+ * This function clears the entire screen and resets the cursor
+ * position to the top-left corner.
+ */
+void clear_screen();
+
 #endif // __IO_H__

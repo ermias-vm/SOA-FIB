@@ -98,3 +98,11 @@ void printk_color(char *string, Word color) {
         printc(string[i], color);
     }
 }
+
+void clear_screen() {
+    Word *screen = (Word *)VIDEO_MEMORY_BASE;
+    for (int i = 0; i < NUM_ROWS * NUM_COLUMNS; i++) {
+        screen[i] = (Word)' ' | DEFAULT_COLOR;
+    }
+    x = y = 0;
+}

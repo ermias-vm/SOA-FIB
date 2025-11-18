@@ -1,9 +1,8 @@
 # Root Makefile - Redirects all commands to specific project directory
 
-# Specify the project directory
-PROJECT_DIR = zeos
+# Specify the project directory (zeos or project)
+PROJECT_DIR ?=zeos
 
-TOPLEVEL_DIRS := zeos zeosBackup
 
 # Directory that contains many subfolders
 EXAM_DIR := lab_exams
@@ -18,6 +17,9 @@ clean:
 
 restart:
 	$(MAKE) -C $(PROJECT_DIR) restart
+
+reemul:
+	$(MAKE) -C $(PROJECT_DIR) reemul
 
 emul:
 	$(MAKE) -C $(PROJECT_DIR) emul
@@ -39,6 +41,9 @@ backup:
 
 disk:
 	$(MAKE) -C $(PROJECT_DIR) disk
+
+doxygen:
+	$(MAKE) -C $(PROJECT_DIR) doxygen
 
 global_clean:
 	@echo "=== Global clean ==="
@@ -72,4 +77,4 @@ global_clean:
 %:
 	$(MAKE) -C $(PROJECT_DIR) $@
 
-.PHONY: all clean restart emul gdb emuldbg format format-check backup disk
+.PHONY: all clean restart emul reemul gdb emuldbg format format-check backup disk doxygen
