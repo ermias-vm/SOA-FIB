@@ -60,8 +60,8 @@ docs/*.txt
 # Other files
 docs/*.txt
 docs/img
+docs/doxygen/
 /backup
-/zeosBackup
 TODO
 ZeOSSysenter.tar.gz
 !lab_exams/L1/ZeOSSysenter.tar.gz

@@ -214,3 +214,12 @@ format:
 		echo "  No files were modified."; \
 	fi
 
+# Generate Doxygen documentation
+doxygen:
+	@if command -v doxygen >/dev/null 2>&1; then \
+        echo "Generating Doxygen documentation..."; \
+        cd ../docs/doxygen/zeos && doxygen Doxyfile; \
+        echo "Documentation generated in docs/doxygen/zeos/output/html/"; \
+	else \
+        echo "Error: Doxygen is not installed. Please install it with 'sudo apt install doxygen' (Ubuntu/Debian) or equivalent for your system."; \
+    fi
