@@ -3,10 +3,11 @@
  *
  * @section intro Introduction
  *
- * ZeOS is a 32-bit teaching operating system for the Intel 80386 architecture that demonstrates fundamental OS concepts.
- * This documentation provides detailed technical information about all system components, their implementation, and interactions
- * within the ZeOS kernel. The system is designed to run on emulated x86 hardware using Bochs and provides a complete
- * environment for learning operating system internals.
+ * ZeOS is a 32-bit teaching operating system for the Intel 80386 architecture that demonstrates
+ * fundamental OS concepts. This documentation provides detailed technical information about all
+ * system components, their implementation, and interactions within the ZeOS kernel. The system is
+ * designed to run on emulated x86 hardware using Bochs and provides a complete environment for
+ * learning operating system internals.
  *
  * @section overview System Overview
  *
@@ -22,8 +23,8 @@
  *
  * @subsection bootsect Boot Sector (bootsect.S)
  *
- * The boot sector is the first code executed when ZeOS starts. This 512-byte assembly program handles the critical
- * transition from BIOS real mode to protected mode and loads the kernel.
+ * The boot sector is the first code executed when ZeOS starts. This 512-byte assembly program
+ * handles the critical transition from BIOS real mode to protected mode and loads the kernel.
  *
  * **Key Responsibilities:**
  * - Self-relocation from `0x07C00` to `0x90000` to make room for kernel loading
@@ -382,8 +383,8 @@
  * @section authors Authors
  *
  * Developed as part of the Operating Systems course at FIB (Facultat d'Informàtica de Barcelona).
- * Implementation demonstrates fundamental OS concepts including process scheduling, memory management,
- * interrupt handling, and system call interfaces.
+ * Implementation demonstrates fundamental OS concepts including process scheduling, memory
+ * management, interrupt handling, and system call interfaces.
  *
  * @section license License
  *

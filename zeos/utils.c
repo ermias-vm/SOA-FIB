@@ -25,8 +25,7 @@ void copy_data(void *start, void *dest, int size) {
         size--;
     }
 }
-/* Copy from user space to kernel space, returns 0 if ok and -1 if
- * error*/
+
 int copy_from_user(void *start, void *dest, int size) {
     DWord *p = start, *q = dest;
     Byte *p1, *q1;
@@ -42,8 +41,7 @@ int copy_from_user(void *start, void *dest, int size) {
     }
     return 0;
 }
-/* Copy from kernel space to user space, returns 0 if ok and -1 if
- * error*/
+
 int copy_to_user(void *start, void *dest, int size) {
     DWord *p = start, *q = dest;
     Byte *p1, *q1;
@@ -60,15 +58,6 @@ int copy_to_user(void *start, void *dest, int size) {
     return 0;
 }
 
-/* access_ok: Checks if a user space pointer is valid
- * @type:  Type of access: %VERIFY_READ or %VERIFY_WRITE. Note that
- *         %VERIFY_WRITE is a superset of %VERIFY_READ: if it is safe
- *         to write to a block, it is always safe to read from it
- * @addr:  User space pointer to start of block to check
- * @size:  Size of block to check
- * Returns true (nonzero) if the memory block may be valid,
- *         false (zero) if it is definitely invalid
- */
 int access_ok(int type, const void *addr, unsigned long size) {
     unsigned long addr_ini, addr_fin;
 
@@ -160,30 +149,30 @@ void print_splash_screen(void) {
     printk("\n");
     // clang-format off
     //ZEOS
-    printk_color("             ###########    ########  #######    ######       \n", MAKE_COLOR(BLACK, LIGHT_CYAN));
-    printk_color("                    ##     ##        ##     ##  ##    ##      \n", MAKE_COLOR(BLACK, CYAN));
-    printk_color("                  ##      ##        ##     ##  ##             \n", MAKE_COLOR(BLACK, LIGHT_BLUE));
-    printk_color("                ##       ######    ##     ##   ######         \n", MAKE_COLOR(BLACK, BLUE));
-    printk_color("              ##        ##        ##     ##        ##         \n", MAKE_COLOR(BLACK, LIGHT_BLUE));
-    printk_color("            ##         ##        ##     ##  ##    ##          \n", MAKE_COLOR(BLACK, CYAN));
-    printk_color("          ##########  ########   #######    ######            \n", MAKE_COLOR(BLACK, LIGHT_CYAN));
+    printk_color("                  ###########    ########  #######    ######       \n", MAKE_COLOR(BLACK, LIGHT_CYAN));
+    printk_color("                         ##     ##        ##     ##  ##    ##      \n", MAKE_COLOR(BLACK, CYAN));
+    printk_color("                       ##      ##        ##     ##  ##             \n", MAKE_COLOR(BLACK, LIGHT_BLUE));
+    printk_color("                     ##       ######    ##     ##   ######         \n", MAKE_COLOR(BLACK, BLUE));
+    printk_color("                   ##        ##        ##     ##        ##         \n", MAKE_COLOR(BLACK, LIGHT_BLUE));
+    printk_color("                 ##         ##        ##     ##  ##    ##          \n", MAKE_COLOR(BLACK, CYAN));
+    printk_color("               ##########  ########   #######    ######            \n", MAKE_COLOR(BLACK, LIGHT_CYAN));
     printk("\n\n");
     // SOA-FIB
-    printk_color("        ####    #####     ###        #######  ##  ######      \n", MAKE_COLOR(BLACK, YELLOW));
-    printk_color("       ##  ##  ##   ##   ## ##       ##       ##  ##   ##     \n", MAKE_COLOR(BLACK, LIGHT_RED));
-    printk_color("       ##      ##   ##  ##   ##      ##       ##  ##   ##     \n", MAKE_COLOR(BLACK, LIGHT_MAGENTA));
-    printk_color("        ####   ##   ##  #######      #####    ##  ######      \n", MAKE_COLOR(BLACK, MAGENTA));
-    printk_color("           ##  ##   ##  ##   ##      ##       ##  ##   ##     \n", MAKE_COLOR(BLACK, LIGHT_MAGENTA));
-    printk_color("       ##  ##  ##   ##  ##   ##      ##       ##  ##   ##     \n", MAKE_COLOR(BLACK, LIGHT_RED));
-    printk_color("        ####    #####   ##   ##      ##       ##  ######      \n\n", MAKE_COLOR(BLACK, YELLOW));
+    printk_color("               ####    #####     ###        #######  ##  ######      \n", MAKE_COLOR(BLACK, YELLOW));
+    printk_color("              ##  ##  ##   ##   ## ##       ##       ##  ##   ##     \n", MAKE_COLOR(BLACK, LIGHT_RED));
+    printk_color("              ##      ##   ##  ##   ##      ##       ##  ##   ##     \n", MAKE_COLOR(BLACK, LIGHT_MAGENTA));
+    printk_color("               ####   ##   ##  #######      #####    ##  ######      \n", MAKE_COLOR(BLACK, MAGENTA));
+    printk_color("                  ##  ##   ##  ##   ##      ##       ##  ##   ##     \n", MAKE_COLOR(BLACK, LIGHT_MAGENTA));
+    printk_color("              ##  ##  ##   ##  ##   ##      ##       ##  ##   ##     \n", MAKE_COLOR(BLACK, LIGHT_RED));
+    printk_color("               ####    #####   ##   ##      ##       ##  ######      \n\n", MAKE_COLOR(BLACK, YELLOW));
     
     // 2025-2026
-    printk_color("                   =========================\n", MAKE_COLOR(BLACK, DARK_GRAY));
-    printk_color("                       2 0 2 5", MAKE_COLOR(BLACK, LIGHT_GREEN));
+    printk_color("                        =========================\n", MAKE_COLOR(BLACK, DARK_GRAY));
+    printk_color("                            2 0 2 5", MAKE_COLOR(BLACK, LIGHT_GREEN));
     printk_color(" - ", MAKE_COLOR(BLACK, WHITE));
     printk_color("2 0 2 6\n", MAKE_COLOR(BLACK, LIGHT_GREEN));
-    printk_color("                   =========================\n\n", MAKE_COLOR(BLACK, DARK_GRAY));
-    printk_color("                   Booting ZeOs by Baka Baka\n", WARNING_COLOR);
+    printk_color("                        =========================\n\n", MAKE_COLOR(BLACK, DARK_GRAY));
+    printk_color("                        Booting ZeOs by Baka Baka\n", WARNING_COLOR);
     // clang-format on
-    wait_ticks(22500);
+    wait_ticks(2500);
 }

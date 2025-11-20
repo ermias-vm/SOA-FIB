@@ -18,15 +18,15 @@
 #include <sys.h>
 #include <utils.h>
 
-#define LECTURA 0
-#define ESCRIPTURA 1
+#define READ 0
+#define WRITE 1
 #define BUFFER_SIZE 256
 
 char buffer_k[BUFFER_SIZE];
 
 int check_fd(int fd, int permissions) {
-    if (fd != 1) return -9;                    /*EBADF*/
-    if (permissions != ESCRIPTURA) return -13; /*EACCES*/
+    if (fd != 1) return -9;               /*EBADF*/
+    if (permissions != WRITE) return -13; /*EACCES*/
     return 0;
 }
 
@@ -163,15 +163,14 @@ int sys_fork() {
 }
 
 int sys_write(int fd, char *buffer, int size) {
-
-    int fd_error = check_fd(fd, ESCRIPTURA);
-    if (fd_error) return fd_error;
-    if (buffer == NULL) return -EFAULT;
+    int ret;
     if (size < 0) return -EINVAL;
+    if ((ret = check_fd(fd, WRITE))) return ret;
+    if (!access_ok(VERIFY_READ, buffer, size)) return -EFAULT;
 
     int bytes_left = size;
     int written_bytes;
-    // TODO: test this syscall with sizes larger than BUFFER_SIZE and optimize it
+
     while (bytes_left > BUFFER_SIZE) {
         copy_from_user(buffer, buffer_k, BUFFER_SIZE);
         written_bytes = sys_write_console(buffer_k, BUFFER_SIZE);

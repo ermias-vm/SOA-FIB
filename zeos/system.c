@@ -75,9 +75,9 @@ __attribute__((__section__(".text.main"))) int main(void) {
     print_splash_screen();
 
     /* Initialize hardware data */
-    setGdt(); /* Definicio de la taula de segments de memoria */
-    setIdt(); /* Definicio del vector de interrupcions */
-    setTSS(); /* Definicio de la TSS */
+    setGdt(); /* Definition of the memory segments table */
+    setIdt(); /* Definition of the interrupt vector */
+    setTSS(); /* Definition of the TSS */
 
     /* Initialize Memory */
     init_mm();

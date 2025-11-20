@@ -616,11 +616,15 @@ void test_exit_syscall(void) {
 void test_block_unblock_syscalls(void) {
     print_test_header("BLOCK/UNBLOCK SYSCALLS");
 
-    msg = "[TEST] Testing block() and unblock() syscalls...\n";
+    subtests_run = 0;
+    subtests_passed = 0;
+
+    // Subtest 1: Basic block/unblock test - should PASS
+    msg = "[TEST 1] Basic block/unblock test...\n";
     write(1, msg, strlen(msg));
 
-    int pid = fork();
-    if (pid == 0) {
+    int pid1 = fork();
+    if (pid1 == 0) {
         // Child process
         write_current_pid();
         msg = "Child about to block\n";
@@ -631,46 +635,111 @@ void test_block_unblock_syscalls(void) {
         write_current_pid();
         msg = "Child unblocked successfully\n";
         write(1, msg, strlen(msg));
+
+        // Wait a bit to ensure parent sees the result, then exit
+        work(200);
         exit();
-    } else if (pid > 0) {
+    } else if (pid1 > 0) {
         // Parent process
-        write_current_pid();
-        msg = "Parent waiting before unblocking child\n";
-        write(1, msg, strlen(msg));
-
-        // Wait for child to block
-        work(200); // Wait 0.2 seconds
+        work(200); // Wait for child to block
 
         write_current_pid();
-        msg = "Unblocking child process\n";
+        msg = "Unblocking child PID: ";
         write(1, msg, strlen(msg));
-
-        write_current_pid();
-        msg = "About to unblock PID: ";
-        write(1, msg, strlen(msg));
-        itoa(pid, buffer);
+        itoa(pid1, buffer);
         write(1, buffer, strlen(buffer));
         msg = "\n";
         write(1, msg, strlen(msg));
 
-        int result = unblock(pid);
-        if (result == 0) {
-            write_current_pid();
-            msg = "Unblock successful\n";
+        int result1 = unblock(pid1);
+        if (result1 == 0) {
+            work(300); // Give time for child to respond and show message
+            msg = " - PASSED\n";
             write(1, msg, strlen(msg));
+            subtests_passed++;
         } else {
-            write_current_pid();
-            msg = "Unblock failed\n";
+            msg = " - FAILED\n";
             write(1, msg, strlen(msg));
         }
+        subtests_run++;
 
-        int passed = (result == 0);
-        print_test_result("block/unblock syscalls", passed);
-    } else {
-        msg = "[ERROR] Fork failed for block/unblock test\n";
+        work(200); // Wait for child to finish completely
+    }              // Subtest 2: Unblock non-existent process - should FAIL
+    msg = "[TEST 2] Unblock non-existent process...\n";
+    write(1, msg, strlen(msg));
+
+    int result2 = unblock(999); // PID that doesn't exist
+    if (result2 == -1) {
+        msg = " - PASSED (correctly failed)\n";
         write(1, msg, strlen(msg));
-        print_test_result("block/unblock syscalls", 0);
+        subtests_passed++;
+    } else {
+        msg = " - FAILED (should have failed)\n";
+        write(1, msg, strlen(msg));
     }
+    subtests_run++;
+
+    // Subtest 3: Unblock running process - should PASS
+    msg = "[TEST 3] Unblock running (non-blocked) process...\n";
+    write(1, msg, strlen(msg));
+
+    int pid3 = fork();
+    if (pid3 == 0) {
+        // Child process - stays running, doesn't block
+        write_current_pid();
+        msg = "Child running (not blocking)\n";
+        write(1, msg, strlen(msg));
+
+        work(500); // Work for 0.5 seconds without blocking
+
+        write_current_pid();
+        msg = "Child finishing\n";
+        write(1, msg, strlen(msg));
+        exit();
+    } else if (pid3 > 0) {
+        // Parent process
+        work(100); // Wait a bit for child to start
+
+        write_current_pid();
+        msg = "Attempting to unblock running child PID: ";
+        write(1, msg, strlen(msg));
+        itoa(pid3, buffer);
+        write(1, buffer, strlen(buffer));
+        msg = "\n";
+        write(1, msg, strlen(msg));
+
+        int result3 = unblock(pid3);
+        if (result3 == 0) {
+            msg = " - PASSED (unblock running process should succeed)\n";
+            write(1, msg, strlen(msg));
+            subtests_passed++;
+        } else {
+            msg = " - FAILED (unblock running process should succeed)\n";
+            write(1, msg, strlen(msg));
+        }
+        subtests_run++;
+
+        work(500); // Wait for child to finish
+    }
+
+    // Summary for block/unblock tests
+    msg = "\n[BLOCK/UNBLOCK] Subtests: ";
+    write(1, msg, strlen(msg));
+
+    itoa(subtests_passed, buffer);
+    write(1, buffer, strlen(buffer));
+
+    msg = "/";
+    write(1, msg, strlen(msg));
+
+    itoa(subtests_run, buffer);
+    write(1, buffer, strlen(buffer));
+
+    msg = " passed";
+    write(1, msg, strlen(msg));
+
+    int passed = (subtests_passed == subtests_run);
+    print_test_result("block/unblock syscalls", passed);
 }
 
 /* -- Helper functions -- */
@@ -747,58 +816,76 @@ void print_final_summary(void) {
     msg = "Tests executed:\n";
     write(1, msg, strlen(msg));
 
+    // Obtener resultados basados en tests_passed y tests_run
+    int current_test = 0;
+
 #if WRITE_TEST
-    msg = "WRITE_TEST              : PASSED\n";
-    write(1, msg, strlen(msg));
-#else
-    msg = "WRITE_TEST              : SKIPPED\n";
+    if (current_test < tests_run) {
+        msg = (current_test < tests_passed) ? "WRITE_TEST              : PASSED\n"
+                                            : "WRITE_TEST              : FAILED\n";
+        current_test++;
+    } else {
+        msg = "WRITE_TEST              : SKIPPED\n";
+    }
     write(1, msg, strlen(msg));
 #endif
 
 #if GETTIME_TEST
-    msg = "GETTIME_TEST            : PASSED\n";
-    write(1, msg, strlen(msg));
-#else
-    msg = "GETTIME_TEST            : SKIPPED\n";
+    if (current_test < tests_run) {
+        msg = (current_test < tests_passed) ? "GETTIME_TEST            : PASSED\n"
+                                            : "GETTIME_TEST            : FAILED\n";
+        current_test++;
+    } else {
+        msg = "GETTIME_TEST            : SKIPPED\n";
+    }
     write(1, msg, strlen(msg));
 #endif
 
 #if GETPID_TEST
-    msg = "GETPID_TEST             : PASSED\n";
-    write(1, msg, strlen(msg));
-#else
-    msg = "GETPID_TEST             : SKIPPED\n";
+    if (current_test < tests_run) {
+        msg = (current_test < tests_passed) ? "GETPID_TEST             : PASSED\n"
+                                            : "GETPID_TEST             : FAILED\n";
+        current_test++;
+    } else {
+        msg = "GETPID_TEST             : SKIPPED\n";
+    }
     write(1, msg, strlen(msg));
 #endif
 
 #if FORK_TEST
-    msg = "FORK_TEST               : PASSED\n";
-    write(1, msg, strlen(msg));
-#else
-    msg = "FORK_TEST               : SKIPPED\n";
+    if (current_test < tests_run) {
+        msg = (current_test < tests_passed) ? "FORK_TEST               : PASSED\n"
+                                            : "FORK_TEST               : FAILED\n";
+        current_test++;
+    } else {
+        msg = "FORK_TEST               : SKIPPED\n";
+    }
     write(1, msg, strlen(msg));
 #endif
 
 #if EXIT_TEST
-    msg = "EXIT_TEST               : PASSED\n";
-    write(1, msg, strlen(msg));
-#else
-    msg = "EXIT_TEST               : SKIPPED\n";
+    if (current_test < tests_run) {
+        msg = (current_test < tests_passed) ? "EXIT_TEST               : PASSED\n"
+                                            : "EXIT_TEST               : FAILED\n";
+        current_test++;
+    } else {
+        msg = "EXIT_TEST               : SKIPPED\n";
+    }
     write(1, msg, strlen(msg));
 #endif
 
 #if BLOCK_UNBLOCK_TEST
-    msg = "BLOCK_UNBLOCK_TEST      : PASSED\n";
-    write(1, msg, strlen(msg));
-#else
-    msg = "BLOCK_UNBLOCK_TEST      : SKIPPED\n";
+    if (current_test < tests_run) {
+        msg = (current_test < tests_passed) ? "BLOCK_UNBLOCK_TEST      : PASSED\n"
+                                            : "BLOCK_UNBLOCK_TEST      : FAILED\n";
+        current_test++;
+    } else {
+        msg = "BLOCK_UNBLOCK_TEST      : SKIPPED\n";
+    }
     write(1, msg, strlen(msg));
 #endif
 
 #if PAGEFAULT_TEST
-    msg = "PAGEFAULT_TEST          : PASSED\n";
-    write(1, msg, strlen(msg));
-#else
     msg = "PAGEFAULT_TEST          : SKIPPED\n";
     write(1, msg, strlen(msg));
 #endif

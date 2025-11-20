@@ -20,6 +20,6 @@
 
 #define KERNEL_TSS 0x30 /* Entry  6 on GDT (TI = 0) with RPL = 00 */
 
-#define GDT_START 0x901b3 /* bootsect + gdt */
+#define GDT_START 0x901b3 /* Boot sector + GDT */
 
 #endif /* __SEGMENT_H__ */

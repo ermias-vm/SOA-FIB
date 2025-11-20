@@ -133,7 +133,7 @@ int main(int argc, char **argv) {
     }
     close(fd);
 
-    if ((fd = open(argv[3], O_RDONLY, 0)) < 0) /* Copiamos el user */
+    if ((fd = open(argv[3], O_RDONLY, 0)) < 0) /* Copy the user */
         die("Unable to open `%s': %m", argv[3]);
     if (fstat(fd, &sb)) die("Unable to stat `%s': %m", argv[3]);
     usr_size = uz = sb.st_size;

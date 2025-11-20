@@ -13,11 +13,11 @@
 
 // clang-format off
 #define WRITE_TEST              1
-#define GETTIME_TEST            0
-#define GETPID_TEST             0
-#define FORK_TEST               0
-#define EXIT_TEST               0
-#define BLOCK_UNBLOCK_TEST      0
+#define GETTIME_TEST            1
+#define GETPID_TEST             1
+#define FORK_TEST               1
+#define EXIT_TEST               1
+#define BLOCK_UNBLOCK_TEST      1
 #define PAGEFAULT_TEST          0
 // clang-format on
 
