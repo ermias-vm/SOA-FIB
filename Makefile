@@ -1,7 +1,7 @@
 # Root Makefile - Redirects all commands to specific project directory
 
 # Specify the project directory (zeos or project)
-PROJECT_DIR ?=zeos
+PROJECT_DIR ?=project
 
 
 # Directory that contains many subfolders
