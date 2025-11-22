@@ -79,6 +79,15 @@ void init_idle(void) {
     /* Initialize blocking mechanism */
     idle_task->pending_unblocks = 0;
 
+    /* Initialize thread support */
+    idle_task->TID = 1;
+    idle_task->thread_count = 1;
+    idle_task->master_thread = idle_task;
+    INIT_LIST_HEAD(&idle_task->threads);
+    INIT_LIST_HEAD(&idle_task->thread_list);
+    idle_task->user_stack_ptr = NULL;
+    idle_task->user_stack_frames = 0;
+
     allocate_DIR(idle_task);
 
     union task_union *idle_union = (union task_union *)idle_task;
@@ -113,6 +122,15 @@ void init_task1(void) {
 
     /* Initialize blocking mechanism */
     init_task->pending_unblocks = 0;
+
+    /* Initialize thread support */
+    init_task->TID = 1;
+    init_task->thread_count = 1;
+    init_task->master_thread = init_task;
+    INIT_LIST_HEAD(&init_task->threads);
+    INIT_LIST_HEAD(&init_task->thread_list);
+    init_task->user_stack_ptr = NULL;
+    init_task->user_stack_frames = 0;
 
     allocate_DIR(init_task);
     set_user_pages(init_task);

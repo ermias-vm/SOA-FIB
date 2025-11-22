@@ -151,4 +151,25 @@ int sys_getpid(void);
  */
 int check_fd(int fd, int permissions);
 
+/**
+ * @brief Create a new thread in the current process.
+ *
+ * This function creates a new thread that executes the specified function
+ * with the given parameter. The thread shares the same address space as
+ * the parent but has its own user stack.
+ *
+ * @param function Pointer to the function the thread will execute.
+ * @param parameter Parameter to pass to the thread function.
+ * @return Thread ID (TID) of the new thread on success, negative error code on failure.
+ */
+int sys_create_thread(void (*function)(void *), void *parameter);
+
+/**
+ * @brief Exit the current thread.
+ *
+ * This function terminates the calling thread. If it's the last thread
+ * in the process, the entire process is terminated.
+ */
+void sys_exit_thread(void);
+
 #endif /* __SYS_H__ */
