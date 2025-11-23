@@ -151,6 +151,11 @@ int sys_getpid(void);
  */
 int check_fd(int fd, int permissions);
 
+#define THREAD_STACK_REGION_PAGES 8
+#define THREAD_STACK_INITIAL_PAGES 1
+#define THREAD_STACK_BASE_PAGE (PAG_LOG_INIT_CODE + NUM_PAG_CODE)
+#define TEMP_STACK_MAPPING_PAGE (NUM_PAG_KERNEL + NUM_PAG_CODE + NUM_PAG_DATA)
+
 /**
  * @brief Create a new thread in the current process.
  *
@@ -160,9 +165,10 @@ int check_fd(int fd, int permissions);
  *
  * @param function Pointer to the function the thread will execute.
  * @param parameter Parameter to pass to the thread function.
+ * @param exit_routine Pointer to the routine to call when the thread function returns.
  * @return Thread ID (TID) of the new thread on success, negative error code on failure.
  */
-int sys_create_thread(void (*function)(void *), void *parameter);
+int sys_create_thread(void (*function)(void *), void *parameter, void (*exit_routine)(void));
 
 /**
  * @brief Exit the current thread.
@@ -171,5 +177,13 @@ int sys_create_thread(void (*function)(void *), void *parameter);
  * in the process, the entire process is terminated.
  */
 void sys_exit_thread(void);
+
+/**
+ * @brief Grow the current thread's user stack on demand.
+ *
+ * Attempts to allocate a new page within the thread's reserved stack region
+ * when a page fault occurs. Returns 0 on success or a negative errno code on failure.
+ */
+int grow_user_stack(unsigned int fault_addr);
 
 #endif /* __SYS_H__ */

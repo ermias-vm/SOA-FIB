@@ -368,7 +368,7 @@ void execute_project_tests(void) {
     msg = "\n=========================================\n";
     write(1, msg, strlen(msg));
 
-    msg = "      PROJECT THREAD TEST SUITE         \n";
+    msg = "      PROJECT TEST SUITE         \n";
     write(1, msg, strlen(msg));
 
     msg = "=========================================\n";

@@ -118,8 +118,12 @@ ENTRY(keyboard_handler)
 
 ENTRY(pageFault_handler)
     SAVE_ALL
-    pushl 0x30(%esp)            # Push EIP
+    movl %cr2, %eax
+    pushl %eax                  # Faulting address
+    pushl 0x34(%esp)            # Adjusted offset -> user EIP
     call pageFault_routine
-    RESTORE_ALL                 # This line is never reached
+    addl $8, %esp
+    RESTORE_ALL
+    addl $4, %esp               # Discard error code
     iret
 

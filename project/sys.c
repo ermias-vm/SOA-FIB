@@ -22,6 +22,14 @@
 #define WRITE 1
 #define BUFFER_SIZE 256
 
+static int stack_region_overlaps(const struct task_struct *task, unsigned int start,
+                                 unsigned int pages);
+static int stack_region_in_use(struct task_struct *master, unsigned int start, unsigned int pages);
+static int find_free_stack_region(struct task_struct *master);
+static int map_stack_pages(struct task_struct *master, unsigned int first_page,
+                           unsigned int pages_to_map);
+static void release_thread_stack(struct task_struct *thread);
+
 char buffer_k[BUFFER_SIZE];
 
 int check_fd(int fd, int permissions) {
@@ -158,6 +166,10 @@ int sys_fork() {
     INIT_LIST_HEAD(&child_task->thread_list);
     child_task->user_stack_ptr = NULL;
     child_task->user_stack_frames = 0;
+    child_task->user_stack_region_start = 0;
+    child_task->user_stack_region_pages = 0;
+    child_task->user_initial_esp = 0;
+    child_task->user_entry = 0;
 
     /* === STEP i & j: Prepare registers and child stack for task_switch === */
     // Rebuild child's kernel stack so that when
@@ -240,29 +252,18 @@ void sys_exit() {
     /* === STEP 1: Free all threads in the process === */
     if (!list_empty(&master->threads)) {
         struct list_head *pos, *tmp;
-        page_table_entry *PT = get_PT(master);
 
         list_for_each_safe(pos, tmp, &master->threads) {
             struct task_struct *thread = list_entry(pos, struct task_struct, thread_list);
 
-            /* Free thread's user stack */
-            if (thread->user_stack_ptr != NULL && thread->user_stack_frames > 0) {
-                for (int i = 0; i < thread->user_stack_frames; i++) {
-                    unsigned int stack_page = ((unsigned int)thread->user_stack_ptr >> 12) + i;
-                    free_frame(get_frame(PT, stack_page));
-                    del_ss_pag(PT, stack_page);
-                }
-            }
+            release_thread_stack(thread);
 
-            /* Remove from thread list */
             list_del(&thread->thread_list);
 
-            /* Remove from ready/blocked queue if present */
             if (thread->status != ST_RUN) {
                 list_del(&thread->list);
             }
 
-            /* Mark as unused and add to free queue */
             thread->PID = -1;
             thread->TID = -1;
             list_add_tail(&thread->list, &freequeue);
@@ -330,30 +331,96 @@ int sys_unblock(int pid) {
     return -1;
 }
 
-/* Helper function to search for contiguous free pages in page table */
-static int search_free_user_stack_pages(page_table_entry *PT, int start_page, int pages_needed) {
-    if (pages_needed <= 0) return -1;
+static int stack_region_overlaps(const struct task_struct *task, unsigned int start,
+                                 unsigned int pages) {
+    if (!task || task->user_stack_region_pages == 0) return 0;
 
-    for (int i = start_page; i < TOTAL_PAGES - pages_needed; i++) {
-        int all_free = 1;
+    unsigned int end = start + pages;
+    unsigned int existing_start = task->user_stack_region_start;
+    unsigned int existing_end = existing_start + task->user_stack_region_pages;
 
-        /* Check if pages_needed consecutive pages are free */
-        for (int j = 0; j < pages_needed && all_free; j++) {
-            if (PT[i + j].entry != 0) {
-                all_free = 0;
-                i += j; /* Skip to next potential start */
-            }
-        }
+    return !(end <= existing_start || start >= existing_end);
+}
 
-        if (all_free) {
-            return i;
-        }
+static int stack_region_in_use(struct task_struct *master, unsigned int start, unsigned int pages) {
+    if (stack_region_overlaps(master, start, pages)) return 1;
+
+    struct list_head *pos;
+    list_for_each(pos, &master->threads) {
+        struct task_struct *thread = list_entry(pos, struct task_struct, thread_list);
+        if (stack_region_overlaps(thread, start, pages)) return 1;
     }
 
+    return 0;
+}
+
+static int find_free_stack_region(struct task_struct *master) {
+    for (unsigned int page = THREAD_STACK_BASE_PAGE;
+         page + THREAD_STACK_REGION_PAGES <= TOTAL_PAGES; page += THREAD_STACK_REGION_PAGES) {
+        if (!stack_region_in_use(master, page, THREAD_STACK_REGION_PAGES)) return page;
+    }
     return -1;
 }
 
-int sys_create_thread(void (*function)(void *), void *parameter) {
+static int map_stack_pages(struct task_struct *master, unsigned int first_page,
+                           unsigned int pages_to_map) {
+    page_table_entry *PT = get_PT(master);
+
+    for (unsigned int i = 0; i < pages_to_map; ++i) {
+        int frame = alloc_frame();
+        if (frame < 0) {
+            /* Roll back previously mapped pages */
+            while (i > 0) {
+                --i;
+                unsigned int page = first_page + i;
+                free_frame(get_frame(PT, page));
+                del_ss_pag(PT, page);
+            }
+            return -EAGAIN;
+        }
+        set_ss_pag(PT, first_page + i, frame);
+    }
+
+    return 0;
+}
+
+static void release_thread_stack(struct task_struct *thread) {
+    if (!thread || thread->user_stack_frames <= 0 || thread->user_stack_ptr == NULL) {
+        thread->user_stack_region_start = 0;
+        thread->user_stack_region_pages = 0;
+        thread->user_initial_esp = 0;
+        thread->user_entry = 0;
+        return;
+    }
+
+    page_table_entry *PT = get_PT(thread);
+    unsigned int first_page = ((unsigned int)thread->user_stack_ptr) >> 12;
+
+    for (int i = 0; i < thread->user_stack_frames; ++i) {
+        unsigned int page = first_page + i;
+        free_frame(get_frame(PT, page));
+        del_ss_pag(PT, page);
+    }
+
+    set_cr3(get_DIR(thread));
+
+    thread->user_stack_ptr = NULL;
+    thread->user_stack_frames = 0;
+    thread->user_stack_region_start = 0;
+    thread->user_stack_region_pages = 0;
+    thread->user_initial_esp = 0;
+    thread->user_entry = 0;
+}
+
+/* Helpers to access saved context within kernel stack */
+#define STACK_USER_EIP (KERNEL_STACK_SIZE - 5)
+#define STACK_USER_ESP (KERNEL_STACK_SIZE - 2)
+#define STACK_EAX (KERNEL_STACK_SIZE - 10)
+#define STACK_EBP (KERNEL_STACK_SIZE - 11)
+#define STACK_RET_ADDR (KERNEL_STACK_SIZE - 18)
+#define STACK_FAKE_EBP (KERNEL_STACK_SIZE - 19)
+
+int sys_create_thread(void (*function)(void *), void *parameter, void (*exit_routine)(void)) {
     char debug_buf[12];
 #if DEBUG_INFO_THREAD_CREATE
     printk("[THREAD_CREATE] PID ");
@@ -365,12 +432,10 @@ int sys_create_thread(void (*function)(void *), void *parameter) {
     printk(" creating new thread\n");
 #endif
 
-    /* Validate parameters */
     if (!function) return -EINVAL;
     if (!access_ok(VERIFY_READ, function, sizeof(void (*)(void *)))) return -EFAULT;
     if (parameter && !access_ok(VERIFY_READ, parameter, sizeof(void *))) return -EFAULT;
 
-    /* Get free task_struct */
     if (list_empty(&freequeue)) return -ENOMEM;
 
     struct list_head *free_node = list_first(&freequeue);
@@ -379,110 +444,89 @@ int sys_create_thread(void (*function)(void *), void *parameter) {
     struct task_struct *new_thread = list_head_to_task_struct(free_node);
     union task_union *thread_union = (union task_union *)new_thread;
 
-    /* Copy current task data to new thread */
     copy_data(current_task, thread_union, sizeof(union task_union));
 
-    /* Determine master thread */
     struct task_struct *master =
         (current_task->TID == 1) ? current_task : current_task->master_thread;
 
-    /* Get page table */
-    page_table_entry *PT = get_PT(new_thread);
+    new_thread->dir_pages_baseAddr = master->dir_pages_baseAddr;
 
-    /* Allocate user stack (1 page = 4KB) */
-    int stack_pages = 1;
-    int stack_start =
-        search_free_user_stack_pages(PT, PAG_LOG_INIT_DATA + NUM_PAG_DATA, stack_pages);
+    INIT_LIST_HEAD(&new_thread->list);
+    INIT_LIST_HEAD(&new_thread->children);
+    INIT_LIST_HEAD(&new_thread->child_list);
+    INIT_LIST_HEAD(&new_thread->threads);
+    INIT_LIST_HEAD(&new_thread->thread_list);
 
-    if (stack_start == -1) {
-        list_add_tail(free_node, &freequeue);
+    new_thread->PID = master->PID;
+    new_thread->parent = master;
+    new_thread->master_thread = master;
+    new_thread->quantum = DEFAULT_QUANTUM;
+    new_thread->status = ST_READY;
+    new_thread->pending_unblocks = 0;
+    new_thread->user_stack_ptr = NULL;
+    new_thread->user_stack_frames = 0;
+    new_thread->user_stack_region_start = 0;
+    new_thread->user_stack_region_pages = 0;
+    new_thread->user_initial_esp = 0;
+    new_thread->user_entry = 0;
+
+    int region_start = find_free_stack_region(master);
+    if (region_start < 0) {
+        list_add_tail(&new_thread->list, &freequeue);
         return -ENOMEM;
     }
 
-    /* Allocate and map physical pages for user stack */
-    for (int i = 0; i < stack_pages; i++) {
-        int frame = alloc_frame();
-        if (frame < 0) {
-            /* Free allocated frames on error */
-            for (int j = 0; j < i; j++) {
-                free_frame(get_frame(PT, stack_start + j));
-                del_ss_pag(PT, stack_start + j);
-            }
-            list_add_tail(free_node, &freequeue);
-            return -EAGAIN;
-        }
-        set_ss_pag(PT, stack_start + i, frame);
+    unsigned int region_end = region_start + THREAD_STACK_REGION_PAGES;
+    unsigned int first_mapped_page = region_end - THREAD_STACK_INITIAL_PAGES;
+
+    int map_result = map_stack_pages(master, first_mapped_page, THREAD_STACK_INITIAL_PAGES);
+    if (map_result < 0) {
+        list_add_tail(&new_thread->list, &freequeue);
+        return map_result;
     }
 
-    /* Setup thread fields */
-    master->thread_count++;
-    new_thread->TID = master->thread_count;
-    new_thread->master_thread = master;
-    new_thread->PID = master->PID;
+    unsigned long stack_top = (unsigned long)(region_end << 12);
+    unsigned long user_esp = stack_top - 2 * sizeof(unsigned long);
 
-    /* Initialize thread-specific data - user stack pointer must point to TOP of stack */
-    /* In x86, stacks grow downward, so ESP should point to the highest address */
-    new_thread->user_stack_ptr =
-        (int *)((stack_start << 12) + PAGE_SIZE * stack_pages - sizeof(int));
-    new_thread->user_stack_frames = stack_pages;
-
-    /* Calculate stack parameters */
-    int stack_size_bytes = PAGE_SIZE * stack_pages;
-
-    /* Setup user stack - Map temporarily to write parameter and function */
-    int temp_page = NUM_PAG_KERNEL + NUM_PAG_CODE + NUM_PAG_DATA;
-    for (int i = 0; i < stack_pages; i++) {
-        set_ss_pag(get_PT(current_task), temp_page + i, get_frame(PT, stack_start + i));
+    page_table_entry *current_PT = get_PT(current_task);
+    page_table_entry *process_PT = get_PT(master);
+    for (unsigned int i = 0; i < THREAD_STACK_INITIAL_PAGES; ++i) {
+        set_ss_pag(current_PT, TEMP_STACK_MAPPING_PAGE + i,
+                   get_frame(process_PT, first_mapped_page + i));
     }
 
-    /* Write to user stack using kernel temp mapping */
-    int *temp_stack = (int *)(temp_page << 12);
-    int stack_size_ints = stack_size_bytes / sizeof(int);
+    unsigned long stack_bytes = THREAD_STACK_INITIAL_PAGES * PAGE_SIZE;
+    unsigned long *temp_stack = (unsigned long *)(TEMP_STACK_MAPPING_PAGE << 12);
+    unsigned long stack_words = stack_bytes / sizeof(unsigned long);
 
-    /* Place parameter and function at the TOP of the stack (highest addresses) */
-    /* The stack grows downward, so we use the last valid int positions */
-    temp_stack[stack_size_ints - 1] = (int)parameter; /* Parameter for thread function */
-    temp_stack[stack_size_ints - 2] = (int)function;  /* Function pointer */
-    temp_stack[stack_size_ints - 3] = 0;              /* Return address (never used) */
+    temp_stack[stack_words - 1] = (unsigned long)parameter;
+    temp_stack[stack_words - 2] = (unsigned long)exit_routine;
 
-    /* Update user_stack_ptr to point to return address position */
-    new_thread->user_stack_ptr = (int *)((stack_start << 12) + (stack_size_ints - 3) * sizeof(int));
-
-    /* Remove temporary mapping */
-    for (int i = 0; i < stack_pages; i++) {
-        del_ss_pag(get_PT(current_task), temp_page + i);
+    for (unsigned int i = 0; i < THREAD_STACK_INITIAL_PAGES; ++i) {
+        del_ss_pag(current_PT, TEMP_STACK_MAPPING_PAGE + i);
     }
     set_cr3(get_DIR(current_task));
+    set_cr3(get_DIR(master));
 
-    /* Setup kernel stack with simple approach:
-     * - Don't copy parent context, create minimal context
-     * - Thread starts in kernel mode and calls user function directly
-     * - Stack setup like init_idle: return address to function, fake EBP
-     */
+    new_thread->user_stack_region_start = region_start;
+    new_thread->user_stack_region_pages = THREAD_STACK_REGION_PAGES;
+    new_thread->user_stack_frames = THREAD_STACK_INITIAL_PAGES;
+    new_thread->user_stack_ptr = (int *)(first_mapped_page << 12);
+    new_thread->user_initial_esp = user_esp;
+    new_thread->user_entry = (unsigned long)function;
 
-    /* Clear the entire stack to avoid garbage */
-    for (int i = 0; i < KERNEL_STACK_SIZE; i++) {
-        thread_union->stack[i] = 0;
-    }
+    thread_union->stack[STACK_USER_EIP] = (unsigned long)function;
+    thread_union->stack[STACK_USER_ESP] = user_esp;
+    thread_union->stack[STACK_EAX] = 0;
+    thread_union->stack[STACK_EBP] = 0;
+    thread_union->stack[STACK_FAKE_EBP] = 0;
+    thread_union->stack[STACK_RET_ADDR] = (unsigned long)ret_from_fork;
+    new_thread->kernel_esp = (unsigned long)&thread_union->stack[STACK_FAKE_EBP];
 
-    /* Set up minimal kernel stack like init_idle */
-    thread_union->stack[KERNEL_STACK_SIZE - 1] = (unsigned long)function; /* Return address */
-    thread_union->stack[KERNEL_STACK_SIZE - 2] = 0;                       /* fake EBP */
-
-    /* Set kernel_esp for proper context switching */
-    new_thread->kernel_esp =
-        (unsigned long)&thread_union->stack[KERNEL_STACK_SIZE - 2]; /* Initialize process state */
-    new_thread->quantum = DEFAULT_QUANTUM;
-    new_thread->status = ST_READY;
-
-    /* Initialize thread lists */
-    INIT_LIST_HEAD(&new_thread->thread_list);
+    master->thread_count++;
+    new_thread->TID = master->thread_count;
     list_add_tail(&new_thread->thread_list, &master->threads);
 
-    /* Initialize blocking mechanism */
-    new_thread->pending_unblocks = 0;
-
-    /* Add to ready queue */
     list_add_tail(&new_thread->list, &readyqueue);
 
 #if DEBUG_INFO_THREAD_CREATE
@@ -521,15 +565,7 @@ void sys_exit_thread(void) {
         return; /* Never reached */
     }
 
-    /* Free thread's user stack */
-    page_table_entry *PT = get_PT(thread);
-    if (thread->user_stack_ptr != NULL && thread->user_stack_frames > 0) {
-        for (int i = 0; i < thread->user_stack_frames; i++) {
-            unsigned int stack_page = ((unsigned int)thread->user_stack_ptr >> 12) + i;
-            free_frame(get_frame(PT, stack_page));
-            del_ss_pag(PT, stack_page);
-        }
-    }
+    release_thread_stack(thread);
 
     /* Decrement thread count */
     master->thread_count--;
@@ -546,4 +582,33 @@ void sys_exit_thread(void) {
 
     /* Schedule next process/thread */
     sched_next_rr();
+}
+
+int grow_user_stack(unsigned int fault_addr) {
+    struct task_struct *thread = current_task;
+    if (!thread || thread->user_stack_region_pages == 0 || thread->user_stack_ptr == NULL)
+        return -EFAULT;
+
+    unsigned int fault_page = fault_addr >> 12;
+    unsigned int region_start = thread->user_stack_region_start;
+    unsigned int region_end = region_start + thread->user_stack_region_pages;
+
+    if (fault_page < region_start || fault_page >= region_end) return -EFAULT;
+
+    if ((unsigned int)thread->user_stack_frames >= thread->user_stack_region_pages) return -ENOMEM;
+
+    unsigned int first_mapped_page = ((unsigned int)thread->user_stack_ptr) >> 12;
+    if (fault_page != first_mapped_page - 1) return -EFAULT;
+
+    page_table_entry *PT = get_PT(thread);
+    int frame = alloc_frame();
+    if (frame < 0) return frame;
+
+    set_ss_pag(PT, fault_page, frame);
+    thread->user_stack_ptr = (int *)(fault_page << 12);
+    thread->user_stack_frames++;
+
+    set_cr3(get_DIR(thread));
+
+    return 0;
 }

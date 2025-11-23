@@ -87,6 +87,10 @@ void init_idle(void) {
     INIT_LIST_HEAD(&idle_task->thread_list);
     idle_task->user_stack_ptr = NULL;
     idle_task->user_stack_frames = 0;
+    idle_task->user_stack_region_start = 0;
+    idle_task->user_stack_region_pages = 0;
+    idle_task->user_initial_esp = 0;
+    idle_task->user_entry = 0;
 
     allocate_DIR(idle_task);
 
@@ -131,6 +135,10 @@ void init_task1(void) {
     INIT_LIST_HEAD(&init_task->thread_list);
     init_task->user_stack_ptr = NULL;
     init_task->user_stack_frames = 0;
+    init_task->user_stack_region_start = 0;
+    init_task->user_stack_region_pages = 0;
+    init_task->user_initial_esp = 0;
+    init_task->user_entry = 0;
 
     allocate_DIR(init_task);
     set_user_pages(init_task);

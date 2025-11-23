@@ -50,6 +50,10 @@ struct task_struct {
     struct list_head thread_list;      /* Entry in master thread's threads list */
     int *user_stack_ptr;               /* Pointer to user stack for this thread */
     int user_stack_frames;             /* Number of pages allocated for user stack */
+    unsigned int user_stack_region_start; /* First logical page reserved for the stack region */
+    unsigned int user_stack_region_pages; /* Total reserved pages (mapped+gap) */
+    unsigned long user_initial_esp;       /* User ESP used when the thread starts */
+    unsigned long user_entry;             /* User entry point used on first dispatch */
 };
 
 /* Union for process data and stack */

@@ -11,6 +11,7 @@
 #include <io.h>
 #include <sched.h>
 #include <segment.h>
+#include <sys.h>
 #include <types.h>
 #include <utils.h>
 #include <zeos_interrupt.h>
@@ -115,19 +116,27 @@ void clock_routine(void) {
     scheduler();
 }
 
-void pageFault_routine(unsigned int eip) {
+void pageFault_routine(unsigned int eip, unsigned int fault_addr) {
+    if (grow_user_stack(fault_addr) == 0) return;
+
     char buffer_eip[11];
+    char buffer_addr[11];
 
     itoa_hex(eip, buffer_eip);
+    itoa_hex(fault_addr, buffer_addr);
 
     printk_color("\n===============================================\n", ERROR_COLOR);
     printk_color("           PAGE FAULT EXCEPTION               \n", ERROR_COLOR);
     printk_color("===============================================\n", ERROR_COLOR);
-    printk_color("\n  Error at EIP:   ", WARNING_COLOR);
+    printk_color("\n  Fault at EIP:   ", WARNING_COLOR);
     printk_color(buffer_eip, MAKE_COLOR(BLACK, WHITE));
-    printk_color("\n\n  The process tried to access an invalid\n", INFO_COLOR);
-    printk_color("  memory address and will be terminated.\n", INFO_COLOR);
+    printk_color("\n  Address:        ", WARNING_COLOR);
+    printk_color(buffer_addr, MAKE_COLOR(BLACK, WHITE));
+    printk_color("\n\n  The process accessed an invalid region\n", INFO_COLOR);
+    printk_color("  and will be terminated.\n", INFO_COLOR);
     printk_color("===============================================\n", ERROR_COLOR);
+
+    sys_exit();
     while (1) {
     }
 }

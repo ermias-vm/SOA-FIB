@@ -183,11 +183,11 @@ ENTRY(ThreadCreate)
     pushl %ebp
     movl %esp, %ebp
     pushl %ebx
-    pushl %ecx
     
     movl $6, %eax
     movl 0x08(%ebp), %ebx  # function pointer
     movl 0x0c(%ebp), %ecx  # parameter
+    leal ThreadExit, %edx  # exit_routine
     
     pushl $tc_return
     pushl %ebp
@@ -197,7 +197,6 @@ ENTRY(ThreadCreate)
 tc_return:
     popl %ebp
     addl $4, %esp
-    popl %ecx
     popl %ebx
     popl %ebp
     test %eax, %eax
