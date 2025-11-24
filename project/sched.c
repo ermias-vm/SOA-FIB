@@ -272,18 +272,10 @@ void scheduler(void) {
 /* ---- Test functions ---- */
 
 void printDebugInfoSched(int from_pid, int to_pid) {
-    char buffer[12];
-
-    printk_color("[SCHED] switch from PID ", INFO_COLOR);
-    itoa(from_pid, buffer);
-    printk_color(buffer, INFO_COLOR);
-    printk_color(" to PID ", INFO_COLOR);
-    itoa(to_pid, buffer);
-    printk_color(buffer, INFO_COLOR);
-    printk_color(" and ready: ", INFO_COLOR);
-
+    printk_color_fmt(INFO_COLOR, "[SCHED] switch from PID %d to PID %d and ready: ", from_pid,
+                     to_pid);
     if (list_empty(&readyqueue)) {
-        printk_color("empty\n", WARNING_COLOR);
+        printk_color_fmt(WARNING_COLOR, "empty\n");
     } else {
         printk_color("NOT empty\n", INFO_COLOR);
     }

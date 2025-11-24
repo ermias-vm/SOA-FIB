@@ -52,13 +52,9 @@ int ret_from_fork() {
 
 int sys_fork() {
     int PID = -1;
-    char debug_buf[12];
 
 #if DEBUG_INFO_FORK
-    printk("[FORK] PID ");
-    itoa(current_task->PID, debug_buf);
-    printk(debug_buf);
-    printk(" calling fork\n");
+    printk_color_fmt(INFO_COLOR, "[FORK] PID %d calling fork\n", current_task->PID);
 #endif
 
     /*=== STEP a: Get a free task_struct ===*/
@@ -188,13 +184,7 @@ int sys_fork() {
     list_add_tail(&child_task->list, &readyqueue);
 
 #if DEBUG_INFO_FORK
-    printk("[FORK] PID ");
-    itoa(current_task->PID, debug_buf);
-    printk(debug_buf);
-    printk(" created child PID ");
-    itoa(PID, debug_buf);
-    printk(debug_buf);
-    printk("\n");
+    printk_color_fmt(INFO_COLOR, "[FORK] PID %d created child PID %d\n", current_task->PID, PID);
 #endif
 
     /* === STEP l: Return child PID === */
@@ -231,15 +221,9 @@ int sys_gettime() {
 }
 
 void sys_exit() {
-    char debug_buf[12];
 #if DEBUG_INFO_EXIT
-    printk("[EXIT] PID ");
-    itoa(current_task->PID, debug_buf);
-    printk(debug_buf);
-    printk(" TID ");
-    itoa(current_task->TID, debug_buf);
-    printk(debug_buf);
-    printk(" calling exit\n");
+    printk_color_fmt(INFO_COLOR, "[EXIT] PID %d TID %d calling exit\n", current_task->PID,
+                     current_task->TID);
 #endif
 
     // If the process is task 1, it cannot exit
@@ -421,15 +405,9 @@ static void release_thread_stack(struct task_struct *thread) {
 #define STACK_FAKE_EBP (KERNEL_STACK_SIZE - 19)
 
 int sys_create_thread(void (*function)(void *), void *parameter, void (*exit_routine)(void)) {
-    char debug_buf[12];
 #if DEBUG_INFO_THREAD_CREATE
-    printk("[THREAD_CREATE] PID ");
-    itoa(current_task->PID, debug_buf);
-    printk(debug_buf);
-    printk(" TID ");
-    itoa(current_task->TID, debug_buf);
-    printk(debug_buf);
-    printk(" creating new thread\n");
+    printk_color_fmt(INFO_COLOR, "[THREAD_CREATE] PID %d TID %d creating new thread\n",
+                     current_task->PID, current_task->TID);
 #endif
 
     if (!function) return -EINVAL;
@@ -530,13 +508,8 @@ int sys_create_thread(void (*function)(void *), void *parameter, void (*exit_rou
     list_add_tail(&new_thread->list, &readyqueue);
 
 #if DEBUG_INFO_THREAD_CREATE
-    printk("[THREAD_CREATE] PID ");
-    itoa(new_thread->PID, debug_buf);
-    printk(debug_buf);
-    printk(" created TID ");
-    itoa(new_thread->TID, debug_buf);
-    printk(debug_buf);
-    printk("\n");
+    printk_color_fmt(INFO_COLOR, "[THREAD_CREATE] PID %d created TID %d\n", new_thread->PID,
+                     new_thread->TID);
 #endif
 
     return new_thread->TID;
@@ -544,19 +517,10 @@ int sys_create_thread(void (*function)(void *), void *parameter, void (*exit_rou
 void sys_exit_thread(void) {
     struct task_struct *thread = current_task;
     struct task_struct *master = thread->master_thread;
-    char debug_buf[12];
 
 #if DEBUG_INFO_THREAD_EXIT
-    printk("[THREAD_EXIT] PID ");
-    itoa(thread->PID, debug_buf);
-    printk(debug_buf);
-    printk(" TID ");
-    itoa(thread->TID, debug_buf);
-    printk(debug_buf);
-    printk(" exiting (master has ");
-    itoa(master->thread_count, debug_buf);
-    printk(debug_buf);
-    printk(" threads)\n");
+    printk_color_fmt(INFO_COLOR, "[THREAD_EXIT] PID %d TID %d exiting (master has %d threads)\n",
+                     thread->PID, thread->TID, master->thread_count);
 #endif
 
     /* If this is the only thread (or master thread with no other threads), exit the process */

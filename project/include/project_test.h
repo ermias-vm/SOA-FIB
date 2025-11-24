@@ -112,4 +112,3 @@ void print_test_result(char *test_name, int passed);
 void print_final_summary(void);
 
 #endif /* __PROJECT_TEST_H__ */
-

@@ -115,7 +115,6 @@ void block(void);
  */
 int unblock(int pid);
 
-
 /**
  * @brief Create a new thread.
  *

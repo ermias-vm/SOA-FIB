@@ -19,8 +19,8 @@
 /* Size of the kernel stack for each process in words */
 #define KERNEL_STACK_SIZE 1024
 
-/* Default quantum assigned to new processes */
-#define DEFAULT_QUANTUM 10
+/* Default quantum assigned to new processes (10 ticks default)*/
+#define DEFAULT_QUANTUM 1000
 
 /* Process states for scheduling */
 enum state_t {
@@ -43,13 +43,13 @@ struct task_struct {
     int pending_unblocks;                 /* Number of pending unblock operations */
 
     /* Thread support fields */
-    int TID;                           /* Thread identifier (1 for main thread) */
-    int thread_count;                  /* Number of threads in process */
-    struct task_struct *master_thread; /* Pointer to master thread */
-    struct list_head threads;          /* List of threads in this process */
-    struct list_head thread_list;      /* Entry in master thread's threads list */
-    int *user_stack_ptr;               /* Pointer to user stack for this thread */
-    int user_stack_frames;             /* Number of pages allocated for user stack */
+    int TID;                              /* Thread identifier (1 for main thread) */
+    int thread_count;                     /* Number of threads in process */
+    struct task_struct *master_thread;    /* Pointer to master thread */
+    struct list_head threads;             /* List of threads in this process */
+    struct list_head thread_list;         /* Entry in master thread's threads list */
+    int *user_stack_ptr;                  /* Pointer to user stack for this thread */
+    int user_stack_frames;                /* Number of pages allocated for user stack */
     unsigned int user_stack_region_start; /* First logical page reserved for the stack region */
     unsigned int user_stack_region_pages; /* Total reserved pages (mapped+gap) */
     unsigned long user_initial_esp;       /* User ESP used when the thread starts */
