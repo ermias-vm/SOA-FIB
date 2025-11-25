@@ -58,6 +58,13 @@ struct task_struct {
     unsigned int user_stack_region_pages; /* Total reserved pages (mapped+gap) */
     unsigned long user_initial_esp;       /* User ESP used when the thread starts */
     unsigned long user_entry;             /* User entry point used on first dispatch */
+
+    /* Keyboard support fields */
+    void (*kbd_handler)(char key, int pressed);  /* User callback function */
+    void *kbd_aux_stack;                         /* Auxiliary stack for keyboard handler */
+    int kbd_in_handler;                          /* Flag: 1 if currently in keyboard handler */
+    unsigned long kbd_saved_esp;                 /* Saved ESP before entering handler */
+    unsigned long kbd_saved_eip; 
 };
 
 /* Union for process data and stack */

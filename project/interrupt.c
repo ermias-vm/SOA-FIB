@@ -15,6 +15,7 @@
 #include <types.h>
 #include <utils.h>
 #include <zeos_interrupt.h>
+#include <keyboard.h>
 
 /* Interrupt Descriptor Table - array of interrupt/trap gates */
 Gate idt[IDT_ENTRIES];
@@ -94,6 +95,14 @@ void setIdt() {
     writeMSR(0x176, (unsigned long)syscall_handler_sysenter);
 
     set_idt_reg(&idtR);
+}
+
+void init_interrupts(void) {
+    /* Register keyboard IRQ handler (IRQ 1) */
+    setInterruptHandler(0x21, keyboard_irq_handler, 0); /* IRQ 1 = INT 0x21 */
+    
+    /* Register int 0x2b handler */
+    setInterruptHandler(0x2b, keyboard_resume_handler, 0);
 }
 
 void keyboard_routine() {

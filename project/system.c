@@ -16,6 +16,7 @@
 #include <system.h>
 #include <types.h>
 #include <utils.h>
+#include <keyboard.h>
 // #include <zeos_mm.h> /* DEPRECATED: TO BE DELETED WHEN PROCESS MANAGEMENT IS FULLY IMPLEMENTED */
 
 int (*usr_main)(void) = (void *)(PAG_LOG_INIT_CODE * PAGE_SIZE);
@@ -89,6 +90,9 @@ __attribute__((__section__(".text.main"))) int main(void) {
     init_idle();
     /* Initialize task 1 data */
     init_task1();
+
+    /* Initialize keyboard support */
+    init_keyboard();
 
     /* Move user code/data now (after the page table initialization) */
     copy_data((void *)KERNEL_START + *p_sys_size, (void *)L_USER_START, *p_usr_size);

@@ -11,6 +11,7 @@
 #include <errno.h>
 #include <interrupt.h>
 #include <io.h>
+#include <keyboard.h>
 #include <libc.h>
 #include <mm.h>
 #include <mm_address.h>
@@ -54,12 +55,23 @@ int ret_from_fork() {
     return 0;
 }
 
+static int check_keyboard_context(void) {
+    if (current_task && current_task->kbd_in_handler) {
+        return -EINPROGRESS; 
+    }
+    return 0;
+}
+
 int sys_fork() {
     int PID = -1;
 
 #if DEBUG_INFO_FORK
     printk_color_fmt(INFO_COLOR, "[FORK] PID %d calling fork\n", current_task->PID);
 #endif
+
+    if (check_keyboard_context()) {
+        return -EINPROGRESS;
+    }
 
     /*=== STEP a: Get a free task_struct ===*/
     if (list_empty(&freequeue)) {
@@ -202,6 +214,10 @@ int sys_write(int fd, char *buffer, int size) {
     if ((ret = check_fd(fd, WRITE))) return ret;
     if (!access_ok(VERIFY_READ, buffer, size)) return -EFAULT;
 
+    if (check_keyboard_context()) {
+        return -EINPROGRESS;
+    }
+
     int bytes_left = size;
     int written_bytes;
 
@@ -280,6 +296,9 @@ void sys_exit() {
 
     /* === STEP 5: Return master task_struct to free queue === */
     list_add_tail(&master->list, &freequeue);
+
+    /* Clean up keyboard handler if registered */
+    cleanup_keyboard_handler(current_task);
 
     /* === STEP 6: Schedule new process (will go to idle if no processes left) === */
     sched_next_rr();
@@ -630,4 +649,14 @@ int grow_user_stack(unsigned int fault_addr) {
     set_cr3(get_DIR(thread));
 
     return 0;
+}
+
+/* Add the actual implementation */
+int sys_KeyboardEvent_wrapper(void (*func)(char key, int pressed)) {
+    /* Check if we're in keyboard handler context */
+    if (current_task && current_task->kbd_in_handler) {
+        return -EINPROGRESS;
+    }
+    
+    return sys_KeyboardEvent(func);
 }

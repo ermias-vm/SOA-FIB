@@ -48,6 +48,7 @@ SYSOBJ = \
 	hardware.o \
 	list.o \
 	kernel_asm.o \
+	keyboard.o \
 
 LIBZEOS = -L . -l zeos
 
@@ -121,6 +122,8 @@ list.o:list.c $(INCLUDEDIR)/list.h
 devices.o:devices.c $(INCLUDEDIR)/io.h $(INCLUDEDIR)/list.h $(INCLUDEDIR)/utils.h
 
 system.o:system.c $(INCLUDEDIR)/hardware.h system.lds $(SYSOBJ) $(INCLUDEDIR)/segment.h $(INCLUDEDIR)/types.h $(INCLUDEDIR)/interrupt.h $(INCLUDEDIR)/system.h $(INCLUDEDIR)/sched.h $(INCLUDEDIR)/mm.h $(INCLUDEDIR)/io.h $(INCLUDEDIR)/mm_address.h 
+
+keyboard.o: keyboard.c $(INCLUDEDIR)/keyboard.h $(INCLUDEDIR)/sched.h $(INCLUDEDIR)/mm.h $(INCLUDEDIR)/io.h $(INCLUDEDIR)/interrupt.h $(INCLUDEDIR)/errno.h $(INCLUDEDIR)/utils.h $(INCLUDEDIR)/segment.h
 
 system: system.o system.lds $(SYSOBJ)
 	$(LD) $(LDFLAGS) -T system.lds -o $@ $< $(SYSOBJ) $(LIBZEOS)

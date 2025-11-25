@@ -82,3 +82,27 @@ void perror() {
 
     return;
 }
+
+/* Keyboard wrapper function */
+void __kbd_wrapper(void (*func)(char, int), char key, int pressed) {
+    func(key, pressed);
+    __asm__ __volatile__("int $0x2b" ::: "memory");
+}
+
+/* Assembly wrapper for kernel to call */
+__asm__(
+    ".global __kbd_wrapper_asm\n"
+    "__kbd_wrapper_asm:\n"
+    "    pushl %ebp\n"
+    "    movl %esp, %ebp\n"
+    "    pushl 16(%ebp)\n"      
+    "    pushl 12(%ebp)\n"      
+    "    calll *8(%ebp)\n"      
+    "    addl $8, %esp\n"       
+    "    int $0x2b\n"           
+    "    popl %ebp\n"
+    "    ret\n"
+);
+
+/* Declaration - implementation is in sys_call_wrappers.S */
+extern int KeyboardEvent(void (*func)(char key, int pressed));

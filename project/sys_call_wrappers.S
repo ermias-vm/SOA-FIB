@@ -251,3 +251,17 @@ gtid_error:
     movl $-1, %eax
     ret
 
+
+ENTRY(KeyboardEvent)
+    pushl %ebp
+    movl %esp, %ebp
+    pushl %ebx
+    
+    movl $22, %eax          /* syscall number - adjust as needed */
+    movl 8(%ebp), %ebx      /* func parameter */
+    int $0x80               /* syscall interrupt */
+    
+    popl %ebx
+    popl %ebp
+    ret
+

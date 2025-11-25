@@ -186,4 +186,19 @@ void sys_exit_thread(void);
  */
 int grow_user_stack(unsigned int fault_addr);
 
+/**
+ * @brief Register a keyboard event handler.
+ *
+ * This function allows a user process to register a callback function
+ * that will be invoked on keyboard events (key press/release).
+ *
+ * @param func Pointer to the callback function with signature:
+ *             void func(char key, int pressed);
+ *             where 'key' is the character of the key event and
+ *             'pressed' is 1 for key press and 0 for key release.
+ * @return 0 on success, negative error code on failure.
+ */
+int KeyboardEvent(void (*func)(char key, int pressed));
+
+
 #endif /* __SYS_H__ */
