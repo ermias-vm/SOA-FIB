@@ -67,3 +67,5 @@ output/
 ZeOSSysenter.tar.gz
 !lab_exams/L1/ZeOSSysenter.tar.gz
 output
+.cache
+*.json

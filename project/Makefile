@@ -153,13 +153,13 @@ backup: clean
 	@mkdir -p ../backup/zeos_versions
 	@mkdir -p ../backup/project_versions
 	@TIMESTAMP=$$(date +%Y%m%d_%H%M%S) && \
-	BACKUP_NAME="zeos_v$$TIMESTAMP.tar.gz" && \
-	if [ -f ../backup/zeos_versions/$$BACKUP_NAME ]; then \
+	BACKUP_NAME="project_v$$TIMESTAMP.tar.gz" && \
+	if [ -f ../backup/project_versions/$$BACKUP_NAME ]; then \
 		echo "Error: File $$BACKUP_NAME already exists!"; \
 		exit 1; \
 	fi && \
-	echo "Creating ZeOS backup: $$BACKUP_NAME" && \
-	cd .. && tar -czvf backup/zeos_versions/$$BACKUP_NAME zeos/
+	echo "Creating Project backup: $$BACKUP_NAME" && \
+	cd .. && tar -czvf backup/project_versions/$$BACKUP_NAME project/
 
 # Write the ZeOS binary image to floppy disk device (legacy target, requires floppy drive)
 disk: zeos.bin
@@ -224,16 +224,16 @@ format:
 doxygen:
 	@if command -v doxygen >/dev/null 2>&1; then \
         echo "Generating Doxygen documentation..."; \
-        cd ../docs/doxygen/zeos && doxygen Doxyfile; \
-        echo "Documentation generated in docs/doxygen/zeos/output/html/"; \
+        cd ../docs/doxygen/project && doxygen Doxyfile; \
+        echo "Documentation generated in docs/doxygen/project/output/html/"; \
 	else \
         echo "Error: Doxygen is not installed. Please install it with 'sudo apt install doxygen' (Ubuntu/Debian) or equivalent for your system."; \
     fi
 
 doxygen-pdf:
-	@if [ -d "../docs/doxygen/zeos/output/latex" ]; then \
-        cd ../docs/doxygen/zeos/output/latex && make; \
-        echo "PDF generated: ../docs/doxygen/zeos/output/latex/refman.pdf"; \
+	@if [ -d "../docs/doxygen/project/output/latex" ]; then \
+        cd ../docs/doxygen/project/output/latex && make; \
+        echo "PDF generated: ../docs/doxygen/project/output/latex/refman.pdf"; \
 	else \
         echo "Run 'make doxygen' first to generate LaTeX files."; \
     fi
