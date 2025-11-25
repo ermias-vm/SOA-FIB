@@ -143,7 +143,8 @@ static void survivor_thread_func(void *arg) {
 
     /* Work for a while - we should become master */
     int start = gettime();
-    while (gettime() - start < MEDIUM_WORK_TIME) { }
+    while (gettime() - start < MEDIUM_WORK_TIME) {
+    }
 
     write_current_info();
     msg = "Survivor thread: I am now master (hopefully), exiting process\n";
@@ -570,7 +571,8 @@ void subtest_fork_single_thread(int *passed) {
         msg = ")\n";
         write(1, msg, strlen(msg));
 
-        /* Try to create threads - if fork only copied us, we should be able to create max_new_threads */
+        /* Try to create threads - if fork only copied us, we should be able to create
+         * max_new_threads */
         int can_create = 0;
         int test_tids[MAX_THREADS_PER_PROCESS];
         int test_flags[MAX_THREADS_PER_PROCESS];
