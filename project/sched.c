@@ -56,7 +56,7 @@ int allocate_DIR(struct task_struct *task) {
 void cpu_idle(void) {
 
     __asm__ __volatile__("sti" : : : "memory");
-    printk_color_fmt(INFO_COLOR, "[IDLE] Idle task started. Current PID=%d, TID=%d\n",
+    printk_color_fmt(INFO_COLOR, "DEBUG->[IDLE] Idle task started. Current PID=%d, TID=%d\n",
                      current()->PID, current()->TID);
     while (1) {
         ;
@@ -302,7 +302,10 @@ void scheduler(void) {
     update_sched_data_rr();
 
     if (needs_sched_rr()) {
-        update_process_state_rr(current_task, &readyqueue);
+        /* Only add to ready queue if NOT blocked (blocked tasks are already in blocked queue) */
+        if (current_task->status != ST_BLOCKED) {
+            update_process_state_rr(current_task, &readyqueue);
+        }
         sched_next_rr();
     }
 }
@@ -311,8 +314,8 @@ void scheduler(void) {
 
 void printDebugInfoSched(int from_pid, int from_tid, int to_pid, int to_tid) {
     printk_color_fmt(INFO_COLOR,
-                     "[SCHED] switch from PID %d TID %d to PID %d TID %d and ready: ", from_pid,
-                     from_tid, to_pid, to_tid);
+                     "DEBUG->[SCHED] switch from PID %d TID %d to PID %d TID %d and ready: ",
+                     from_pid, from_tid, to_pid, to_tid);
     if (list_empty(&readyqueue)) {
         printk_color_fmt(WARNING_COLOR, "empty\n");
     } else {
