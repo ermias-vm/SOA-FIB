@@ -12,10 +12,9 @@
 /* Test configuration macros */
 
 // clang-format off
-#define THREAD_CREATE_TEST      1
-#define THREAD_EXIT_TEST        1
+#define THREAD_ADVANCED_TEST    1
 #define THREAD_FORK_TEST        1
-#define THREAD_STRESS_TEST      1
+#define IDLE_SWITCH_TEST        1
 // clang-format on
 
 /* Reset errno macro */
@@ -23,6 +22,15 @@
 
 /* Default Buffer size */
 #define BUFFER_SIZE 256
+
+#define NULL ((void *)0) /* Null pointer definition */
+
+#define SHORT_WORK_TIME 1000  /* 1 second */
+#define MIN_WORK_TIME 300     /* 300 ticks */
+#define MEDIUM_WORK_TIME 3000 /* 3 seconds */
+#define LONG_WORK_TIME 5000   /* 5 seconds */
+
+#define MAX_THREADS_PER_PROCESS 5 /* Maximum threads per process */
 
 /**
  * @brief Execute all thread test suites.
@@ -33,82 +41,61 @@
  */
 void execute_project_tests(void);
 
+/**
+ * @brief Execute basic thread tests.
+ *
+ * This function runs basic thread creation and exit tests.
+ * Can be called from user code independently.
+ */
+void execute_basic_thread_tests(void);
+
 /* ---- Thread test functions ---- */
 
 /**
- * @brief Test ThreadCreate system call functionality.
+ * @brief Test advanced thread functionality.
  *
- * This function tests the ThreadCreate() system call with various parameters
- * including normal thread creation, parameter passing, and error conditions.
+ * This function tests:
+ * - Creating threads up to max limit (5 per process)
+ * - Verifying creation fails when limit reached
+ * - TID reuse after thread deletion
+ * - Process termination when last thread exits
+ * - Master thread reassignment when current master exits
  */
-void test_thread_create(void);
-
-/**
- * @brief Test ThreadExit system call functionality.
- *
- * This function tests the ThreadExit() system call including proper
- * cleanup of thread resources and process termination when last thread exits.
- */
-void test_thread_exit(void);
+void test_thread_advanced(void);
 
 /**
  * @brief Test fork behavior with threads.
  *
- * This function tests that fork() only copies the current thread,
+ * This function verifies that fork() only copies the current thread,
  * not all threads in the process.
  */
 void test_thread_fork(void);
 
-/**
- * @brief Stress test for thread creation and termination.
- *
- * This function creates multiple threads to test system limits
- * and proper resource management.
- */
-void test_thread_stress(void);
-
 /* ---- Helper functions ---- */
 
 /**
- * @brief Work for a specified number of ticks.
+ * @brief Wait for a specified number of ticks.
  *
- * This function makes the current process work (busy wait) for a specified
- * number of system ticks. 1000 ticks approximately corresponds to 1 second.
- * @param ticks Number of system ticks to work for.
+ * This function waits for the specified number of ticks, printing
+ * PID/TID info at start and end of the wait period.
+ * @param ticks Number of ticks to wait.
  */
-void work(int ticks);
+void wait_for_ticks(int ticks);
 
 /**
- * @brief Write the current thread ID in a formatted manner.
+ * @brief Write current process and thread information.
  *
- * This function writes the current thread ID to standard output
- * in the format: [TID X]
+ * This function writes the current PID and TID in the format: [PID X] [TID Y]
  */
-void write_current_tid(void);
+void write_current_info(void);
 
 /**
- * @brief Print formatted test header.
+ * @brief Thread function that works for a specified time and then exits.
  *
- * This function prints a formatted header for a test section.
- * @param test_name Name of the test being executed.
+ * This function is executed by created threads. It works for the specified
+ * number of ticks and then exits, setting a flag to indicate completion.
+ * @param arg Pointer to integer containing the number of ticks to work.
  */
-void print_test_header(char *test_name);
-
-/**
- * @brief Print test result.
- *
- * This function prints the result of a test (PASSED or FAILED).
- * @param test_name Name of the test that was executed.
- * @param passed 1 if test passed, 0 if test failed.
- */
-void print_test_result(char *test_name, int passed);
-
-/**
- * @brief Print final test summary.
- *
- * This function prints a summary of all executed tests
- * including total tests run, passed, and failed counts.
- */
-void print_final_summary(void);
+void thread_work(void *arg);
 
 #endif /* __PROJECT_TEST_H__ */

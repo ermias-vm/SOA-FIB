@@ -226,3 +226,28 @@ te_return:
     popl %ebp
     ret
 
+
+ENTRY(gettid)
+    pushl %ebp
+    movl %esp, %ebp
+    movl $21, %eax
+    
+    pushl $gtid_return
+    pushl %ebp
+    movl %esp, %ebp
+    sysenter
+
+gtid_return:
+    popl %ebp
+    addl $4, %esp
+    popl %ebp
+    test %eax, %eax
+    js gtid_error
+    ret
+ 
+gtid_error:
+    negl %eax
+    movl %eax, errno
+    movl $-1, %eax
+    ret
+

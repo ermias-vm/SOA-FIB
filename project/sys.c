@@ -46,6 +46,10 @@ int sys_getpid() {
     return current_task->PID;
 }
 
+int sys_gettid() {
+    return current_task->TID;
+}
+
 int ret_from_fork() {
     return 0;
 }
@@ -155,11 +159,12 @@ int sys_fork() {
     child_task->pending_unblocks = 0;
 
     /* Initialize thread support - child starts as single-threaded process */
-    child_task->TID = 1;
     child_task->thread_count = 1;
     child_task->master_thread = child_task;
     INIT_LIST_HEAD(&child_task->threads);
     INIT_LIST_HEAD(&child_task->thread_list);
+    init_tid_slots(child_task);
+    child_task->TID = child_task->PID * 10 + 1; /* TID = PID*10 + 1 (master uses slot 1) */
     child_task->user_stack_ptr = NULL;
     child_task->user_stack_frames = 0;
     child_task->user_stack_region_start = 0;
@@ -225,12 +230,6 @@ void sys_exit() {
     printk_color_fmt(INFO_COLOR, "[EXIT] PID %d TID %d calling exit\n", current_task->PID,
                      current_task->TID);
 #endif
-
-    // If the process is task 1, it cannot exit
-    if (current_task->PID == 1) {
-        return;
-    }
-
     struct task_struct *master = current_task->master_thread;
 
     /* === STEP 1: Free all threads in the process === */
@@ -242,20 +241,20 @@ void sys_exit() {
 
             release_thread_stack(thread);
 
+            /* Free TID slot */
+            free_tid(master, thread->TID);
+
             list_del(&thread->thread_list);
 
             if (thread->status != ST_RUN) {
                 list_del(&thread->list);
             }
 
-            thread->PID = -1;
-            thread->TID = -1;
             list_add_tail(&thread->list, &freequeue);
         }
     }
 
     /* === STEP 2: Handle orphaned children === */
-    // Move children to idle process
     struct list_head *pos, *tmp;
     list_for_each_safe(pos, tmp, &current_task->children) {
         struct task_struct *child = list_entry(pos, struct task_struct, child_list);
@@ -270,7 +269,6 @@ void sys_exit() {
     }
 
     /* === STEP 4: Free process resources === */
-    // Free data pages and clear page table entries
     page_table_entry *PT = get_PT(master);
     for (int page = 0; page < NUM_PAG_DATA; page++) {
         int frame = get_frame(PT, PAG_LOG_INIT_DATA + page);
@@ -280,10 +278,10 @@ void sys_exit() {
         }
     }
 
-    /* === STEP 5: Return task_struct to free queue === */
+    /* === STEP 5: Return master task_struct to free queue === */
     list_add_tail(&master->list, &freequeue);
 
-    /* === STEP 6: Schedule new process === */
+    /* === STEP 6: Schedule new process (will go to idle if no processes left) === */
     sched_next_rr();
 }
 
@@ -424,8 +422,14 @@ int sys_create_thread(void (*function)(void *), void *parameter, void (*exit_rou
 
     copy_data(current_task, thread_union, sizeof(union task_union));
 
-    struct task_struct *master =
-        (current_task->TID == 1) ? current_task : current_task->master_thread;
+    struct task_struct *master = current_task->master_thread;
+
+    /* Allocate new TID */
+    int new_tid = allocate_tid(master);
+    if (new_tid < 0) {
+        list_add_tail(&new_thread->list, &freequeue);
+        return -ENOMEM; /* No available TID slots */
+    }
 
     new_thread->dir_pages_baseAddr = master->dir_pages_baseAddr;
 
@@ -436,6 +440,7 @@ int sys_create_thread(void (*function)(void *), void *parameter, void (*exit_rou
     INIT_LIST_HEAD(&new_thread->thread_list);
 
     new_thread->PID = master->PID;
+    new_thread->TID = new_tid;
     new_thread->parent = master;
     new_thread->master_thread = master;
     new_thread->quantum = DEFAULT_QUANTUM;
@@ -450,6 +455,7 @@ int sys_create_thread(void (*function)(void *), void *parameter, void (*exit_rou
 
     int region_start = find_free_stack_region(master);
     if (region_start < 0) {
+        free_tid(master, new_tid);
         list_add_tail(&new_thread->list, &freequeue);
         return -ENOMEM;
     }
@@ -459,6 +465,7 @@ int sys_create_thread(void (*function)(void *), void *parameter, void (*exit_rou
 
     int map_result = map_stack_pages(master, first_mapped_page, THREAD_STACK_INITIAL_PAGES);
     if (map_result < 0) {
+        free_tid(master, new_tid);
         list_add_tail(&new_thread->list, &freequeue);
         return map_result;
     }
@@ -502,7 +509,6 @@ int sys_create_thread(void (*function)(void *), void *parameter, void (*exit_rou
     new_thread->kernel_esp = (unsigned long)&thread_union->stack[STACK_FAKE_EBP];
 
     master->thread_count++;
-    new_thread->TID = master->thread_count;
     list_add_tail(&new_thread->thread_list, &master->threads);
 
     list_add_tail(&new_thread->list, &readyqueue);
@@ -514,6 +520,7 @@ int sys_create_thread(void (*function)(void *), void *parameter, void (*exit_rou
 
     return new_thread->TID;
 }
+
 void sys_exit_thread(void) {
     struct task_struct *thread = current_task;
     struct task_struct *master = thread->master_thread;
@@ -523,13 +530,16 @@ void sys_exit_thread(void) {
                      thread->PID, thread->TID, master->thread_count);
 #endif
 
-    /* If this is the only thread (or master thread with no other threads), exit the process */
-    if (master->thread_count == 1 || (thread == master && list_empty(&master->threads))) {
+    /* If this is the only thread, terminate the whole process (including init) */
+    if (master->thread_count == 1) {
         sys_exit();
-        return; /* Never reached */
+        return; /* Normally not reached */
     }
 
     release_thread_stack(thread);
+
+    /* Free TID slot */
+    free_tid(master, thread->TID);
 
     /* Decrement thread count */
     master->thread_count--;
@@ -537,12 +547,57 @@ void sys_exit_thread(void) {
     /* Remove from thread list */
     list_del(&thread->thread_list);
 
-    /* Mark thread as unused */
-    thread->PID = -1;
-    thread->TID = -1;
+    /* If we are exiting a non-master thread, just free it */
+    if (thread != master) {
+        list_add_tail(&thread->list, &freequeue);
+        sched_next_rr();
+        return;
+    }
 
-    /* Add to free queue */
-    list_add_tail(&thread->list, &freequeue);
+    /* We are exiting the master but there are other threads: choose new master */
+    struct list_head *pos;
+    struct task_struct *new_master = NULL;
+
+    list_for_each(pos, &master->threads) {
+        struct task_struct *candidate = list_entry(pos, struct task_struct, thread_list);
+        if (candidate != master) {
+            new_master = candidate;
+            break;
+        }
+    }
+
+    if (new_master == NULL) {
+        /* Fallback: no other thread found, destroy process */
+        sys_exit();
+        return;
+    }
+
+    /* Transfer master role to new_master */
+    new_master->master_thread = new_master;
+    new_master->thread_count = master->thread_count;
+
+    /* Copy TID slots to new master (array size is 6: index 0 unused, 1-5 valid) */
+    for (int i = 0; i <= MAX_TIDS_PER_PROCESS; i++) {
+        new_master->tid_slots[i] = master->tid_slots[i];
+    }
+
+    /* Free old master TID slot (TID = PID*10 + slot) */
+    free_tid(new_master, master->TID);
+
+    /* Remove new_master from thread list and rebuild as master */
+    list_del(&new_master->thread_list);
+    INIT_LIST_HEAD(&new_master->threads);
+
+    /* Update all threads to point to new master */
+    list_for_each(pos, &master->threads) {
+        struct task_struct *t = list_entry(pos, struct task_struct, thread_list);
+        if (t == master) continue;
+        t->master_thread = new_master;
+        list_add_tail(&t->thread_list, &new_master->threads);
+    }
+
+    /* Finally, free the old master thread structure */
+    list_add_tail(&master->list, &freequeue);
 
     /* Schedule next process/thread */
     sched_next_rr();

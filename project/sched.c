@@ -54,8 +54,10 @@ int allocate_DIR(struct task_struct *task) {
 }
 
 void cpu_idle(void) {
-    __asm__ __volatile__("sti" : : : "memory");
 
+    __asm__ __volatile__("sti" : : : "memory");
+    printk_color_fmt(INFO_COLOR, "[IDLE] Idle task started. Current PID=%d, TID=%d\n",
+                     current()->PID, current()->TID);
     while (1) {
         ;
     }
@@ -80,11 +82,16 @@ void init_idle(void) {
     idle_task->pending_unblocks = 0;
 
     /* Initialize thread support */
-    idle_task->TID = 1;
     idle_task->thread_count = 1;
     idle_task->master_thread = idle_task;
     INIT_LIST_HEAD(&idle_task->threads);
     INIT_LIST_HEAD(&idle_task->thread_list);
+    /* Idle has special TID = 10 (reserved) */
+    idle_task->TID = 10;
+    /* Idle doesn't use tid_slots, initialize all to 0 */
+    for (int i = 0; i <= MAX_TIDS_PER_PROCESS; i++) {
+        idle_task->tid_slots[i] = 0;
+    }
     idle_task->user_stack_ptr = NULL;
     idle_task->user_stack_frames = 0;
     idle_task->user_stack_region_start = 0;
@@ -128,11 +135,12 @@ void init_task1(void) {
     init_task->pending_unblocks = 0;
 
     /* Initialize thread support */
-    init_task->TID = 1;
     init_task->thread_count = 1;
     init_task->master_thread = init_task;
     INIT_LIST_HEAD(&init_task->threads);
     INIT_LIST_HEAD(&init_task->thread_list);
+    init_tid_slots(init_task);
+    init_task->TID = 11; /* TID = PID*10 + 1 = 1*10 + 1 = 11 */
     init_task->user_stack_ptr = NULL;
     init_task->user_stack_frames = 0;
     init_task->user_stack_region_start = 0;
@@ -177,7 +185,7 @@ void inner_task_switch(union task_union *new) {
     current_task = &new->task; /* (Optimization) Update global current_task pointer */
 
 #if DEBUG_INFO_TASK_SWITCH
-    printDebugInfoSched(old_task->PID, new->task.PID);
+    printDebugInfoSched(old_task->PID, old_task->TID, new->task.PID, new->task.TID);
 #endif
 
     /* Update TSS stack pointer for the new task */
@@ -193,6 +201,36 @@ void inner_task_switch(union task_union *new) {
 
 int get_next_pid(void) {
     return ++next_pid;
+}
+
+void init_tid_slots(struct task_struct *master) {
+    /* Initialize all slots as free (0)
+     * Array size is 6: index 0 unused, indices 1-5 correspond to TIDs PID*10 + (1-5) */
+    master->tid_slots[0] = 0; /* Index 0 is unused */
+    for (int i = 1; i <= MAX_TIDS_PER_PROCESS; i++) {
+        master->tid_slots[i] = 0;
+    }
+    /* Mark slot 1 (TID = PID*10 + 1) as used for the master thread */
+    master->tid_slots[1] = 1;
+}
+
+int allocate_tid(struct task_struct *master) {
+    /* Find first free slot (indices 1-5, corresponding to TIDs PID*10 + 1 to PID*10 + 5) */
+    for (int i = 1; i <= MAX_TIDS_PER_PROCESS; i++) {
+        if (master->tid_slots[i] == 0) {
+            master->tid_slots[i] = 1;    /* Mark as used */
+            return master->PID * 10 + i; /* Return TID = PID*10 + i */
+        }
+    }
+    return -1; /* No free slots */
+}
+
+void free_tid(struct task_struct *master, int tid) {
+    /* Convert TID to slot index: TID = PID*10 + slot, so slot = TID - PID*10 */
+    int slot = tid - (master->PID * 10);
+    if (slot >= 1 && slot <= MAX_TIDS_PER_PROCESS) {
+        master->tid_slots[slot] = 0; /* Mark as free */
+    }
 }
 
 int get_quantum(struct task_struct *task) {
@@ -271,9 +309,10 @@ void scheduler(void) {
 
 /* ---- Test functions ---- */
 
-void printDebugInfoSched(int from_pid, int to_pid) {
-    printk_color_fmt(INFO_COLOR, "[SCHED] switch from PID %d to PID %d and ready: ", from_pid,
-                     to_pid);
+void printDebugInfoSched(int from_pid, int from_tid, int to_pid, int to_tid) {
+    printk_color_fmt(INFO_COLOR,
+                     "[SCHED] switch from PID %d TID %d to PID %d TID %d and ready: ", from_pid,
+                     from_tid, to_pid, to_tid);
     if (list_empty(&readyqueue)) {
         printk_color_fmt(WARNING_COLOR, "empty\n");
     } else {

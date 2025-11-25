@@ -76,6 +76,16 @@ int write(int fd, char *buffer, int size);
 int getpid();
 
 /**
+ * @brief User-space wrapper for gettid system call.
+ *
+ * This wrapper function provides the user-space interface for retrieving
+ * the thread identifier of the calling thread.
+ *
+ * @return Thread ID of the current thread, or -1 on error with errno set
+ */
+int gettid();
+
+/**
  * @brief User-space wrapper for fork system call.
  *
  * This wrapper function provides the user-space interface for creating
