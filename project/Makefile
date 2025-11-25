@@ -33,7 +33,7 @@ CFLAGS = -m32 -O2  -g -fno-omit-frame-pointer -ffreestanding -Wall -Wextra  -I$(
 # Original No optimizations
 #CFLAGS = -m32 -O0  -g -fno-omit-frame-pointer -ffreestanding -Wall -Wextra  -I$(INCLUDEDIR) -fno-PIC
 ASMFLAGS = -I$(INCLUDEDIR)
-LDFLAGS = -g -melf_i386
+LDFLAGS = -g -melf_i386 -z noexecstack
 
 SYSOBJ = \
 	interrupt.o \
@@ -55,7 +55,8 @@ LIBZEOS = -L . -l zeos
 USROBJ = \
 	libc.o \
 	sys_call_wrappers.o \
-	zeos_test.o
+	zeos_test.o \
+	project_test.o
 
 
 ################################################################################
@@ -104,6 +105,8 @@ sched.o:sched.c $(INCLUDEDIR)/debug.h $(INCLUDEDIR)/interrupt.h $(INCLUDEDIR)/io
 libc.o:libc.c $(INCLUDEDIR)/libc.h
 
 zeos_test.o:zeos_test.c $(INCLUDEDIR)/errno.h $(INCLUDEDIR)/libc.h $(INCLUDEDIR)/zeos_test.h
+
+project_test.o:project_test.c $(INCLUDEDIR)/libc.h $(INCLUDEDIR)/project_test.h
 
 mm.o:mm.c $(INCLUDEDIR)/hardware.h $(INCLUDEDIR)/mm.h $(INCLUDEDIR)/sched.h $(INCLUDEDIR)/segment.h $(INCLUDEDIR)/types.h
 

@@ -8,7 +8,9 @@
  */
 
 #include <io.h>
+#include <libc.h>
 #include <types.h>
+#include <utils.h>
 
 /**************/
 /** Screen  ***/
@@ -105,4 +107,55 @@ void clear_screen() {
         screen[i] = (Word)' ' | DEFAULT_COLOR;
     }
     x = y = 0;
+}
+
+void printk_color_fmt(Word color, char *fmt, ...) {
+    __builtin_va_list args;
+    __builtin_va_start(args, fmt);
+
+    char buffer[32];
+    char *str;
+    int num;
+
+    for (int i = 0; fmt[i] != '\0'; i++) {
+        if (fmt[i] != '%') {
+            printc(fmt[i], color);
+            continue;
+        }
+
+        i++; // Skip '%'
+        switch (fmt[i]) {
+        case 'd': // Integer
+            num = __builtin_va_arg(args, int);
+            if (num < 0) {
+                printc('-', color);
+                num = -num;
+            }
+            itoa(num, buffer);
+            printk_color(buffer, color);
+            break;
+        case 'x': // Hexadecimal
+            num = __builtin_va_arg(args, int);
+            itoa_hex(num, buffer);
+            printk_color(buffer, color);
+            break;
+        case 's': // String
+            str = __builtin_va_arg(args, char *);
+            printk_color(str, color);
+            break;
+        case 'c':                              // Character
+            num = __builtin_va_arg(args, int); // char is promoted to int
+            printc((char)num, color);
+            break;
+        case '%': // Escaped %
+            printc('%', color);
+            break;
+        default: // Unknown format, print as is
+            printc('%', color);
+            printc(fmt[i], color);
+            break;
+        }
+    }
+
+    __builtin_va_end(args);
 }

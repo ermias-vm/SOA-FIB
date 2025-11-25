@@ -65,15 +65,14 @@ int access_ok(int type, const void *addr, unsigned long size) {
     addr_fin = ((((unsigned long)addr) + size) >> 12);
     if (addr_fin < addr_ini) return 0; // This looks like an overflow ... deny access
 
+    unsigned long max_user_page = TOTAL_PAGES;
+
     switch (type) {
     case VERIFY_WRITE:
-        /* Should suppose no support for automodifyable code */
-        if ((addr_ini >= USER_FIRST_PAGE) && (addr_fin <= USER_FIRST_PAGE + NUM_PAG_DATA)) return 1;
-        /* fallthrough */
+        if ((addr_ini >= USER_FIRST_PAGE) && (addr_fin < max_user_page)) return 1;
+        break;
     default:
-        if ((addr_ini >= USER_FIRST_PAGE) &&
-            (addr_fin <= (USER_FIRST_PAGE + NUM_PAG_CODE + NUM_PAG_DATA)))
-            return 1;
+        if ((addr_ini >= USER_FIRST_PAGE) && (addr_fin < max_user_page)) return 1;
     }
     return 0;
 }

@@ -94,6 +94,17 @@ void printk(char *string);
 void printk_color(char *string, Word color);
 
 /**
+ * @brief Print formatted string with color.
+ *
+ * This function prints a formatted string to the screen with
+ * the specified color. Supports %d, %x, %s, %c.
+ * @param color Color attribute for the text.
+ * @param fmt Format string.
+ * @param ... Variable arguments.
+ */
+void printk_color_fmt(Word color, char *fmt, ...);
+
+/**
  * @brief Clear the screen.
  *
  * This function clears the entire screen and resets the cursor

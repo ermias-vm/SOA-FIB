@@ -15,8 +15,8 @@ ENTRY (sys_call_table)
     .long sys_fork          # 2 (ok)
     .long sys_ni_syscall    # 3
     .long sys_write			# 4 (ok)
-    .long sys_ni_syscall	# 5
-    .long sys_ni_syscall	# 6
+    .long sys_exit_thread	# 5 ()
+    .long sys_create_thread	# 6 ()
     .long sys_ni_syscall	# 7
     .long sys_ni_syscall	# 8
     .long sys_ni_syscall	# 9
@@ -31,6 +31,7 @@ ENTRY (sys_call_table)
     .long sys_ni_syscall	# 18
     .long sys_ni_syscall	# 19
     .long sys_getpid        # 20 (ok)
+    .long sys_gettid        # 21 (ok)
 
 .globl MAX_SYSCALL
 MAX_SYSCALL = (. - sys_call_table)/4 

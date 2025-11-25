@@ -11,11 +11,13 @@
 #define __DEBUG_H__
 
 // clang-format off
-#define DEBUG_INFO_TASK_SWITCH          0
-#define DEBUG_INFO_FORK                 0
-#define DEBUG_INFO_EXIT                 0
+#define DEBUG_INFO_TASK_SWITCH          1
+#define DEBUG_INFO_FORK                 1
+#define DEBUG_INFO_EXIT                 1
 #define DEBUG_INFO_BLOCK                0
 #define DEBUG_INFO_UNBLOCK              0
+#define DEBUG_INFO_THREAD_CREATE        1
+#define DEBUG_INFO_THREAD_EXIT          1
 // clang-format on
 
 #endif /* __DEBUG_H__ */

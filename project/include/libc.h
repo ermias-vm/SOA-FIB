@@ -30,6 +30,13 @@ void itoa(int a, char *b);
 int strlen(char *a);
 
 /**
+ * @brief Execute ZeOS test suite.
+ *
+ * This function runs the ZeOS test suite.
+ */
+void execute_zeos_tests(void);
+
+/**
  * @brief User-space wrapper for gettime system call.
  *
  * This wrapper function provides the user-space interface for retrieving
@@ -67,6 +74,16 @@ int write(int fd, char *buffer, int size);
  * @return Process ID of the current process, or -1 on error with errno set
  */
 int getpid();
+
+/**
+ * @brief User-space wrapper for gettid system call.
+ *
+ * This wrapper function provides the user-space interface for retrieving
+ * the thread identifier of the calling thread.
+ *
+ * @return Thread ID of the current thread, or -1 on error with errno set
+ */
+int gettid();
 
 /**
  * @brief User-space wrapper for fork system call.
@@ -109,10 +126,23 @@ void block(void);
 int unblock(int pid);
 
 /**
- * @brief Execute ZeOS test suite.
+ * @brief Create a new thread.
  *
- * This function runs the ZeOS test suite.
+ * This function creates a new thread that executes the given function
+ * with the provided parameter. A wrapper ensures ThreadExit is called.
+ *
+ * @param function Pointer to the function the thread will execute.
+ * @param parameter Parameter to pass to the thread function.
+ * @return Thread ID on success, -1 on error with errno set.
  */
-void execute_zeos_tests(void);
+int ThreadCreate(void (*function)(void *), void *parameter);
+
+/**
+ * @brief Exit the current thread.
+ *
+ * This function terminates the calling thread. Must be called to
+ * properly clean up thread resources.
+ */
+void ThreadExit(void);
 
 #endif /* __LIBC_H__ */

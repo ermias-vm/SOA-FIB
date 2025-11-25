@@ -177,3 +177,77 @@ unblock_error:
     movl %eax, errno
     movl $-1, %eax
     ret
+
+
+ENTRY(ThreadCreate)
+    pushl %ebp
+    movl %esp, %ebp
+    pushl %ebx
+    
+    movl $6, %eax
+    movl 0x08(%ebp), %ebx  # function pointer
+    movl 0x0c(%ebp), %ecx  # parameter
+    leal ThreadExit, %edx  # exit_routine
+    
+    pushl $tc_return
+    pushl %ebp
+    movl %esp, %ebp
+    sysenter
+
+tc_return:
+    popl %ebp
+    addl $4, %esp
+    popl %ebx
+    popl %ebp
+    test %eax, %eax
+    js tc_error
+    ret
+
+tc_error:
+    negl %eax
+    movl %eax, errno
+    movl $-1, %eax
+    ret
+
+
+ENTRY(ThreadExit)
+    pushl %ebp
+    movl %esp, %ebp
+    movl $5, %eax
+    
+    pushl $te_return
+    pushl %ebp
+    movl %esp, %ebp
+    sysenter
+
+te_return:
+    popl %ebp
+    addl $4, %esp
+    popl %ebp
+    ret
+
+
+ENTRY(gettid)
+    pushl %ebp
+    movl %esp, %ebp
+    movl $21, %eax
+    
+    pushl $gtid_return
+    pushl %ebp
+    movl %esp, %ebp
+    sysenter
+
+gtid_return:
+    popl %ebp
+    addl $4, %esp
+    popl %ebp
+    test %eax, %eax
+    js gtid_error
+    ret
+ 
+gtid_error:
+    negl %eax
+    movl %eax, errno
+    movl $-1, %eax
+    ret
+

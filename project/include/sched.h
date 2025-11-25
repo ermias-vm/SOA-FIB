@@ -19,8 +19,8 @@
 /* Size of the kernel stack for each process in words */
 #define KERNEL_STACK_SIZE 1024
 
-/* Default quantum assigned to new processes */
-#define DEFAULT_QUANTUM 10
+/* Default quantum assigned to new processes (10 ticks default)*/
+#define DEFAULT_QUANTUM 100
 
 /* Process states for scheduling */
 enum state_t {
@@ -28,6 +28,9 @@ enum state_t {
     ST_READY,  /* Ready to run, in ready queue */
     ST_BLOCKED /* Blocked waiting for an event */
 };
+
+/* Maximum TIDs per process (slots 1-5, so 5 threads per process) */
+#define MAX_TIDS_PER_PROCESS 5
 
 /* Process control block structure */
 struct task_struct {
@@ -41,6 +44,20 @@ struct task_struct {
     struct list_head children;            /* List of child processes */
     struct list_head child_list;          /* Entry in parent's children list */
     int pending_unblocks;                 /* Number of pending unblock operations */
+
+    /* Thread support fields */
+    int TID;                              /* Thread identifier: PID*10 + slot (1-5). Idle=10 */
+    int thread_count;                     /* Number of threads in process */
+    struct task_struct *master_thread;    /* Pointer to master thread */
+    struct list_head threads;             /* List of threads in this process */
+    struct list_head thread_list;         /* Entry in master thread's threads list */
+    int tid_slots[6];                     /* TID slots: index 0 unused, 1-5 valid. 0=free, 1=used */
+    int *user_stack_ptr;                  /* Pointer to user stack for this thread */
+    int user_stack_frames;                /* Number of pages allocated for user stack */
+    unsigned int user_stack_region_start; /* First logical page reserved for the stack region */
+    unsigned int user_stack_region_pages; /* Total reserved pages (mapped+gap) */
+    unsigned long user_initial_esp;       /* User ESP used when the thread starts */
+    unsigned long user_entry;             /* User entry point used on first dispatch */
 };
 
 /* Union for process data and stack */
@@ -255,15 +272,43 @@ void set_quantum(struct task_struct *taskask, int new_quantum);
  */
 int get_next_pid(void);
 
+/**
+ * @brief Allocate next available TID for a process.
+ *
+ * This function finds the next available TID slot and returns TID = PID*10 + slot.
+ * @param master Pointer to the master thread of the process.
+ * @return The allocated TID, or -1 if no slots are available.
+ */
+int allocate_tid(struct task_struct *master);
+
+/**
+ * @brief Free a TID slot for a process.
+ *
+ * This function frees the TID slot for reuse.
+ * @param master Pointer to the master thread of the process.
+ * @param tid The TID to free.
+ */
+void free_tid(struct task_struct *master, int tid);
+
+/**
+ * @brief Initialize TID slots for a process.
+ *
+ * This function initializes all TID slots as free except slot 0 (master).
+ * @param master Pointer to the master thread of the process.
+ */
+void init_tid_slots(struct task_struct *master);
+
 /* test functions */
 /**
  * @brief Print debug information before context switch.
  *
  * This function prints scheduler debug information showing the context
- * switch from current process to target process and ready queue status.
+ * switch from current thread to target thread and ready queue status.
  * @param from_pid PID of the current process being switched from.
+ * @param from_tid TID of the current thread being switched from.
  * @param to_pid PID of the target process being switched to.
+ * @param to_tid TID of the target thread being switched to.
  */
-void printDebugInfoSched(int from_pid, int to_pid);
+void printDebugInfoSched(int from_pid, int from_tid, int to_pid, int to_tid);
 
 #endif /* __SCHED_H__ */
