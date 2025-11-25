@@ -58,7 +58,8 @@ int sys_fork() {
     int PID = -1;
 
 #if DEBUG_INFO_FORK
-    printk_color_fmt(INFO_COLOR, "[FORK] PID %d calling fork\n", current_task->PID);
+    printk_color_fmt(INFO_COLOR, "DEBUG->[FORK] PID %d TID %d calling fork\n", current_task->PID,
+                     current_task->TID);
 #endif
 
     /*=== STEP a: Get a free task_struct ===*/
@@ -113,8 +114,8 @@ int sys_fork() {
     }
 
     /*=== STEP f: Inherit user data === */
-    // Temporarily map child's pages in parent's address space
-    int temp_pages = NUM_PAG_KERNEL + NUM_PAG_CODE + NUM_PAG_DATA; // Free pages
+    /* Use FORK_TEMP_MAPPING_PAGE at end of address space to avoid conflicts with thread stacks */
+    unsigned int temp_pages = FORK_TEMP_MAPPING_PAGE;
 
     for (int page = 0; page < NUM_PAG_DATA; page++) {
         /* e.ii) Assign new frames for user data+stack */
@@ -189,7 +190,8 @@ int sys_fork() {
     list_add_tail(&child_task->list, &readyqueue);
 
 #if DEBUG_INFO_FORK
-    printk_color_fmt(INFO_COLOR, "[FORK] PID %d created child PID %d\n", current_task->PID, PID);
+    printk_color_fmt(INFO_COLOR, "DEBUG->[FORK] PID %d TID %d created child PID %d TID %d\n",
+                     current_task->PID, current_task->TID, PID, PID * 10 + 1);
 #endif
 
     /* === STEP l: Return child PID === */
@@ -227,7 +229,7 @@ int sys_gettime() {
 
 void sys_exit() {
 #if DEBUG_INFO_EXIT
-    printk_color_fmt(INFO_COLOR, "[EXIT] PID %d TID %d calling exit\n", current_task->PID,
+    printk_color_fmt(INFO_COLOR, "DEBUG->[EXIT] PID %d TID %d calling exit\n", current_task->PID,
                      current_task->TID);
 #endif
     struct task_struct *master = current_task->master_thread;
@@ -404,7 +406,7 @@ static void release_thread_stack(struct task_struct *thread) {
 
 int sys_create_thread(void (*function)(void *), void *parameter, void (*exit_routine)(void)) {
 #if DEBUG_INFO_THREAD_CREATE
-    printk_color_fmt(INFO_COLOR, "[THREAD_CREATE] PID %d TID %d creating new thread\n",
+    printk_color_fmt(INFO_COLOR, "DEBUG->[THREAD_CREATE] PID %d TID %d creating new thread\n",
                      current_task->PID, current_task->TID);
 #endif
 
@@ -514,7 +516,7 @@ int sys_create_thread(void (*function)(void *), void *parameter, void (*exit_rou
     list_add_tail(&new_thread->list, &readyqueue);
 
 #if DEBUG_INFO_THREAD_CREATE
-    printk_color_fmt(INFO_COLOR, "[THREAD_CREATE] PID %d created TID %d\n", new_thread->PID,
+    printk_color_fmt(INFO_COLOR, "DEBUG->[THREAD_CREATE] PID %d created TID %d\n", new_thread->PID,
                      new_thread->TID);
 #endif
 
@@ -526,7 +528,8 @@ void sys_exit_thread(void) {
     struct task_struct *master = thread->master_thread;
 
 #if DEBUG_INFO_THREAD_EXIT
-    printk_color_fmt(INFO_COLOR, "[THREAD_EXIT] PID %d TID %d exiting (master has %d threads)\n",
+    printk_color_fmt(INFO_COLOR,
+                     "DEBUG->[THREAD_EXIT] PID %d TID %d exiting (master has %d threads)\n",
                      thread->PID, thread->TID, master->thread_count);
 #endif
 

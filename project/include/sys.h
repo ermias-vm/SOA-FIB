@@ -151,10 +151,15 @@ int sys_getpid(void);
  */
 int check_fd(int fd, int permissions);
 
+/* Thread stack configuration */
 #define THREAD_STACK_REGION_PAGES 8
 #define THREAD_STACK_INITIAL_PAGES 1
 #define THREAD_STACK_BASE_PAGE (PAG_LOG_INIT_CODE + NUM_PAG_CODE)
-#define TEMP_STACK_MAPPING_PAGE (NUM_PAG_KERNEL + NUM_PAG_CODE + NUM_PAG_DATA)
+
+/* Temporary mapping pages - use end of address space to avoid conflicts with thread stacks */
+/* TOTAL_PAGES = 1024, so we use pages near the end for temporary mappings */
+#define TEMP_STACK_MAPPING_PAGE (TOTAL_PAGES - THREAD_STACK_INITIAL_PAGES - 1)  /* Page 1022 */
+#define FORK_TEMP_MAPPING_PAGE (TOTAL_PAGES - NUM_PAG_DATA - 2)                  /* Page 1002 */
 
 /**
  * @brief Create a new thread in the current process.
