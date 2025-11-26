@@ -166,14 +166,16 @@ int check_fd(int fd, int permissions);
  *
  * This function creates a new thread that executes the specified function
  * with the given parameter. The thread shares the same address space as
- * the parent but has its own user stack.
+ * the parent but has its own user stack. The wrapper function is called
+ * first, which in turn calls the actual thread function and ensures
+ * ThreadExit is called when the function returns.
  *
  * @param function Pointer to the function the thread will execute.
  * @param parameter Parameter to pass to the thread function.
- * @param exit_routine Pointer to the routine to call when the thread function returns.
+ * @param wrapper Pointer to the thread wrapper function that calls function and ThreadExit.
  * @return Thread ID (TID) of the new thread on success, negative error code on failure.
  */
-int sys_create_thread(void (*function)(void *), void *parameter, void (*exit_routine)(void));
+int sys_create_thread(void (*function)(void *), void *parameter, void (*wrapper)(void));
 
 /**
  * @brief Exit the current thread.

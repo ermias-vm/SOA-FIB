@@ -192,9 +192,9 @@ static void print_subtest_header(int num, char *name) {
 
 static void print_subtest_result(int passed) {
     if (passed) {
-        msg = "  -> PASSED\n";
+        msg = "-> PASSED\n";
     } else {
-        msg = "  -> FAILED\n";
+        msg = "-> FAILED\n";
     }
     write(1, msg, strlen(msg));
 }
@@ -205,14 +205,14 @@ static void print_subtest_result(int passed) {
 
 /**
  * Subtest 1 & 2: Create maximum threads and verify limit
- * Note: MAX_THREADS_PER_PROCESS (5) includes the master thread,
- *       so we can only create 4 additional threads (slots 2-5).
+ * Note: MAX_THREADS_PER_PROCESS (10) includes the master thread,
+ *       so we can only create 9 additional threads (slots 1-9).
  */
 void subtest_max_threads(int *passed) {
-    /* Master already uses 1 slot, so we can create MAX - 1 new threads */
+    /* Master already uses 1 slot (slot 0), so we can create MAX - 1 new threads */
     int max_new_threads = MAX_THREADS_PER_PROCESS - 1;
 
-    print_subtest_header(1, "Create maximum additional threads (4) and verify limit");
+    print_subtest_header(1, "Create maximum additional threads (9) and verify limit");
 
     clear_all_flags();
 
@@ -236,7 +236,7 @@ void subtest_max_threads(int *passed) {
         if (tids[i] > 0) {
             created++;
             write_current_info();
-            msg = "  Created thread TID ";
+            msg = "Created thread TID ";
             write(1, msg, strlen(msg));
             itoa(tids[i], buffer);
             write(1, buffer, strlen(buffer));
@@ -245,7 +245,8 @@ void subtest_max_threads(int *passed) {
         }
     }
 
-    msg = "  Created ";
+    write_current_info();
+    msg = "Created ";
     write(1, msg, strlen(msg));
     itoa(created, buffer);
     write(1, buffer, strlen(buffer));
@@ -278,13 +279,13 @@ void subtest_max_threads(int *passed) {
         if (tids[i] > 0) created++;
     }
 
-    /* Now try to create one more - should fail (we have master + max_new_threads = 5 total) */
-    int extra_flag = 7;
+    /* Now try to create one more - should fail (we have master + max_new_threads = 10 total) */
+    int extra_flag = 9;
     int extra_tid = ThreadCreate(simple_thread_func, &extra_flag);
 
     write_current_info();
     if (extra_tid < 0) {
-        msg = "  Correctly rejected 5th additional thread (returned ";
+        msg = "Correctly rejected 10th additional thread (returned ";
         write(1, msg, strlen(msg));
         itoa(extra_tid, buffer);
         write(1, buffer, strlen(buffer));
@@ -292,7 +293,7 @@ void subtest_max_threads(int *passed) {
         write(1, msg, strlen(msg));
         *passed = 1;
     } else {
-        msg = "  ERROR: Created extra thread with TID ";
+        msg = "ERROR: Created extra thread with TID ";
         write(1, msg, strlen(msg));
         itoa(extra_tid, buffer);
         write(1, buffer, strlen(buffer));
@@ -322,7 +323,7 @@ void subtest_tid_reuse(int *passed) {
     int first_tid = ThreadCreate(minimal_thread_func, &flag0);
 
     write_current_info();
-    msg = "  First thread created with TID ";
+    msg = "First thread created with TID ";
     write(1, msg, strlen(msg));
     itoa(first_tid, buffer);
     write(1, buffer, strlen(buffer));
@@ -341,7 +342,7 @@ void subtest_tid_reuse(int *passed) {
     int second_tid = ThreadCreate(minimal_thread_func, &flag1);
 
     write_current_info();
-    msg = "  Second thread created with TID ";
+    msg = "Second thread created with TID ";
     write(1, msg, strlen(msg));
     itoa(second_tid, buffer);
     write(1, buffer, strlen(buffer));
@@ -354,19 +355,22 @@ void subtest_tid_reuse(int *passed) {
     /* Check if TID was reused (should be same or another freed TID) */
     if (second_tid > 0) {
         if (second_tid == first_tid) {
-            msg = "  TID ";
+            write_current_info();
+            msg = "TID ";
             write(1, msg, strlen(msg));
             itoa(first_tid, buffer);
             write(1, buffer, strlen(buffer));
             msg = " was reused\n";
             write(1, msg, strlen(msg));
         } else {
-            msg = "  Different TID used (still valid - TIDs are being freed)\n";
+            write_current_info();
+            msg = "Different TID used (still valid - TIDs are being freed)\n";
             write(1, msg, strlen(msg));
         }
         *passed = 1;
     } else {
-        msg = "  ERROR: Could not create second thread\n";
+        write_current_info();
+        msg = "ERROR: Could not create second thread\n";
         write(1, msg, strlen(msg));
         *passed = 0;
     }
@@ -384,7 +388,7 @@ void subtest_last_thread_exits(void) {
     print_subtest_header(4, "Process terminates when last thread exits");
 
     write_current_info();
-    msg = "  Creating child process to test last thread exit...\n";
+    msg = "Creating child process to test last thread exit...\n";
     write(1, msg, strlen(msg));
 
     int pid = fork();
@@ -392,17 +396,17 @@ void subtest_last_thread_exits(void) {
     if (pid == 0) {
         /* Child process - we are the only thread initially */
         write_current_info();
-        msg = "  Child: I am the only thread, calling ThreadExit()\n";
+        msg = "Child: I am the only thread, calling ThreadExit()\n";
         write(1, msg, strlen(msg));
 
-        msg = "  -> PASSED (if this prints and process exits)\n";
+        msg = "-> PASSED (if this prints and process exits)\n";
         write(1, msg, strlen(msg));
 
         /* This should terminate the process */
         ThreadExit();
 
         /* Should never reach here */
-        msg = "  -> FAILED: Code after ThreadExit executed!\n";
+        msg = "-> FAILED: Code after ThreadExit executed!\n";
         write(1, msg, strlen(msg));
         exit();
 
@@ -411,13 +415,13 @@ void subtest_last_thread_exits(void) {
         waitTicks(MEDIUM_WORK_TIME);
 
         write_current_info();
-        msg = "  Parent: Child process should have terminated\n";
+        msg = "Parent: Child process should have terminated\n";
         write(1, msg, strlen(msg));
 
         thread_subtests_run++;
         thread_subtests_passed++; /* If we got here, child exited properly */
     } else {
-        msg = "  -> FAILED: Fork failed\n";
+        msg = "-> FAILED: Fork failed\n";
         write(1, msg, strlen(msg));
         thread_subtests_run++;
     }
@@ -430,7 +434,7 @@ void subtest_master_reassignment(void) {
     print_subtest_header(5, "Master thread reassignment when master exits");
 
     write_current_info();
-    msg = "  Creating child process to test master reassignment...\n";
+    msg = "Creating child process to test master reassignment...\n";
     write(1, msg, strlen(msg));
 
     int pid = fork();
@@ -440,7 +444,7 @@ void subtest_master_reassignment(void) {
         clear_all_flags();
 
         write_current_info();
-        msg = "  Child (Master): Creating survivor thread\n";
+        msg = "Child (Master): Creating survivor thread\n";
         write(1, msg, strlen(msg));
 
         int flag_idx = 0;
@@ -448,7 +452,7 @@ void subtest_master_reassignment(void) {
 
         if (survivor_tid > 0) {
             write_current_info();
-            msg = "  Child (Master): Created survivor TID ";
+            msg = "Child (Master): Created survivor TID ";
             write(1, msg, strlen(msg));
             itoa(survivor_tid, buffer);
             write(1, buffer, strlen(buffer));
@@ -459,20 +463,20 @@ void subtest_master_reassignment(void) {
             wait_for_flag(0);
 
             write_current_info();
-            msg = "  Child (Master): Exiting, survivor should become master\n";
+            msg = "Child (Master): Exiting, survivor should become master\n";
             write(1, msg, strlen(msg));
 
-            msg = "  -> PASSED (if survivor continues and process eventually exits)\n";
+            msg = "-> PASSED (if survivor continues and process eventually exits)\n";
             write(1, msg, strlen(msg));
 
             /* Master exits - survivor should take over */
             ThreadExit();
 
             /* Should never reach here */
-            msg = "  -> FAILED: Code after ThreadExit executed!\n";
+            msg = "-> FAILED: Code after ThreadExit executed!\n";
             write(1, msg, strlen(msg));
         } else {
-            msg = "  -> FAILED: Could not create survivor thread\n";
+            msg = "-> FAILED: Could not create survivor thread\n";
             write(1, msg, strlen(msg));
         }
         exit();
@@ -482,13 +486,13 @@ void subtest_master_reassignment(void) {
         waitTicks(LONG_WORK_TIME);
 
         write_current_info();
-        msg = "  Parent: Child process should have completed\n";
+        msg = "Parent: Child process should have completed\n";
         write(1, msg, strlen(msg));
 
         thread_subtests_run++;
         thread_subtests_passed++; /* If we got here, reassignment worked */
     } else {
-        msg = "  -> FAILED: Fork failed\n";
+        msg = "-> FAILED: Fork failed\n";
         write(1, msg, strlen(msg));
         thread_subtests_run++;
     }
@@ -530,14 +534,14 @@ void subtest_fork_single_thread(int *passed) {
 
     /* Create a secondary thread that will work during fork */
     write_current_info();
-    msg = "  Creating secondary thread before fork...\n";
+    msg = "Creating secondary thread before fork...\n";
     write(1, msg, strlen(msg));
 
     int flag_idx = 0;
     int secondary_tid = ThreadCreate(long_work_thread_func, &flag_idx);
 
     if (secondary_tid <= 0) {
-        msg = "  -> FAILED: Could not create secondary thread\n";
+        msg = "-> FAILED: Could not create secondary thread\n";
         write(1, msg, strlen(msg));
         *passed = 0;
         print_subtest_result(*passed);
@@ -549,7 +553,7 @@ void subtest_fork_single_thread(int *passed) {
     wait_for_flag(0);
 
     write_current_info();
-    msg = "  Secondary thread TID ";
+    msg = "Secondary thread TID ";
     write(1, msg, strlen(msg));
     itoa(secondary_tid, buffer);
     write(1, buffer, strlen(buffer));
@@ -560,11 +564,11 @@ void subtest_fork_single_thread(int *passed) {
 
     if (child_pid == 0) {
         /* Child process - should only have current thread, not the secondary one */
-        /* Child starts fresh with 1 thread (master), so can create 4 more */
+        /* Child starts fresh with 1 thread (master), so can create 9 more */
         int max_new_threads = MAX_THREADS_PER_PROCESS - 1;
 
         write_current_info();
-        msg = "  Child: I should be the only thread (TID ";
+        msg = "Child: I should be the only thread (TID ";
         write(1, msg, strlen(msg));
         itoa(gettid(), buffer);
         write(1, buffer, strlen(buffer));
@@ -583,7 +587,8 @@ void subtest_fork_single_thread(int *passed) {
             if (test_tids[i] > 0) can_create++;
         }
 
-        msg = "  Child: Created ";
+        write_current_info();
+        msg = "Child: Created ";
         write(1, msg, strlen(msg));
         itoa(can_create, buffer);
         write(1, buffer, strlen(buffer));
@@ -595,10 +600,10 @@ void subtest_fork_single_thread(int *passed) {
         write(1, msg, strlen(msg));
 
         if (can_create == max_new_threads) {
-            msg = "  -> PASSED (fork copied only current thread)\n";
+            msg = "-> PASSED (fork copied only current thread)\n";
             write(1, msg, strlen(msg));
         } else {
-            msg = "  -> FAILED (fork may have copied other threads)\n";
+            msg = "-> FAILED (fork may have copied other threads)\n";
             write(1, msg, strlen(msg));
         }
 
@@ -609,7 +614,7 @@ void subtest_fork_single_thread(int *passed) {
     } else if (child_pid > 0) {
         /* Parent - wait for child and our secondary thread */
         write_current_info();
-        msg = "  Parent: Forked child PID ";
+        msg = "Parent: Forked child PID ";
         write(1, msg, strlen(msg));
         itoa(child_pid, buffer);
         write(1, buffer, strlen(buffer));
@@ -620,7 +625,7 @@ void subtest_fork_single_thread(int *passed) {
         waitTicks(LONG_WORK_TIME + MEDIUM_WORK_TIME);
 
         write_current_info();
-        msg = "  Parent: Test completed\n";
+        msg = "Parent: Test completed\n";
         write(1, msg, strlen(msg));
 
         *passed = 1; /* Success if we reach here */
@@ -629,7 +634,7 @@ void subtest_fork_single_thread(int *passed) {
         if (*passed) thread_subtests_passed++;
 
     } else {
-        msg = "  -> FAILED: Fork failed\n";
+        msg = "-> FAILED: Fork failed\n";
         write(1, msg, strlen(msg));
         *passed = 0;
         print_subtest_result(*passed);

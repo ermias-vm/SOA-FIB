@@ -14,6 +14,7 @@
 #include <mm.h>
 #include <sched.h>
 #include <segment.h>
+#include <sys.h>
 #include <utils.h>
 
 union task_union tasks[NR_TASKS] __attribute__((__section__(".data.task")));
@@ -86,10 +87,10 @@ void init_idle(void) {
     idle_task->master_thread = idle_task;
     INIT_LIST_HEAD(&idle_task->threads);
     INIT_LIST_HEAD(&idle_task->thread_list);
-    /* Idle has special TID = 10 (reserved) */
-    idle_task->TID = 10;
+    /* Idle has special TID = 0 (reserved for idle process) */
+    idle_task->TID = 0;
     /* Idle doesn't use tid_slots, initialize all to 0 */
-    for (int i = 0; i <= MAX_TIDS_PER_PROCESS; i++) {
+    for (int i = 0; i < MAX_TIDS_PER_PROCESS; i++) {
         idle_task->tid_slots[i] = 0;
     }
     idle_task->user_stack_ptr = NULL;
@@ -140,16 +141,31 @@ void init_task1(void) {
     INIT_LIST_HEAD(&init_task->threads);
     INIT_LIST_HEAD(&init_task->thread_list);
     init_tid_slots(init_task);
-    init_task->TID = 11; /* TID = PID*10 + 1 = 1*10 + 1 = 11 */
-    init_task->user_stack_ptr = NULL;
-    init_task->user_stack_frames = 0;
-    init_task->user_stack_region_start = 0;
-    init_task->user_stack_region_pages = 0;
-    init_task->user_initial_esp = 0;
-    init_task->user_entry = 0;
+    init_task->TID = 10; /* TID = PID*10 + 0 = 1*10 + 0 = 10 */
 
     allocate_DIR(init_task);
     set_user_pages(init_task);
+
+    /* Allocate a dedicated user stack for init's first thread
+     * This ensures uniform stack management for all threads including master */
+    page_table_entry *PT = get_PT(init_task);
+    unsigned int region_start = THREAD_STACK_BASE_PAGE;
+    unsigned int region_end = region_start + THREAD_STACK_REGION_PAGES;
+    unsigned int first_mapped_page = region_end - THREAD_STACK_INITIAL_PAGES;
+
+    /* Allocate initial stack page */
+    int frame = alloc_frame();
+    set_ss_pag(PT, first_mapped_page, frame);
+
+    unsigned long stack_top = (unsigned long)(region_end << 12);
+    unsigned long user_esp = stack_top - 16; /* Leave some space at top */
+
+    init_task->user_stack_region_start = region_start;
+    init_task->user_stack_region_pages = THREAD_STACK_REGION_PAGES;
+    init_task->user_stack_frames = THREAD_STACK_INITIAL_PAGES;
+    init_task->user_stack_ptr = (int *)(first_mapped_page << 12);
+    init_task->user_initial_esp = user_esp;
+    init_task->user_entry = 0;
 
     union task_union *init_union = (union task_union *)init_task;
 
@@ -205,18 +221,19 @@ int get_next_pid(void) {
 
 void init_tid_slots(struct task_struct *master) {
     /* Initialize all slots as free (0)
-     * Array size is 6: index 0 unused, indices 1-5 correspond to TIDs PID*10 + (1-5) */
-    master->tid_slots[0] = 0; /* Index 0 is unused */
-    for (int i = 1; i <= MAX_TIDS_PER_PROCESS; i++) {
+     * Array has MAX_TIDS_PER_PROCESS (10) slots: indices 0-9 correspond to TIDs PID*10 + (0-9)
+     * For PID 1: TIDs 10, 11, 12...19
+     * For PID 2: TIDs 20, 21, 22...29 */
+    for (int i = 0; i < MAX_TIDS_PER_PROCESS; i++) {
         master->tid_slots[i] = 0;
     }
-    /* Mark slot 1 (TID = PID*10 + 1) as used for the master thread */
-    master->tid_slots[1] = 1;
+    /* Mark slot 0 (TID = PID*10 + 0) as used for the master thread */
+    master->tid_slots[0] = 1;
 }
 
 int allocate_tid(struct task_struct *master) {
-    /* Find first free slot (indices 1-5, corresponding to TIDs PID*10 + 1 to PID*10 + 5) */
-    for (int i = 1; i <= MAX_TIDS_PER_PROCESS; i++) {
+    /* Find first free slot (indices 0-9, corresponding to TIDs PID*10 + 0 to PID*10 + 9) */
+    for (int i = 0; i < MAX_TIDS_PER_PROCESS; i++) {
         if (master->tid_slots[i] == 0) {
             master->tid_slots[i] = 1;    /* Mark as used */
             return master->PID * 10 + i; /* Return TID = PID*10 + i */
@@ -228,7 +245,7 @@ int allocate_tid(struct task_struct *master) {
 void free_tid(struct task_struct *master, int tid) {
     /* Convert TID to slot index: TID = PID*10 + slot, so slot = TID - PID*10 */
     int slot = tid - (master->PID * 10);
-    if (slot >= 1 && slot <= MAX_TIDS_PER_PROCESS) {
+    if (slot >= 0 && slot < MAX_TIDS_PER_PROCESS) {
         master->tid_slots[slot] = 0; /* Mark as free */
     }
 }

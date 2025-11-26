@@ -1,0 +1,63 @@
+================================================================================
+                     MILESTONE 1: THREAD SUPPORT IN ZEOS
+================================================================================
+
+1. SYSTEM CALLS IMPLEMENTADAS
+-----------------------------
+
+int ThreadCreate(void (*function)(void* arg), void* parameter);
+  - Crea un nuevo thread que ejecuta function(parameter)
+  - Stack inicial: 1 página, con crecimiento dinámico via page faults
+  - Usa thread_entry_wrapper para garantizar que ThreadExit siempre se llame
+
+void ThreadExit(void);
+  - Termina el thread actual y libera su stack
+  - Si es el último thread del proceso, termina el proceso completo
+
+2. ESQUEMA DE TIDs
+------------------
+
+TID = PID * 10 + slot (0-9)
+  - 10 threads máximo por proceso
+  - Idle: TID = 0
+  - Init (PID 1): TIDs 10-19
+  - Procesos hijos: TIDs PID*10 hasta PID*10+9
+
+3. THREAD WRAPPER
+-----------------
+
+El thread_entry_wrapper (sys_call_wrappers.S) envuelve la función del usuario:
+  1. Kernel configura thread para empezar en thread_entry_wrapper
+  2. Stack contiene: [retaddr][function][parameter]
+  3. wrapper llama function(parameter)
+  4. Cuando function retorna, wrapper llama ThreadExit automáticamente
+
+Esto garantiza que ThreadExit siempre se llame aunque el programador lo olvide.
+
+4. USER STACKS
+--------------
+
+- Cada thread tiene su propio stack fuera de la zona data+stack
+- THREAD_STACK_REGION_PAGES = 8 páginas reservadas por thread
+- THREAD_STACK_INITIAL_PAGES = 1 página mapeada inicialmente
+- Crecimiento dinámico: page fault en gap → grow_user_stack() asigna página
+- El primer thread de init también tiene stack dedicado
+
+5. MODIFICACIONES EN FORK
+-------------------------
+
+- Fork solo copia el thread que llama (no los otros threads del proceso)
+- El hijo empieza con thread_count = 1 y tid_slots[] inicializado
+- Se copia el user stack del thread padre al hijo
+
+6. ARCHIVOS MODIFICADOS
+-----------------------
+
+include/sched.h    - MAX_TIDS_PER_PROCESS=10, campos thread en task_struct
+include/sys.h      - Constantes THREAD_STACK_*, prototipo sys_create_thread
+sched.c            - init_tid_slots, allocate_tid, free_tid, init_task1 con stack
+sys.c              - sys_fork, sys_create_thread, sys_exit_thread, grow_user_stack
+sys_call_wrappers.S - thread_entry_wrapper, ThreadCreate pasa wrapper al kernel
+interrupt.c        - pageFault_routine llama grow_user_stack
+
+================================================================================

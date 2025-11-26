@@ -30,10 +30,10 @@
 #define MEDIUM_WORK_TIME 1500 /* 1.5 seconds */
 #define LONG_WORK_TIME 3000   /* 3 seconds */
 
-#define MAX_THREADS_PER_PROCESS 5 /* Maximum threads per process */
+#define MAX_THREADS_PER_PROCESS 10 /* Maximum threads per process (TIDs X0-X9) */
 
 /* Synchronization flags - shared between threads */
-#define MAX_SYNC_FLAGS 8
+#define MAX_SYNC_FLAGS 10
 
 /**
  * @brief Execute all thread test suites.

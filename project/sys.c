@@ -165,12 +165,68 @@ int sys_fork() {
     INIT_LIST_HEAD(&child_task->threads);
     INIT_LIST_HEAD(&child_task->thread_list);
     init_tid_slots(child_task);
-    child_task->TID = child_task->PID * 10 + 1; /* TID = PID*10 + 1 (master uses slot 1) */
-    child_task->user_stack_ptr = NULL;
-    child_task->user_stack_frames = 0;
-    child_task->user_stack_region_start = 0;
-    child_task->user_stack_region_pages = 0;
-    child_task->user_initial_esp = 0;
+    child_task->TID = child_task->PID * 10; /* TID = PID*10 + 0 (master uses slot 0) */
+
+    /*=== STEP: Copy parent thread's user stack if it exists ===*/
+    /* This is required because the calling thread may have a dedicated stack outside data+stack */
+    if (current_task->user_stack_ptr != NULL && current_task->user_stack_frames > 0) {
+        /* Find a free stack region in child's address space */
+        unsigned int region_start = THREAD_STACK_BASE_PAGE;
+        unsigned int region_end = region_start + THREAD_STACK_REGION_PAGES;
+        unsigned int first_mapped_page = region_end - current_task->user_stack_frames;
+
+        /* Allocate and map frames for child's user stack */
+        for (int i = 0; i < current_task->user_stack_frames; i++) {
+            int frame = alloc_frame();
+            if (frame < 0) {
+                /* Rollback on error */
+                for (int j = 0; j < i; j++) {
+                    free_frame(get_frame(child_PT, first_mapped_page + j));
+                    del_ss_pag(child_PT, first_mapped_page + j);
+                }
+                /* Also free data frames */
+                for (int j = 0; j < NUM_PAG_DATA; j++) {
+                    free_frame(new_frames[j]);
+                }
+                list_add_tail(&child_task->list, &freequeue);
+                return -EAGAIN;
+            }
+            set_ss_pag(child_PT, first_mapped_page + i, frame);
+        }
+
+        /* Copy parent's user stack to child using temporary mapping */
+        unsigned int parent_stack_page = ((unsigned int)current_task->user_stack_ptr) >> 12;
+        for (int i = 0; i < current_task->user_stack_frames; i++) {
+            /* Map child's stack page temporarily in parent's address space */
+            set_ss_pag(parent_PT, temp_pages + i, get_frame(child_PT, first_mapped_page + i));
+
+            /* Copy from parent's stack to child's stack */
+            copy_data((void *)((parent_stack_page + i) << 12), (void *)((temp_pages + i) << 12),
+                      PAGE_SIZE);
+
+            /* Remove temporary mapping */
+            del_ss_pag(parent_PT, temp_pages + i);
+        }
+
+        child_task->user_stack_region_start = region_start;
+        child_task->user_stack_region_pages = THREAD_STACK_REGION_PAGES;
+        child_task->user_stack_frames = current_task->user_stack_frames;
+        child_task->user_stack_ptr = (int *)(first_mapped_page << 12);
+
+        /* Update child's user ESP to point to equivalent position in new stack */
+        unsigned int parent_esp = ((union task_union *)current_task)->stack[KERNEL_STACK_SIZE - 2];
+        unsigned int offset = parent_esp - (unsigned int)(current_task->user_stack_ptr);
+        unsigned int child_esp = (unsigned int)(child_task->user_stack_ptr) + offset;
+        ((union task_union *)child_task)->stack[KERNEL_STACK_SIZE - 2] = child_esp;
+
+        child_task->user_initial_esp = child_esp;
+    } else {
+        child_task->user_stack_ptr = NULL;
+        child_task->user_stack_frames = 0;
+        child_task->user_stack_region_start = 0;
+        child_task->user_stack_region_pages = 0;
+        child_task->user_initial_esp = 0;
+    }
     child_task->user_entry = 0;
 
     /* === STEP i & j: Prepare registers and child stack for task_switch === */
@@ -191,7 +247,7 @@ int sys_fork() {
 
 #if DEBUG_INFO_FORK
     printk_color_fmt(INFO_COLOR, "DEBUG->[FORK] PID %d TID %d created child PID %d TID %d\n",
-                     current_task->PID, current_task->TID, PID, PID * 10 + 1);
+                     current_task->PID, current_task->TID, PID, PID * 10);
 #endif
 
     /* === STEP l: Return child PID === */
@@ -404,14 +460,16 @@ static void release_thread_stack(struct task_struct *thread) {
 #define STACK_RET_ADDR (KERNEL_STACK_SIZE - 18)
 #define STACK_FAKE_EBP (KERNEL_STACK_SIZE - 19)
 
-int sys_create_thread(void (*function)(void *), void *parameter, void (*exit_routine)(void)) {
+int sys_create_thread(void (*function)(void *), void *parameter, void (*wrapper)(void)) {
 #if DEBUG_INFO_THREAD_CREATE
     printk_color_fmt(INFO_COLOR, "DEBUG->[THREAD_CREATE] PID %d TID %d creating new thread\n",
                      current_task->PID, current_task->TID);
 #endif
 
     if (!function) return -EINVAL;
+    if (!wrapper) return -EINVAL;
     if (!access_ok(VERIFY_READ, function, sizeof(void (*)(void *)))) return -EFAULT;
+    if (!access_ok(VERIFY_READ, wrapper, sizeof(void (*)(void)))) return -EFAULT;
     if (parameter && !access_ok(VERIFY_READ, parameter, sizeof(void *))) return -EFAULT;
 
     if (list_empty(&freequeue)) return -ENOMEM;
@@ -473,7 +531,12 @@ int sys_create_thread(void (*function)(void *), void *parameter, void (*exit_rou
     }
 
     unsigned long stack_top = (unsigned long)(region_end << 12);
-    unsigned long user_esp = stack_top - 2 * sizeof(unsigned long);
+    /* Stack layout for thread_wrapper:
+     * stack_top - 4:  parameter (offset +8 from ESP)
+     * stack_top - 8:  function pointer (offset +4 from ESP)
+     * stack_top - 12: return address (offset +0 from ESP, unused)
+     * ESP points to stack_top - 12 */
+    unsigned long user_esp = stack_top - 3 * sizeof(unsigned long);
 
     page_table_entry *current_PT = get_PT(current_task);
     page_table_entry *process_PT = get_PT(master);
@@ -486,8 +549,11 @@ int sys_create_thread(void (*function)(void *), void *parameter, void (*exit_rou
     unsigned long *temp_stack = (unsigned long *)(TEMP_STACK_MAPPING_PAGE << 12);
     unsigned long stack_words = stack_bytes / sizeof(unsigned long);
 
-    temp_stack[stack_words - 1] = (unsigned long)parameter;
-    temp_stack[stack_words - 2] = (unsigned long)exit_routine;
+    /* Set up stack for thread_wrapper:
+     * wrapper expects: [esp+0]=retaddr, [esp+4]=function, [esp+8]=parameter */
+    temp_stack[stack_words - 1] = (unsigned long)parameter; /* offset +8: parameter */
+    temp_stack[stack_words - 2] = (unsigned long)function;  /* offset +4: function ptr */
+    temp_stack[stack_words - 3] = 0;                        /* offset +0: return addr (unused) */
 
     for (unsigned int i = 0; i < THREAD_STACK_INITIAL_PAGES; ++i) {
         del_ss_pag(current_PT, TEMP_STACK_MAPPING_PAGE + i);
@@ -500,9 +566,10 @@ int sys_create_thread(void (*function)(void *), void *parameter, void (*exit_rou
     new_thread->user_stack_frames = THREAD_STACK_INITIAL_PAGES;
     new_thread->user_stack_ptr = (int *)(first_mapped_page << 12);
     new_thread->user_initial_esp = user_esp;
-    new_thread->user_entry = (unsigned long)function;
+    new_thread->user_entry = (unsigned long)wrapper; /* Entry point is the wrapper */
 
-    thread_union->stack[STACK_USER_EIP] = (unsigned long)function;
+    /* Thread starts at wrapper function, which will call the actual function */
+    thread_union->stack[STACK_USER_EIP] = (unsigned long)wrapper;
     thread_union->stack[STACK_USER_ESP] = user_esp;
     thread_union->stack[STACK_EAX] = 0;
     thread_union->stack[STACK_EBP] = 0;
@@ -579,8 +646,8 @@ void sys_exit_thread(void) {
     new_master->master_thread = new_master;
     new_master->thread_count = master->thread_count;
 
-    /* Copy TID slots to new master (array size is 6: index 0 unused, 1-5 valid) */
-    for (int i = 0; i <= MAX_TIDS_PER_PROCESS; i++) {
+    /* Copy TID slots to new master (array size is MAX_TIDS_PER_PROCESS: indices 0-9) */
+    for (int i = 0; i < MAX_TIDS_PER_PROCESS; i++) {
         new_master->tid_slots[i] = master->tid_slots[i];
     }
 

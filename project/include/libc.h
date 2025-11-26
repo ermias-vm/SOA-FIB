@@ -129,20 +129,50 @@ int unblock(int pid);
  * @brief Create a new thread.
  *
  * This function creates a new thread that executes the given function
- * with the provided parameter. A wrapper ensures ThreadExit is called.
+ * with the provided parameter. Internally, ThreadCreate passes the address
+ * of thread_entry_wrapper to the kernel, which sets up the new thread to
+ * start execution at that wrapper. The wrapper then calls function(parameter)
+ * and ensures ThreadExit is always called when the function returns.
  *
  * @param function Pointer to the function the thread will execute.
  * @param parameter Parameter to pass to the thread function.
- * @return Thread ID on success, -1 on error with errno set.
+ * @return Thread ID (TID) on success, -1 on error with errno set to:
+ *         - EINVAL: Invalid function pointer
+ *         - ENOMEM: No available task structures or TID slots
+ *         - EAGAIN: Could not allocate memory for thread stack
  */
 int ThreadCreate(void (*function)(void *), void *parameter);
 
 /**
  * @brief Exit the current thread.
  *
- * This function terminates the calling thread. Must be called to
- * properly clean up thread resources.
+ * This function terminates the calling thread and frees its resources
+ * (user stack, TID slot). If this is the last thread in the process,
+ * the entire process is terminated.
+ *
+ * Note: Returning from a thread function without calling ThreadExit
+ * would crash the system, but thread_entry_wrapper ensures ThreadExit
+ * is always called automatically.
  */
 void ThreadExit(void);
+
+/**
+ * @brief Thread entry wrapper function (internal use).
+ *
+ * This function is the actual entry point for new threads. The kernel
+ * sets up the thread's initial EIP to point to this wrapper, with the
+ * user stack containing:
+ *   - [esp+0]: unused return address
+ *   - [esp+4]: function pointer
+ *   - [esp+8]: parameter
+ *
+ * The wrapper:
+ *   1. Extracts function and parameter from the stack
+ *   2. Calls function(parameter)
+ *   3. Calls ThreadExit when the function returns
+ *
+ * This guarantees ThreadExit is always called, even if the user forgets.
+ */
+void thread_entry_wrapper(void);
 
 #endif /* __LIBC_H__ */
