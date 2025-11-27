@@ -9,6 +9,23 @@
 #ifndef __SYS_H__
 #define __SYS_H__
 
+#include <sched.h>
+
+/* File descriptor permissions */
+#define FD_READ 0
+#define FD_WRITE 1
+
+/* System buffer size for kernel operations */
+#define SYS_BUFFER_SIZE 256
+
+/* Kernel stack offsets for accessing saved context (used in thread/fork setup) */
+#define STACK_USER_EIP (KERNEL_STACK_SIZE - 5)  /* User EIP in hardware context */
+#define STACK_USER_ESP (KERNEL_STACK_SIZE - 2)  /* User ESP in hardware context */
+#define STACK_EAX (KERNEL_STACK_SIZE - 10)      /* EAX in software context */
+#define STACK_EBP (KERNEL_STACK_SIZE - 11)      /* EBP in software context */
+#define STACK_RET_ADDR (KERNEL_STACK_SIZE - 18) /* Return address for switch_context */
+#define STACK_FAKE_EBP (KERNEL_STACK_SIZE - 19) /* Fake EBP for switch_context pop */
+
 /**
  * KERNEL STACK LAYOUT FOR CHILD PROCESS (sys_fork)
  * ================================================
@@ -166,14 +183,16 @@ int check_fd(int fd, int permissions);
  *
  * This function creates a new thread that executes the specified function
  * with the given parameter. The thread shares the same address space as
- * the parent but has its own user stack.
+ * the parent but has its own user stack. The wrapper function is called
+ * first, which in turn calls the actual thread function and ensures
+ * ThreadExit is called when the function returns.
  *
  * @param function Pointer to the function the thread will execute.
  * @param parameter Parameter to pass to the thread function.
- * @param exit_routine Pointer to the routine to call when the thread function returns.
+ * @param wrapper Pointer to the thread wrapper function that calls function and ThreadExit.
  * @return Thread ID (TID) of the new thread on success, negative error code on failure.
  */
-int sys_create_thread(void (*function)(void *), void *parameter, void (*exit_routine)(void));
+int sys_create_thread(void (*function)(void *), void *parameter, void (*wrapper)(void));
 
 /**
  * @brief Exit the current thread.
@@ -192,18 +211,10 @@ void sys_exit_thread(void);
 int grow_user_stack(unsigned int fault_addr);
 
 /**
- * @brief Register a keyboard event handler.
+ * @brief Gets the thread identifier (TID) of the current thread.
  *
- * This function allows a user process to register a callback function
- * that will be invoked on keyboard events (key press/release).
- *
- * @param func Pointer to the callback function with signature:
- *             void func(char key, int pressed);
- *             where 'key' is the character of the key event and
- *             'pressed' is 1 for key press and 0 for key release.
- * @return 0 on success, negative error code on failure.
+ * @return The thread identifier (TID) of the current thread.
  */
-int KeyboardEvent(void (*func)(char key, int pressed));
-
+int sys_gettid(void);
 
 #endif /* __SYS_H__ */

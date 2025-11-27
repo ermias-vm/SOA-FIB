@@ -14,7 +14,7 @@
 #include <types.h>
 
 /* Maximum number of tasks in the system */
-#define NR_TASKS 10
+#define NR_TASKS 25
 
 /* Size of the kernel stack for each process in words */
 #define KERNEL_STACK_SIZE 1024
@@ -29,8 +29,8 @@ enum state_t {
     ST_BLOCKED /* Blocked waiting for an event */
 };
 
-/* Maximum TIDs per process (slots 1-5, so 5 threads per process) */
-#define MAX_TIDS_PER_PROCESS 5
+/* Maximum TIDs per process: 10 threads (slots 0-9) */
+#define MAX_TIDS_PER_PROCESS 10
 
 /* Process control block structure */
 struct task_struct {
@@ -46,12 +46,12 @@ struct task_struct {
     int pending_unblocks;                 /* Number of pending unblock operations */
 
     /* Thread support fields */
-    int TID;                              /* Thread identifier: PID*10 + slot (1-5). Idle=10 */
+    int TID;                              /* Thread identifier: PID*10 + slot (0-9). Idle=0 */
     int thread_count;                     /* Number of threads in process */
     struct task_struct *master_thread;    /* Pointer to master thread */
     struct list_head threads;             /* List of threads in this process */
     struct list_head thread_list;         /* Entry in master thread's threads list */
-    int tid_slots[6];                     /* TID slots: index 0 unused, 1-5 valid. 0=free, 1=used */
+    int tid_slots[MAX_TIDS_PER_PROCESS];  /* TID slots: indices 0-9. 0=free, 1=used */
     int *user_stack_ptr;                  /* Pointer to user stack for this thread */
     int user_stack_frames;                /* Number of pages allocated for user stack */
     unsigned int user_stack_region_start; /* First logical page reserved for the stack region */

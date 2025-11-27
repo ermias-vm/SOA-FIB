@@ -179,6 +179,9 @@ unblock_error:
     ret
 
 
+
+
+
 ENTRY(ThreadCreate)
     pushl %ebp
     movl %esp, %ebp
@@ -187,7 +190,7 @@ ENTRY(ThreadCreate)
     movl $6, %eax
     movl 0x08(%ebp), %ebx  # function pointer
     movl 0x0c(%ebp), %ecx  # parameter
-    leal ThreadExit, %edx  # exit_routine
+    leal thread_entry_wrapper, %edx  # wrapper function address
     
     pushl $tc_return
     pushl %ebp
@@ -251,6 +254,7 @@ gtid_error:
     movl $-1, %eax
     ret
 
+<<<<<<< HEAD
 
 ENTRY(KeyboardEvent)
     pushl %ebp
@@ -265,3 +269,12 @@ ENTRY(KeyboardEvent)
     popl %ebp
     ret
 
+=======
+ENTRY(thread_entry_wrapper)
+    movl 4(%esp), %eax      # %eax = function pointer
+    movl 8(%esp), %ecx      # %ecx = parameter
+    pushl %ecx
+    call *%eax
+    addl $4, %esp
+    call ThreadExit         # ALWAYS call ThreadExit when function returns
+>>>>>>> main

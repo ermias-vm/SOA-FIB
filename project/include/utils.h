@@ -82,6 +82,16 @@ extern unsigned long get_ticks(void);
 extern void itoa_hex(unsigned int num, char *buffer);
 
 /**
+ * @brief Convert unsigned integer to ASCII string.
+ *
+ * This function converts an unsigned integer to its decimal string representation.
+ * Handles the full range of unsigned int including values > INT_MAX.
+ * @param a Unsigned integer to convert.
+ * @param b Buffer to store the decimal string.
+ */
+extern void utoa(unsigned int a, char *b);
+
+/**
  * @brief Print system splash screen.
  *
  * This function prints the ZeOS startup splash screen with system information.

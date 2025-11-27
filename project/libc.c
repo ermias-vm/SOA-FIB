@@ -13,6 +13,9 @@
 
 int errno;
 
+/* Internal buffer for printf formatting */
+static char printf_buffer[PRINTF_BUFFER_SIZE];
+
 void itoa(int a, char *b) {
     int i, i1;
     char c;
@@ -83,6 +86,7 @@ void perror() {
     return;
 }
 
+<<<<<<< HEAD
 /* Keyboard wrapper function */
 void __kbd_wrapper(void (*func)(char, int), char key, int pressed) {
     func(key, pressed);
@@ -106,3 +110,80 @@ __asm__(
 
 /* Declaration - implementation is in sys_call_wrappers.S */
 extern int KeyboardEvent(void (*func)(char key, int pressed));
+=======
+void prints(const char *fmt, ...) {
+    __builtin_va_list args;
+    __builtin_va_start(args, fmt);
+
+    char *buf = printf_buffer;
+    int buf_idx = 0;
+    char num_buf[16];
+
+    while (*fmt && buf_idx < PRINTF_BUFFER_SIZE - 1) {
+        if (*fmt == '%' && *(fmt + 1)) {
+            fmt++;
+            switch (*fmt) {
+            case 'd': {
+                int val = __builtin_va_arg(args, int);
+                int is_neg = 0;
+                unsigned int uval;
+                if (val < 0) {
+                    is_neg = 1;
+                    uval = -(unsigned int)val;
+                } else {
+                    uval = (unsigned int)val;
+                }
+                /* Convert to string */
+                int i = 0;
+                if (uval == 0) {
+                    num_buf[i++] = '0';
+                } else {
+                    while (uval > 0 && i < 15) {
+                        num_buf[i++] = (uval % 10) + '0';
+                        uval /= 10;
+                    }
+                }
+                if (is_neg && buf_idx < PRINTF_BUFFER_SIZE - 1) {
+                    buf[buf_idx++] = '-';
+                }
+                /* Reverse and copy */
+                while (i > 0 && buf_idx < PRINTF_BUFFER_SIZE - 1) {
+                    buf[buf_idx++] = num_buf[--i];
+                }
+                break;
+            }
+            case 's': {
+                char *str = __builtin_va_arg(args, char *);
+                while (*str && buf_idx < PRINTF_BUFFER_SIZE - 1) {
+                    buf[buf_idx++] = *str++;
+                }
+                break;
+            }
+            case 'c': {
+                char c = (char)__builtin_va_arg(args, int);
+                buf[buf_idx++] = c;
+                break;
+            }
+            case '%':
+                buf[buf_idx++] = '%';
+                break;
+            default:
+                buf[buf_idx++] = '%';
+                if (buf_idx < PRINTF_BUFFER_SIZE - 1) {
+                    buf[buf_idx++] = *fmt;
+                }
+                break;
+            }
+            fmt++;
+        } else {
+            buf[buf_idx++] = *fmt++;
+        }
+    }
+
+    __builtin_va_end(args);
+
+    if (buf_idx > 0) {
+        write(1, buf, buf_idx);
+    }
+}
+>>>>>>> main

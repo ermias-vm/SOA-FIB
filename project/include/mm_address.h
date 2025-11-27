@@ -42,6 +42,9 @@
 /* Logical address where user space starts (1MB) */
 #define L_USER_START 0x100000
 
+/* Physical address where user code starts (1MB) */
+#define PH_USER_START 0x100000
+
 /* Initial ESP for user processes (top of data segment - 16 bytes) */
 #define USER_ESP L_USER_START + (NUM_PAG_DATA)*0x1000 - 16
 

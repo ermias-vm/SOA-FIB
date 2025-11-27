@@ -13,7 +13,7 @@
 
 // clang-format off
 #define THREAD_TEST         1   /* Enable/disable thread tests */
-#define IDLE_SWITCH_TEST    0   /* Test idle switch (exits init) */
+#define IDLE_SWITCH_TEST    1   /* Test idle switch (exits init) */
 // clang-format on
 
 /* Reset errno macro */
@@ -30,10 +30,10 @@
 #define MEDIUM_WORK_TIME 1500 /* 1.5 seconds */
 #define LONG_WORK_TIME 3000   /* 3 seconds */
 
-#define MAX_THREADS_PER_PROCESS 5 /* Maximum threads per process */
+#define MAX_THREADS_PER_PROCESS 10 /* Maximum threads per process (TIDs X0-X9) */
 
 /* Synchronization flags - shared between threads */
-#define MAX_SYNC_FLAGS 8
+#define MAX_SYNC_FLAGS 10
 
 /**
  * @brief Execute all thread test suites.
@@ -48,12 +48,13 @@ void execute_project_tests(void);
  * @brief Main thread test suite.
  *
  * This function runs all thread tests:
- * - Subtest 1: Create threads up to max limit (5 per process)
+ * - Subtest 1: Create threads up to max limit (10 per process)
  * - Subtest 2: Verify creation fails when limit reached
  * - Subtest 3: TID reuse after thread deletion
  * - Subtest 4: Process termination when last thread exits
  * - Subtest 5: Master thread reassignment when current master exits
  * - Subtest 6: Fork copies only current thread
+ * - Subtest 7: Thread wrapper calls ThreadExit on function return
  */
 void thread_tests(void);
 
@@ -88,6 +89,15 @@ void subtest_master_reassignment(void);
  * @param passed Pointer to store result (1 = passed, 0 = failed)
  */
 void subtest_fork_single_thread(int *passed);
+
+/**
+ * @brief Test that thread wrapper calls ThreadExit on function return.
+ *
+ * Creates a thread that returns without calling ThreadExit explicitly.
+ * The wrapper should automatically call ThreadExit, preventing a crash.
+ * @param passed Pointer to store result (1 = passed, 0 = failed)
+ */
+void subtest_wrapper_calls_exit(int *passed);
 
 /* ---- Utility Functions ---- */
 
