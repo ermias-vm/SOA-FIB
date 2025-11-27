@@ -86,7 +86,6 @@ void perror() {
     return;
 }
 
-<<<<<<< HEAD
 /* Keyboard wrapper function */
 void __kbd_wrapper(void (*func)(char, int), char key, int pressed) {
     func(key, pressed);
@@ -99,18 +98,18 @@ __asm__(
     "__kbd_wrapper_asm:\n"
     "    pushl %ebp\n"
     "    movl %esp, %ebp\n"
-    "    pushl 16(%ebp)\n"      
-    "    pushl 12(%ebp)\n"      
-    "    calll *8(%ebp)\n"      
-    "    addl $8, %esp\n"       
-    "    int $0x2b\n"           
+    "    pushl 16(%ebp)\n"
+    "    pushl 12(%ebp)\n"
+    "    calll *8(%ebp)\n"
+    "    addl $8, %esp\n"
+    "    int $0x2b\n"
     "    popl %ebp\n"
     "    ret\n"
 );
 
 /* Declaration - implementation is in sys_call_wrappers.S */
 extern int KeyboardEvent(void (*func)(char key, int pressed));
-=======
+
 void prints(const char *fmt, ...) {
     __builtin_va_list args;
     __builtin_va_start(args, fmt);
@@ -186,4 +185,3 @@ void prints(const char *fmt, ...) {
         write(1, buf, buf_idx);
     }
 }
->>>>>>> main

@@ -254,22 +254,20 @@ gtid_error:
     movl $-1, %eax
     ret
 
-<<<<<<< HEAD
-
 ENTRY(KeyboardEvent)
     pushl %ebp
     movl %esp, %ebp
     pushl %ebx
-    
+
     movl $22, %eax          /* syscall number - adjust as needed */
     movl 8(%ebp), %ebx      /* func parameter */
     int $0x80               /* syscall interrupt */
-    
+
     popl %ebx
     popl %ebp
     ret
 
-=======
+
 ENTRY(thread_entry_wrapper)
     movl 4(%esp), %eax      # %eax = function pointer
     movl 8(%esp), %ecx      # %ecx = parameter
@@ -277,4 +275,3 @@ ENTRY(thread_entry_wrapper)
     call *%eax
     addl $4, %esp
     call ThreadExit         # ALWAYS call ThreadExit when function returns
->>>>>>> main
