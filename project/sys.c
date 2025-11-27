@@ -647,10 +647,14 @@ void sys_exit_thread(void) {
     INIT_LIST_HEAD(&new_master->threads);
 
     /* Update all threads to point to new master */
-    list_for_each(pos, &master->threads) {
+    /* Must use list_for_each_safe because we modify the list during iteration */
+    struct list_head *tmp;
+    list_for_each_safe(pos, tmp, &master->threads) {
         struct task_struct *t = list_entry(pos, struct task_struct, thread_list);
         if (t == master) continue;
         t->master_thread = new_master;
+        /* Must remove from old list BEFORE adding to new list */
+        list_del(&t->thread_list);
         list_add_tail(&t->thread_list, &new_master->threads);
     }
 

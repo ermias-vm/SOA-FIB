@@ -136,6 +136,31 @@ void itoa_hex(unsigned int num, char *buffer) {
     buffer[10] = '\0';
 }
 
+void utoa(unsigned int a, char *b) {
+    int i, i1;
+    char c;
+
+    if (a == 0) {
+        b[0] = '0';
+        b[1] = 0;
+        return;
+    }
+
+    i = 0;
+    while (a > 0) {
+        b[i] = (a % 10) + '0';
+        a = a / 10;
+        i++;
+    }
+
+    for (i1 = 0; i1 < i / 2; i1++) {
+        c = b[i1];
+        b[i1] = b[i - i1 - 1];
+        b[i - i1 - 1] = c;
+    }
+    b[i] = 0;
+}
+
 void wait_ticks(int ticks_to_wait) {
     unsigned long start_ticks = get_ticks();
     while (get_ticks() - start_ticks < (unsigned long)ticks_to_wait) {

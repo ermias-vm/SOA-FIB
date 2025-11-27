@@ -101,18 +101,21 @@ void prints(const char *fmt, ...) {
             case 'd': {
                 int val = __builtin_va_arg(args, int);
                 int is_neg = 0;
+                unsigned int uval;
                 if (val < 0) {
                     is_neg = 1;
-                    val = -val;
+                    uval = -(unsigned int)val;
+                } else {
+                    uval = (unsigned int)val;
                 }
                 /* Convert to string */
                 int i = 0;
-                if (val == 0) {
+                if (uval == 0) {
                     num_buf[i++] = '0';
                 } else {
-                    while (val > 0 && i < 15) {
-                        num_buf[i++] = (val % 10) + '0';
-                        val /= 10;
+                    while (uval > 0 && i < 15) {
+                        num_buf[i++] = (uval % 10) + '0';
+                        uval /= 10;
                     }
                 }
                 if (is_neg && buf_idx < PRINTF_BUFFER_SIZE - 1) {

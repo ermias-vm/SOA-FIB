@@ -111,6 +111,7 @@ void printk_color_fmt(Word color, char *fmt, ...) {
     char buffer[32];
     char *str;
     int num;
+    unsigned int unum;
 
     for (int i = 0; fmt[i] != '\0'; i++) {
         if (fmt[i] != '%') {
@@ -124,9 +125,11 @@ void printk_color_fmt(Word color, char *fmt, ...) {
             num = __builtin_va_arg(args, int);
             if (num < 0) {
                 printc('-', color);
-                num = -num;
+                unum = -(unsigned int)num;
+            } else {
+                unum = (unsigned int)num;
             }
-            itoa(num, buffer);
+            utoa(unum, buffer);
             printk_color(buffer, color);
             break;
         case 'x': // Hexadecimal
