@@ -22,7 +22,6 @@ zeos/*~
 *.s
 *.bin
 *.out
-*.a
 *.so
 *.dylib
 build
