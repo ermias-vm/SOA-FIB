@@ -18,10 +18,6 @@
 #include <sys.h>
 #include <utils.h>
 
-#define READ 0
-#define WRITE 1
-#define BUFFER_SIZE 256
-
 static int stack_region_overlaps(const struct task_struct *task, unsigned int start,
                                  unsigned int pages);
 static int stack_region_in_use(struct task_struct *master, unsigned int start, unsigned int pages);
@@ -30,11 +26,11 @@ static int map_stack_pages(struct task_struct *master, unsigned int first_page,
                            unsigned int pages_to_map);
 static void release_thread_stack(struct task_struct *thread);
 
-char buffer_k[BUFFER_SIZE];
+char buffer_k[SYS_BUFFER_SIZE];
 
 int check_fd(int fd, int permissions) {
-    if (fd != 1) return -9;               /*EBADF*/
-    if (permissions != WRITE) return -13; /*EACCES*/
+    if (fd != 1) return -EBADF;
+    if (permissions != FD_WRITE) return -EACCES;
     return 0;
 }
 
@@ -257,15 +253,15 @@ int sys_fork() {
 int sys_write(int fd, char *buffer, int size) {
     int ret;
     if (size < 0) return -EINVAL;
-    if ((ret = check_fd(fd, WRITE))) return ret;
+    if ((ret = check_fd(fd, FD_WRITE))) return ret;
     if (!access_ok(VERIFY_READ, buffer, size)) return -EFAULT;
 
     int bytes_left = size;
     int written_bytes;
 
-    while (bytes_left > BUFFER_SIZE) {
-        copy_from_user(buffer, buffer_k, BUFFER_SIZE);
-        written_bytes = sys_write_console(buffer_k, BUFFER_SIZE);
+    while (bytes_left > SYS_BUFFER_SIZE) {
+        copy_from_user(buffer, buffer_k, SYS_BUFFER_SIZE);
+        written_bytes = sys_write_console(buffer_k, SYS_BUFFER_SIZE);
         bytes_left -= written_bytes;
         buffer += written_bytes;
     }
@@ -451,14 +447,6 @@ static void release_thread_stack(struct task_struct *thread) {
     thread->user_initial_esp = 0;
     thread->user_entry = 0;
 }
-
-/* Helpers to access saved context within kernel stack */
-#define STACK_USER_EIP (KERNEL_STACK_SIZE - 5)
-#define STACK_USER_ESP (KERNEL_STACK_SIZE - 2)
-#define STACK_EAX (KERNEL_STACK_SIZE - 10)
-#define STACK_EBP (KERNEL_STACK_SIZE - 11)
-#define STACK_RET_ADDR (KERNEL_STACK_SIZE - 18)
-#define STACK_FAKE_EBP (KERNEL_STACK_SIZE - 19)
 
 int sys_create_thread(void (*function)(void *), void *parameter, void (*wrapper)(void)) {
 #if DEBUG_INFO_THREAD_CREATE

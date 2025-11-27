@@ -16,11 +16,6 @@
 /** Screen  ***/
 /**************/
 
-/* VGA text mode constants */
-#define NUM_COLUMNS 80            /* Number of columns in text mode (80 chars per row) */
-#define NUM_ROWS 25               /* Number of rows in text mode (25 rows total) */
-#define VIDEO_MEMORY_BASE 0xb8000 /* Base address of VGA text mode video memory */
-
 /* Current cursor column position (0-79) */
 Byte x = 0;
 

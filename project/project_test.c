@@ -54,7 +54,6 @@ void wait_for_flag(int flag_index) {
     }
 }
 
-/* Wait for multiple flags to be set */
 static void wait_for_flags(int count) {
     for (int i = 0; i < count; i++) {
         wait_for_flag(i);
@@ -68,13 +67,8 @@ static void wait_for_flags(int count) {
 void simple_thread_func(void *arg) {
     int flag_index = *(int *)arg;
 
-    write_current_info();
-    msg = "Simple thread running, will set flag ";
-    write(1, msg, strlen(msg));
-    itoa(flag_index, buffer);
-    write(1, buffer, strlen(buffer));
-    msg = "\n";
-    write(1, msg, strlen(msg));
+    prints("[PID %d] [TID %d] Simple thread running, will set flag %d\n", getpid(), gettid(),
+           flag_index);
 
     /* Signal completion */
     set_flag(flag_index);
@@ -88,19 +82,13 @@ void thread_work(void *arg) {
 
     write_current_info();
     msg = "Thread working for ";
-    write(1, msg, strlen(msg));
-    itoa(ticks, buffer);
-    write(1, buffer, strlen(buffer));
-    msg = " ticks...\n";
-    write(1, msg, strlen(msg));
+    prints("Thread working for %d ticks...\n", ticks);
 
     while (gettime() - start_time < ticks) {
         /* Working... */
     }
 
-    write_current_info();
-    msg = "Thread finished work\n";
-    write(1, msg, strlen(msg));
+    prints("[PID %d] [TID %d] Thread finished work\n", getpid(), gettid());
 
     ThreadExit();
 }
@@ -108,35 +96,43 @@ void thread_work(void *arg) {
 void thread_block_func(void *arg) {
     int flag_index = *(int *)arg;
 
-    write_current_info();
-    msg = "Thread will set flag and block\n";
-    write(1, msg, strlen(msg));
+    prints("[PID %d] [TID %d] Thread will set flag and block\n", getpid(), gettid());
 
     set_flag(flag_index);
     block();
 
     /* After being unblocked */
-    write_current_info();
-    msg = "Thread was unblocked\n";
-    write(1, msg, strlen(msg));
+    prints("[PID %d] [TID %d] Thread was unblocked\n", getpid(), gettid());
 
     ThreadExit();
 }
 
-/* Thread that just exits immediately - for testing thread limits */
 static void minimal_thread_func(void *arg) {
     int flag_index = *(int *)arg;
     set_flag(flag_index);
     ThreadExit();
 }
 
-/* Thread for master reassignment test - stays alive */
+static void no_explicit_exit_func(void *arg) {
+    int flag_index = *(int *)arg;
+
+    prints("[PID %d] [TID %d] Thread running WITHOUT explicit ThreadExit\n", getpid(), gettid());
+
+    /* Set flag to signal we executed */
+    set_flag(flag_index);
+
+    prints("[PID %d] [TID %d] Returning from function (wrapper should call ThreadExit)\n", getpid(),
+           gettid());
+
+    /* NO ThreadExit() call - the wrapper should handle this */
+    return;
+}
+
 static void survivor_thread_func(void *arg) {
     int flag_index = *(int *)arg;
 
-    write_current_info();
-    msg = "Survivor thread started, waiting for master to exit\n";
-    write(1, msg, strlen(msg));
+    prints("[PID %d] [TID %d] Survivor thread started, waiting for master to exit\n", getpid(),
+           gettid());
 
     /* Signal that we're ready */
     set_flag(flag_index);
@@ -146,9 +142,8 @@ static void survivor_thread_func(void *arg) {
     while (gettime() - start < MEDIUM_WORK_TIME) {
     }
 
-    write_current_info();
-    msg = "Survivor thread: I am now master (hopefully), exiting process\n";
-    write(1, msg, strlen(msg));
+    prints("[PID %d] [TID %d] Survivor thread: I am now master (hopefully), exiting process\n",
+           getpid(), gettid());
 
     /* Exit the process */
     exit();
@@ -166,48 +161,25 @@ void waitTicks(int ticks) {
 }
 
 void write_current_info(void) {
-    msg = "[PID ";
-    write(1, msg, strlen(msg));
-    itoa(getpid(), buffer);
-    write(1, buffer, strlen(buffer));
-    msg = "] [TID ";
-    write(1, msg, strlen(msg));
-    itoa(gettid(), buffer);
-    write(1, buffer, strlen(buffer));
-    msg = "] ";
-    write(1, msg, strlen(msg));
+    prints("[PID %d] [TID %d] ", getpid(), gettid());
 }
 
 static void print_subtest_header(int num, char *name) {
-    msg = "\n[SUBTEST ";
-    write(1, msg, strlen(msg));
-    itoa(num, buffer);
-    write(1, buffer, strlen(buffer));
-    msg = "] ";
-    write(1, msg, strlen(msg));
-    write(1, name, strlen(name));
-    msg = "\n";
-    write(1, msg, strlen(msg));
+    prints("\n[SUBTEST %d] %s\n", num, name);
 }
 
 static void print_subtest_result(int passed) {
     if (passed) {
-        msg = "-> PASSED\n";
+        prints("-> PASSED\n");
     } else {
-        msg = "-> FAILED\n";
+        prints("-> FAILED\n");
     }
-    write(1, msg, strlen(msg));
 }
 
 /* ============================================================
  *                    SUBTEST IMPLEMENTATIONS
  * ============================================================ */
 
-/**
- * Subtest 1 & 2: Create maximum threads and verify limit
- * Note: MAX_THREADS_PER_PROCESS (10) includes the master thread,
- *       so we can only create 9 additional threads (slots 1-9).
- */
 void subtest_max_threads(int *passed) {
     /* Master already uses 1 slot (slot 0), so we can create MAX - 1 new threads */
     int max_new_threads = MAX_THREADS_PER_PROCESS - 1;
@@ -220,13 +192,8 @@ void subtest_max_threads(int *passed) {
     int flag_indices[MAX_THREADS_PER_PROCESS];
     int created = 0;
 
-    write_current_info();
-    msg = "Creating up to ";
-    write(1, msg, strlen(msg));
-    itoa(max_new_threads, buffer);
-    write(1, buffer, strlen(buffer));
-    msg = " additional threads (master uses 1 slot)...\n";
-    write(1, msg, strlen(msg));
+    prints("[PID %d] [TID %d] Creating up to %d additional threads (master uses 1 slot)...\n",
+           getpid(), gettid(), max_new_threads);
 
     /* Try to create MAX_THREADS_PER_PROCESS threads, expect only max_new_threads to succeed */
     for (int i = 0; i < MAX_THREADS_PER_PROCESS; i++) {
@@ -235,27 +202,12 @@ void subtest_max_threads(int *passed) {
 
         if (tids[i] > 0) {
             created++;
-            write_current_info();
-            msg = "Created thread TID ";
-            write(1, msg, strlen(msg));
-            itoa(tids[i], buffer);
-            write(1, buffer, strlen(buffer));
-            msg = "\n";
-            write(1, msg, strlen(msg));
+            prints("[PID %d] [TID %d] Created thread TID %d\n", getpid(), gettid(), tids[i]);
         }
     }
 
-    write_current_info();
-    msg = "Created ";
-    write(1, msg, strlen(msg));
-    itoa(created, buffer);
-    write(1, buffer, strlen(buffer));
-    msg = "/";
-    write(1, msg, strlen(msg));
-    itoa(max_new_threads, buffer);
-    write(1, buffer, strlen(buffer));
-    msg = " additional threads\n";
-    write(1, msg, strlen(msg));
+    prints("[PID %d] [TID %d] Created %d/%d additional threads\n", getpid(), gettid(), created,
+           max_new_threads);
 
     /* Expect exactly max_new_threads (4) to be created */
     int test1_passed = (created == max_new_threads);
@@ -283,22 +235,13 @@ void subtest_max_threads(int *passed) {
     int extra_flag = 9;
     int extra_tid = ThreadCreate(simple_thread_func, &extra_flag);
 
-    write_current_info();
     if (extra_tid < 0) {
-        msg = "Correctly rejected 10th additional thread (returned ";
-        write(1, msg, strlen(msg));
-        itoa(extra_tid, buffer);
-        write(1, buffer, strlen(buffer));
-        msg = ")\n";
-        write(1, msg, strlen(msg));
+        prints("[PID %d] [TID %d] Correctly rejected 10th additional thread (returned %d)\n",
+               getpid(), gettid(), extra_tid);
         *passed = 1;
     } else {
-        msg = "ERROR: Created extra thread with TID ";
-        write(1, msg, strlen(msg));
-        itoa(extra_tid, buffer);
-        write(1, buffer, strlen(buffer));
-        msg = " (should have failed)\n";
-        write(1, msg, strlen(msg));
+        prints("[PID %d] [TID %d] ERROR: Created extra thread with TID %d (should have failed)\n",
+               getpid(), gettid(), extra_tid);
         *passed = 0;
     }
 
@@ -310,9 +253,6 @@ void subtest_max_threads(int *passed) {
     wait_for_flags(created);
 }
 
-/**
- * Subtest 3: TID reuse after thread deletion
- */
 void subtest_tid_reuse(int *passed) {
     print_subtest_header(3, "TID reuse after thread deletion");
 
@@ -322,13 +262,7 @@ void subtest_tid_reuse(int *passed) {
     int flag0 = 0;
     int first_tid = ThreadCreate(minimal_thread_func, &flag0);
 
-    write_current_info();
-    msg = "First thread created with TID ";
-    write(1, msg, strlen(msg));
-    itoa(first_tid, buffer);
-    write(1, buffer, strlen(buffer));
-    msg = "\n";
-    write(1, msg, strlen(msg));
+    prints("[PID %d] [TID %d] First thread created with TID %d\n", getpid(), gettid(), first_tid);
 
     /* Wait for thread to complete */
     wait_for_flag(0);
@@ -341,13 +275,7 @@ void subtest_tid_reuse(int *passed) {
     int flag1 = 0;
     int second_tid = ThreadCreate(minimal_thread_func, &flag1);
 
-    write_current_info();
-    msg = "Second thread created with TID ";
-    write(1, msg, strlen(msg));
-    itoa(second_tid, buffer);
-    write(1, buffer, strlen(buffer));
-    msg = "\n";
-    write(1, msg, strlen(msg));
+    prints("[PID %d] [TID %d] Second thread created with TID %d\n", getpid(), gettid(), second_tid);
 
     /* Wait for completion */
     wait_for_flag(0);
@@ -355,23 +283,14 @@ void subtest_tid_reuse(int *passed) {
     /* Check if TID was reused (should be same or another freed TID) */
     if (second_tid > 0) {
         if (second_tid == first_tid) {
-            write_current_info();
-            msg = "TID ";
-            write(1, msg, strlen(msg));
-            itoa(first_tid, buffer);
-            write(1, buffer, strlen(buffer));
-            msg = " was reused\n";
-            write(1, msg, strlen(msg));
+            prints("[PID %d] [TID %d] TID %d was reused\n", getpid(), gettid(), first_tid);
         } else {
-            write_current_info();
-            msg = "Different TID used (still valid - TIDs are being freed)\n";
-            write(1, msg, strlen(msg));
+            prints("[PID %d] [TID %d] Different TID used (still valid - TIDs are being freed)\n",
+                   getpid(), gettid());
         }
         *passed = 1;
     } else {
-        write_current_info();
-        msg = "ERROR: Could not create second thread\n";
-        write(1, msg, strlen(msg));
+        prints("[PID %d] [TID %d] ERROR: Could not create second thread\n", getpid(), gettid());
         *passed = 0;
     }
 
@@ -380,62 +299,47 @@ void subtest_tid_reuse(int *passed) {
     if (*passed) thread_subtests_passed++;
 }
 
-/**
- * Subtest 4: Process terminates when last thread exits
- * This must be run in a child process since it terminates the process.
- */
 void subtest_last_thread_exits(void) {
     print_subtest_header(4, "Process terminates when last thread exits");
 
-    write_current_info();
-    msg = "Creating child process to test last thread exit...\n";
-    write(1, msg, strlen(msg));
+    prints("[PID %d] [TID %d] Creating child process to test last thread exit...\n", getpid(),
+           gettid());
 
     int pid = fork();
 
     if (pid == 0) {
         /* Child process - we are the only thread initially */
-        write_current_info();
-        msg = "Child: I am the only thread, calling ThreadExit()\n";
-        write(1, msg, strlen(msg));
-
-        msg = "-> PASSED (if this prints and process exits)\n";
-        write(1, msg, strlen(msg));
+        prints("[PID %d] [TID %d] Child: I am the only thread, calling ThreadExit()\n", getpid(),
+               gettid());
+        prints("-> PASSED (if this prints and process exits)\n");
 
         /* This should terminate the process */
         ThreadExit();
 
         /* Should never reach here */
-        msg = "-> FAILED: Code after ThreadExit executed!\n";
-        write(1, msg, strlen(msg));
+        prints("-> FAILED: Code after ThreadExit executed!\n");
         exit();
 
     } else if (pid > 0) {
         /* Parent waits for child to complete */
         waitTicks(MEDIUM_WORK_TIME);
 
-        write_current_info();
-        msg = "Parent: Child process should have terminated\n";
-        write(1, msg, strlen(msg));
+        prints("[PID %d] [TID %d] Parent: Child process should have terminated\n", getpid(),
+               gettid());
 
         thread_subtests_run++;
         thread_subtests_passed++; /* If we got here, child exited properly */
     } else {
-        msg = "-> FAILED: Fork failed\n";
-        write(1, msg, strlen(msg));
+        prints("-> FAILED: Fork failed\n");
         thread_subtests_run++;
     }
 }
 
-/**
- * Subtest 5: Master thread reassignment when current master exits
- */
 void subtest_master_reassignment(void) {
     print_subtest_header(5, "Master thread reassignment when master exits");
 
-    write_current_info();
-    msg = "Creating child process to test master reassignment...\n";
-    write(1, msg, strlen(msg));
+    prints("[PID %d] [TID %d] Creating child process to test master reassignment...\n", getpid(),
+           gettid());
 
     int pid = fork();
 
@@ -443,41 +347,29 @@ void subtest_master_reassignment(void) {
         /* Child process - we are the master thread */
         clear_all_flags();
 
-        write_current_info();
-        msg = "Child (Master): Creating survivor thread\n";
-        write(1, msg, strlen(msg));
+        prints("[PID %d] [TID %d] Child (Master): Creating survivor thread\n", getpid(), gettid());
 
         int flag_idx = 0;
         int survivor_tid = ThreadCreate(survivor_thread_func, &flag_idx);
 
         if (survivor_tid > 0) {
-            write_current_info();
-            msg = "Child (Master): Created survivor TID ";
-            write(1, msg, strlen(msg));
-            itoa(survivor_tid, buffer);
-            write(1, buffer, strlen(buffer));
-            msg = "\n";
-            write(1, msg, strlen(msg));
+            prints("[PID %d] [TID %d] Child (Master): Created survivor TID %d\n", getpid(),
+                   gettid(), survivor_tid);
 
             /* Wait for survivor to be ready */
             wait_for_flag(0);
 
-            write_current_info();
-            msg = "Child (Master): Exiting, survivor should become master\n";
-            write(1, msg, strlen(msg));
-
-            msg = "-> PASSED (if survivor continues and process eventually exits)\n";
-            write(1, msg, strlen(msg));
+            prints("[PID %d] [TID %d] Child (Master): Exiting, survivor should become master\n",
+                   getpid(), gettid());
+            prints("-> PASSED (if survivor continues and process eventually exits)\n");
 
             /* Master exits - survivor should take over */
             ThreadExit();
 
             /* Should never reach here */
-            msg = "-> FAILED: Code after ThreadExit executed!\n";
-            write(1, msg, strlen(msg));
+            prints("-> FAILED: Code after ThreadExit executed!\n");
         } else {
-            msg = "-> FAILED: Could not create survivor thread\n";
-            write(1, msg, strlen(msg));
+            prints("-> FAILED: Could not create survivor thread\n");
         }
         exit();
 
@@ -485,26 +377,21 @@ void subtest_master_reassignment(void) {
         /* Parent waits for child to complete */
         waitTicks(LONG_WORK_TIME);
 
-        write_current_info();
-        msg = "Parent: Child process should have completed\n";
-        write(1, msg, strlen(msg));
+        prints("[PID %d] [TID %d] Parent: Child process should have completed\n", getpid(),
+               gettid());
 
         thread_subtests_run++;
         thread_subtests_passed++; /* If we got here, reassignment worked */
     } else {
-        msg = "-> FAILED: Fork failed\n";
-        write(1, msg, strlen(msg));
+        prints("-> FAILED: Fork failed\n");
         thread_subtests_run++;
     }
 }
 
-/* Thread that works for a while then exits - for fork test */
 static void long_work_thread_func(void *arg) {
     int flag_index = *(int *)arg;
 
-    write_current_info();
-    msg = "Secondary thread started, working...\n";
-    write(1, msg, strlen(msg));
+    prints("[PID %d] [TID %d] Secondary thread started, working...\n", getpid(), gettid());
 
     /* Signal that we've started */
     set_flag(flag_index);
@@ -515,34 +402,24 @@ static void long_work_thread_func(void *arg) {
         /* Working... */
     }
 
-    write_current_info();
-    msg = "Secondary thread finished work, exiting\n";
-    write(1, msg, strlen(msg));
+    prints("[PID %d] [TID %d] Secondary thread finished work, exiting\n", getpid(), gettid());
 
     ThreadExit();
 }
 
-/**
- * Subtest 6: Fork copies only current thread
- * This test creates a secondary thread, then forks. The child should only
- * have the calling thread, not the secondary thread.
- */
 void subtest_fork_single_thread(int *passed) {
     print_subtest_header(6, "Fork copies only current thread");
 
     clear_all_flags();
 
     /* Create a secondary thread that will work during fork */
-    write_current_info();
-    msg = "Creating secondary thread before fork...\n";
-    write(1, msg, strlen(msg));
+    prints("[PID %d] [TID %d] Creating secondary thread before fork...\n", getpid(), gettid());
 
     int flag_idx = 0;
     int secondary_tid = ThreadCreate(long_work_thread_func, &flag_idx);
 
     if (secondary_tid <= 0) {
-        msg = "-> FAILED: Could not create secondary thread\n";
-        write(1, msg, strlen(msg));
+        prints("-> FAILED: Could not create secondary thread\n");
         *passed = 0;
         print_subtest_result(*passed);
         thread_subtests_run++;
@@ -552,13 +429,8 @@ void subtest_fork_single_thread(int *passed) {
     /* Wait for secondary thread to signal it has started */
     wait_for_flag(0);
 
-    write_current_info();
-    msg = "Secondary thread TID ";
-    write(1, msg, strlen(msg));
-    itoa(secondary_tid, buffer);
-    write(1, buffer, strlen(buffer));
-    msg = " is working, now forking...\n";
-    write(1, msg, strlen(msg));
+    prints("[PID %d] [TID %d] Secondary thread TID %d is working, now forking...\n", getpid(),
+           gettid(), secondary_tid);
 
     int child_pid = fork();
 
@@ -567,13 +439,7 @@ void subtest_fork_single_thread(int *passed) {
         /* Child starts fresh with 1 thread (master), so can create 9 more */
         int max_new_threads = MAX_THREADS_PER_PROCESS - 1;
 
-        write_current_info();
-        msg = "Child: I should be the only thread (TID ";
-        write(1, msg, strlen(msg));
-        itoa(gettid(), buffer);
-        write(1, buffer, strlen(buffer));
-        msg = ")\n";
-        write(1, msg, strlen(msg));
+        prints("[PID %d] [TID %d] Child: I should be the only thread\n", getpid(), gettid());
 
         /* Try to create threads - if fork only copied us, we should be able to create
          * max_new_threads */
@@ -587,24 +453,13 @@ void subtest_fork_single_thread(int *passed) {
             if (test_tids[i] > 0) can_create++;
         }
 
-        write_current_info();
-        msg = "Child: Created ";
-        write(1, msg, strlen(msg));
-        itoa(can_create, buffer);
-        write(1, buffer, strlen(buffer));
-        msg = " threads (expected ";
-        write(1, msg, strlen(msg));
-        itoa(max_new_threads, buffer);
-        write(1, buffer, strlen(buffer));
-        msg = ")\n";
-        write(1, msg, strlen(msg));
+        prints("[PID %d] [TID %d] Child: Created %d threads (expected %d)\n", getpid(), gettid(),
+               can_create, max_new_threads);
 
         if (can_create == max_new_threads) {
-            msg = "-> PASSED (fork copied only current thread)\n";
-            write(1, msg, strlen(msg));
+            prints("-> PASSED (fork copied only current thread)\n");
         } else {
-            msg = "-> FAILED (fork may have copied other threads)\n";
-            write(1, msg, strlen(msg));
+            prints("-> FAILED (fork may have copied other threads)\n");
         }
 
         /* Wait for threads to complete and exit */
@@ -613,20 +468,12 @@ void subtest_fork_single_thread(int *passed) {
 
     } else if (child_pid > 0) {
         /* Parent - wait for child and our secondary thread */
-        write_current_info();
-        msg = "Parent: Forked child PID ";
-        write(1, msg, strlen(msg));
-        itoa(child_pid, buffer);
-        write(1, buffer, strlen(buffer));
-        msg = "\n";
-        write(1, msg, strlen(msg));
+        prints("[PID %d] [TID %d] Parent: Forked child PID %d\n", getpid(), gettid(), child_pid);
 
         /* Wait for child to complete its test and for secondary thread to finish */
         waitTicks(LONG_WORK_TIME + MEDIUM_WORK_TIME);
 
-        write_current_info();
-        msg = "Parent: Test completed\n";
-        write(1, msg, strlen(msg));
+        prints("[PID %d] [TID %d] Parent: Test completed\n", getpid(), gettid());
 
         *passed = 1; /* Success if we reach here */
         print_subtest_result(*passed);
@@ -634,12 +481,47 @@ void subtest_fork_single_thread(int *passed) {
         if (*passed) thread_subtests_passed++;
 
     } else {
-        msg = "-> FAILED: Fork failed\n";
-        write(1, msg, strlen(msg));
+        prints("-> FAILED: Fork failed\n");
         *passed = 0;
         print_subtest_result(*passed);
         thread_subtests_run++;
     }
+}
+
+void subtest_wrapper_calls_exit(int *passed) {
+    print_subtest_header(7, "Wrapper calls ThreadExit on function return");
+
+    write_current_info();
+    prints("Creating thread that returns without explicit ThreadExit...\n");
+
+    clear_all_flags();
+
+    int flag_idx = 0;
+    int tid = ThreadCreate(no_explicit_exit_func, &flag_idx);
+
+    if (tid <= 0) {
+        prints("-> FAILED: Could not create thread\n");
+        *passed = 0;
+        print_subtest_result(*passed);
+        thread_subtests_run++;
+        return;
+    }
+
+    prints("[PID %d] [TID %d] Created thread TID %d (no explicit exit)\n", getpid(), gettid(), tid);
+
+    /* Wait for the thread to signal it executed */
+    wait_for_flag(0);
+
+    /* Give time for the thread to return and wrapper to call ThreadExit */
+    waitTicks(MIN_WORK_TIME);
+
+    /* If we get here without crashing, the wrapper worked */
+    prints("[PID %d] [TID %d] System stable - wrapper called ThreadExit\n", getpid(), gettid());
+    *passed = 1;
+
+    print_subtest_result(*passed);
+    thread_subtests_run++;
+    if (*passed) thread_subtests_passed++;
 }
 
 /* ============================================================
@@ -652,9 +534,7 @@ void thread_tests(void) {
     thread_subtests_run = 0;
     thread_subtests_passed = 0;
 
-    write_current_info();
-    msg = "Starting thread test suite...\n";
-    write(1, msg, strlen(msg));
+    prints("[PID %d] [TID %d] Starting thread test suite...\n", getpid(), gettid());
 
     int result;
 
@@ -673,54 +553,39 @@ void thread_tests(void) {
     /* Subtest 6: Fork copies only current thread */
     subtest_fork_single_thread(&result);
 
+    /* Subtest 7: Wrapper calls ThreadExit automatically */
+    subtest_wrapper_calls_exit(&result);
+
     /* Print thread test summary */
-    msg = "\n========================================\n";
-    write(1, msg, strlen(msg));
-    msg = "[THREAD_TESTS] Summary: ";
-    write(1, msg, strlen(msg));
-    itoa(thread_subtests_passed, buffer);
-    write(1, buffer, strlen(buffer));
-    msg = "/";
-    write(1, msg, strlen(msg));
-    itoa(thread_subtests_run, buffer);
-    write(1, buffer, strlen(buffer));
-    msg = " subtests passed\n";
-    write(1, msg, strlen(msg));
-    msg = "========================================\n";
-    write(1, msg, strlen(msg));
+    prints("\n========================================\n");
+    prints("[THREAD_TESTS] Summary: %d/%d subtests passed\n", thread_subtests_passed,
+           thread_subtests_run);
+    prints("========================================\n");
 
     int all_passed = (thread_subtests_passed == thread_subtests_run);
     print_test_result("Thread Tests", all_passed);
 }
 
 void execute_project_tests(void) {
-    msg = "\n=========================================\n";
-    write(1, msg, strlen(msg));
-    msg = "      PROJECT TEST SUITE                 \n";
-    write(1, msg, strlen(msg));
-    msg = "=========================================\n\n";
-    write(1, msg, strlen(msg));
+    prints("\n=========================================\n");
+    prints("      PROJECT TEST SUITE                 \n");
+    prints("=========================================\n\n");
 
-    write_current_info();
-    msg = "Coordinator thread starting tests...\n\n";
-    write(1, msg, strlen(msg));
+    prints("[PID %d] [TID %d] Coordinator thread starting tests...\n\n", getpid(), gettid());
 
 #if THREAD_TEST
     RESET_ERRNO();
     thread_tests();
 #endif
 
-    msg = "\n=========================================\n";
-    write(1, msg, strlen(msg));
-    msg = "      ALL PROJECT TESTS COMPLETED        \n";
-    write(1, msg, strlen(msg));
-    msg = "=========================================\n\n";
-    write(1, msg, strlen(msg));
+    prints("\n=========================================\n");
+    prints("      ALL PROJECT TESTS COMPLETED        \n");
+    prints("=========================================\n\n");
 
 #if IDLE_SWITCH_TEST
-    write_current_info();
-    msg = "Terminating init process. System will switch to idle.\n";
-    write(1, msg, strlen(msg));
+    prints("\n--- Testing: IDLE SWITCH ---\n");
+    prints("[PID %d] [TID %d] Terminating init process. System will switch to idle.\n", getpid(),
+           gettid());
     exit();
 #endif
 }

@@ -9,55 +9,62 @@ int ThreadCreate(void (*function)(void* arg), void* parameter);
   - Crea un nuevo thread que ejecuta function(parameter)
   - Stack inicial: 1 página, con crecimiento dinámico via page faults
   - Usa thread_entry_wrapper para garantizar que ThreadExit siempre se llame
+  - Retorna TID del nuevo thread o error negativo (-ENOMEM si no hay tasks)
 
 void ThreadExit(void);
   - Termina el thread actual y libera su stack
   - Si es el último thread del proceso, termina el proceso completo
+  - Si el thread es master, reasigna master al siguiente thread activo
 
 2. ESQUEMA DE TIDs
 ------------------
 
 TID = PID * 10 + slot (0-9)
-  - 10 threads máximo por proceso
-  - Idle: TID = 0
+  - 10 threads máximo por proceso (MAX_TIDS_PER_PROCESS)
+  - Idle: TID = 0 (único thread del proceso idle)
   - Init (PID 1): TIDs 10-19
   - Procesos hijos: TIDs PID*10 hasta PID*10+9
+  - tid_slots[10] en task_struct: 1=usado, 0=libre
 
-3. THREAD WRAPPER
------------------
+3. THREAD ENTRY WRAPPER
+-----------------------
 
 El thread_entry_wrapper (sys_call_wrappers.S) envuelve la función del usuario:
-  1. Kernel configura thread para empezar en thread_entry_wrapper
-  2. Stack contiene: [retaddr][function][parameter]
-  3. wrapper llama function(parameter)
+  1. Kernel configura EIP del nuevo thread a thread_entry_wrapper
+  2. Stack usuario contiene: [retaddr(0)][function][parameter]
+  3. wrapper: movl 4(%esp),%eax; movl 8(%esp),%ecx; pushl %ecx; call *%eax
   4. Cuando function retorna, wrapper llama ThreadExit automáticamente
 
 Esto garantiza que ThreadExit siempre se llame aunque el programador lo olvide.
+El kernel usa ret_from_fork para la transición kernel→user del nuevo thread.
 
 4. USER STACKS
 --------------
 
 - Cada thread tiene su propio stack fuera de la zona data+stack
-- THREAD_STACK_REGION_PAGES = 8 páginas reservadas por thread
+- THREAD_STACK_REGION_PAGES = 8 páginas reservadas por thread (gap incluido)
 - THREAD_STACK_INITIAL_PAGES = 1 página mapeada inicialmente
 - Crecimiento dinámico: page fault en gap → grow_user_stack() asigna página
-- El primer thread de init también tiene stack dedicado
+- El primer thread de init también tiene stack dedicado (no usa data+stack)
+- find_free_stack_region() busca región libre en page directory
 
 5. MODIFICACIONES EN FORK
 -------------------------
 
 - Fork solo copia el thread que llama (no los otros threads del proceso)
 - El hijo empieza con thread_count = 1 y tid_slots[] inicializado
-- Se copia el user stack del thread padre al hijo
+- Se copia el user stack del thread padre al hijo usando mapping temporal
+- FORK_TEMP_MAPPING_PAGE evita conflictos con regiones de thread stacks
 
 6. ARCHIVOS MODIFICADOS
 -----------------------
 
-include/sched.h    - MAX_TIDS_PER_PROCESS=10, campos thread en task_struct
-include/sys.h      - Constantes THREAD_STACK_*, prototipo sys_create_thread
-sched.c            - init_tid_slots, allocate_tid, free_tid, init_task1 con stack
-sys.c              - sys_fork, sys_create_thread, sys_exit_thread, grow_user_stack
+include/sched.h     - MAX_TIDS_PER_PROCESS=10, campos thread en task_struct
+include/sys.h       - Constantes THREAD_STACK_*, prototipo sys_create_thread
+include/libc.h      - thread_entry_wrapper declaración
+sched.c             - init_tid_slots, allocate_tid, free_tid, init_task1 con stack
+sys.c               - sys_fork, sys_create_thread, sys_exit_thread, grow_user_stack
 sys_call_wrappers.S - thread_entry_wrapper, ThreadCreate pasa wrapper al kernel
-interrupt.c        - pageFault_routine llama grow_user_stack
+interrupt.c         - pageFault_routine llama grow_user_stack
 
 ================================================================================

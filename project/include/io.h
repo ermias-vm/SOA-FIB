@@ -40,6 +40,11 @@
 #define WARNING_COLOR MAKE_COLOR(BLACK, YELLOW)
 #define INFO_COLOR MAKE_COLOR(BLACK, LIGHT_BLUE)
 
+/* VGA text mode constants */
+#define NUM_COLUMNS 80            /* Number of columns in text mode */
+#define NUM_ROWS 25               /* Number of rows in text mode */
+#define VIDEO_MEMORY_BASE 0xb8000 /* Base address of VGA text mode video memory */
+
 /** Screen functions **/
 /**********************/
 

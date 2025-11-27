@@ -11,6 +11,9 @@
 
 #include <stats.h>
 
+/* Buffer size for prints() formatting */
+#define PRINTF_BUFFER_SIZE 256
+
 /**
  * @brief Convert integer to ASCII string.
  *
@@ -174,5 +177,25 @@ void ThreadExit(void);
  * This guarantees ThreadExit is always called, even if the user forgets.
  */
 void thread_entry_wrapper(void);
+
+/**
+ * @brief Formatted print to stdout (user space printf).
+ *
+ * This function formats a string with variable arguments and writes
+ * it to stdout. Similar to printf but simplified for ZeOS user space.
+ * Supports format specifiers: %d (int), %s (string), %c (char), %% (literal %).
+ *
+ * @param fmt Format string with optional format specifiers.
+ * @param ... Variable arguments matching format specifiers.
+ */
+void prints(const char *fmt, ...);
+
+/**
+ * @brief Print error message based on errno.
+ *
+ * This function prints an error message corresponding to the current
+ * value of errno.
+ */
+void perror(void);
 
 #endif /* __LIBC_H__ */
