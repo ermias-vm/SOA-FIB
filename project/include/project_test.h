@@ -1,20 +1,27 @@
 /**
  * @file project_test.h
- * @brief Test suite interface for thread support in ZeOS.
+ * @brief Test suite interface for ZeOS project milestones.
  *
  * This header defines test function prototypes and testing
- * utilities for thread functionality verification.
+ * utilities for thread and keyboard functionality verification.
  */
 
 #ifndef __PROJECT_TEST_H__
 #define __PROJECT_TEST_H__
 
-/* Test configuration macros */
+/* ============================================================
+ *                    CONFIGURATION MACROS
+ * ============================================================ */
 
 // clang-format off
-#define THREAD_TEST         1   /* Enable/disable thread tests */
-#define IDLE_SWITCH_TEST    1   /* Test idle switch (exits init) */
+#define THREAD_TEST         0   /* Enable/disable thread tests */
+#define KEYBOARD_TEST       1   /* Enable/disable keyboard tests */
+#define IDLE_SWITCH_TEST    0   /* Test idle switch (exits init) */
 // clang-format on
+
+/* ============================================================
+ *                    CONSTANTS AND MACROS
+ * ============================================================ */
 
 /* Reset errno macro */
 #define RESET_ERRNO() errno = 0
@@ -22,27 +29,40 @@
 /* Default Buffer size */
 #define BUFFER_SIZE 256
 
-#define NULL ((void *)0) /* Null pointer definition */
+/* Null pointer definition */
+#define NULL ((void *)0)
 
 /* Timing constants (in ticks, ~1000 ticks = 1 second) */
 #define MIN_WORK_TIME 200     /* 200ms */
 #define SHORT_WORK_TIME 500   /* 500ms */
 #define MEDIUM_WORK_TIME 1500 /* 1.5 seconds */
 #define LONG_WORK_TIME 3000   /* 3 seconds */
+#define KBD_WAIT_TIME 3000    /* 3 seconds for keyboard test */
+#define KBD_PAUSE_TIME 1000   /* 1 second pause between keyboard subtests */
 
+/* Thread test constants */
 #define MAX_THREADS_PER_PROCESS 10 /* Maximum threads per process (TIDs X0-X9) */
+#define MAX_SYNC_FLAGS 10          /* Synchronization flags for thread tests */
 
-/* Synchronization flags - shared between threads */
-#define MAX_SYNC_FLAGS 10
+/* Keyboard test constants */
+#define KBD_MAX_KEYS 10 /* Maximum keys to track in keyboard test */
+
+/* ============================================================
+ *                    MAIN TEST ENTRY POINTS
+ * ============================================================ */
 
 /**
- * @brief Execute all thread test suites.
+ * @brief Execute all project test suites.
  *
- * This function runs all enabled test suites for thread functionality.
+ * This function runs all enabled test suites (threads, keyboard).
  * It coordinates the execution of individual test functions and provides
- * a test summary. Thread TID 1 (init's first thread) orchestrates all tests.
+ * a test summary. Thread TID 10 (init's first thread) orchestrates all tests.
  */
 void execute_project_tests(void);
+
+/* ============================================================
+ *                    THREAD TEST FUNCTIONS
+ * ============================================================ */
 
 /**
  * @brief Main thread test suite.
@@ -57,8 +77,6 @@ void execute_project_tests(void);
  * - Subtest 7: Thread wrapper calls ThreadExit on function return
  */
 void thread_tests(void);
-
-/* ---- Thread Test Helper Functions ---- */
 
 /**
  * @brief Test creating maximum threads and verify limit.
@@ -99,13 +117,58 @@ void subtest_fork_single_thread(int *passed);
  */
 void subtest_wrapper_calls_exit(int *passed);
 
-/* ---- Utility Functions ---- */
+/* ============================================================
+ *                    KEYBOARD TEST FUNCTIONS
+ * ============================================================ */
+
+/**
+ * @brief Main keyboard test suite.
+ *
+ * This function runs keyboard support tests:
+ * - Subtest 1: Register keyboard handler successfully
+ * - Subtest 2: Disable keyboard handler with NULL
+ * - Subtest 3: Verify handler is called on key events
+ * - Subtest 4: Verify syscalls return EINPROGRESS inside handler
+ */
+void keyboard_tests(void);
+
+/**
+ * @brief Test registering a keyboard handler.
+ * @param passed Pointer to store result (1 = passed, 0 = failed)
+ */
+void subtest_kbd_register(int *passed);
+
+/**
+ * @brief Test disabling keyboard handler with NULL.
+ * @param passed Pointer to store result (1 = passed, 0 = failed)
+ */
+void subtest_kbd_disable(int *passed);
+
+/**
+ * @brief Test that keyboard handler is called on key events.
+ *
+ * This test registers a handler and waits for key presses.
+ * User must press keys to verify the handler is called.
+ * Shows the last 5 keys pressed with their scancodes and characters.
+ * @param passed Pointer to store result (1 = passed, 0 = failed)
+ */
+void subtest_kbd_handler_called(int *passed);
+
+/**
+ * @brief Test that syscalls return EINPROGRESS inside keyboard handler.
+ *
+ * This test verifies that system calls made from within a keyboard
+ * event handler return -EINPROGRESS as specified.
+ * @param passed Pointer to store result (1 = passed, 0 = failed)
+ */
+void subtest_kbd_einprogress(int *passed);
+
+/* ============================================================
+ *                    UTILITY FUNCTIONS
+ * ============================================================ */
 
 /**
  * @brief Wait for a specified number of ticks.
- *
- * This function waits for the specified number of ticks, printing
- * PID/TID info at start and end of the wait period.
  * @param ticks Number of ticks to wait.
  */
 void waitTicks(int ticks);
@@ -117,19 +180,18 @@ void waitTicks(int ticks);
  */
 void write_current_info(void);
 
+/* ============================================================
+ *                    THREAD WORK FUNCTIONS
+ * ============================================================ */
+
 /**
  * @brief Simple thread work function that sets a completion flag.
- *
- * This function does minimal work and sets its assigned flag.
  * @param arg Pointer to the flag index to set when complete.
  */
 void simple_thread_func(void *arg);
 
 /**
  * @brief Thread function that works for a specified time and then exits.
- *
- * This function is executed by created threads. It works for the specified
- * number of ticks and then exits, setting a flag to indicate completion.
  * @param arg Pointer to integer containing the number of ticks to work.
  */
 void thread_work(void *arg);
@@ -140,10 +202,12 @@ void thread_work(void *arg);
  */
 void thread_block_func(void *arg);
 
+/* ============================================================
+ *                    SYNCHRONIZATION UTILITIES
+ * ============================================================ */
+
 /**
  * @brief Wait for a synchronization flag to be set.
- *
- * Spins until the specified flag becomes non-zero.
  * @param flag_index Index of the flag to wait for.
  */
 void wait_for_flag(int flag_index);

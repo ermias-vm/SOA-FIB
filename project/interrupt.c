@@ -9,6 +9,7 @@
 #include <hardware.h>
 #include <interrupt.h>
 #include <io.h>
+#include <keyboard.h>
 #include <sched.h>
 #include <segment.h>
 #include <sys.h>
@@ -85,9 +86,15 @@ void setIdt() {
     set_handlers();
 
     /* ADD INITIALIZATION CODE FOR INTERRUPT VECTOR */
-    setInterruptHandler(32, clock_handler, 0);
-    setInterruptHandler(33, keyboard_handler, 0);
-    setInterruptHandler(14, pageFault_handler, 0);
+    setInterruptHandler(32, clock_handler, 0);     /* IRQ 0: Timer */
+    setInterruptHandler(33, keyboard_handler, 0);  /* IRQ 1: Keyboard (basic) */
+    setInterruptHandler(14, pageFault_handler, 0); /* Exception 14: Page Fault */
+
+    /* Keyboard event support: use kbd_irq_entry for user callbacks */
+    setInterruptHandler(0x21, kbd_irq_entry, 0); /* IRQ 1 = INT 0x21 */
+
+    /* Int 0x2b: Resume from keyboard handler (callable from user space) */
+    setTrapHandler(0x2b, kbd_resume_entry, 3); /* DPL=3 for user access */
 
     writeMSR(0x174, __KERNEL_CS); // Set SYSENTER CS register - kernel code segment
     writeMSR(0x175, INITIAL_ESP); // Set SYSENTER ESP register - kernel stack pointer

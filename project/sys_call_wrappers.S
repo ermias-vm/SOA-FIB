@@ -254,6 +254,36 @@ gtid_error:
     movl $-1, %eax
     ret
 
+ENTRY(KeyboardEvent)
+    pushl %ebp
+    movl %esp, %ebp
+    pushl %ebx
+
+    movl $22, %eax              # syscall number for KeyboardEvent
+    movl 8(%ebp), %ebx          # func parameter
+    leal kbd_wrapper, %ecx      # wrapper function address
+
+    pushl $ke_return
+    pushl %ebp
+    movl %esp, %ebp
+    sysenter
+
+ke_return:
+    popl %ebp
+    addl $4, %esp
+    popl %ebx
+    popl %ebp
+    test %eax, %eax
+    js ke_error
+    ret
+
+ke_error:
+    negl %eax
+    movl %eax, errno
+    movl $-1, %eax
+    ret
+
+
 ENTRY(thread_entry_wrapper)
     movl 4(%esp), %eax      # %eax = function pointer
     movl 8(%esp), %ecx      # %ecx = parameter
@@ -261,3 +291,14 @@ ENTRY(thread_entry_wrapper)
     call *%eax
     addl $4, %esp
     call ThreadExit         # ALWAYS call ThreadExit when function returns
+
+
+ENTRY(kbd_wrapper)
+    pushl 12(%esp)          # Push pressed (3rd original param becomes 2nd)
+    pushl 12(%esp)          # Push key (2nd original param, now at offset 12 due to push)
+    movl 12(%esp), %eax     # Get handler address (1st original param, now at offset 12)
+    call *%eax              # Call user handler
+    addl $8, %esp           # Clean up parameters
+
+    int $0x2b               # Trigger resume handler
+

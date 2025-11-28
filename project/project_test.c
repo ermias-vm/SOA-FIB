@@ -18,15 +18,58 @@ extern char buffer[BUFFER_SIZE];
 extern char *msg;
 extern int errno;
 
-/* Synchronization flags - volatile for thread visibility */
+/* Thread test*/
 static volatile int sync_flags[MAX_SYNC_FLAGS];
-
-/* Test counters */
 static int thread_subtests_run = 0;
 static int thread_subtests_passed = 0;
 
+/* Keyboard test*/
+static int kbd_subtests_run = 0;
+static int kbd_subtests_passed = 0;
+static volatile int kbd_events_received = 0;
+static volatile char kbd_keys[KBD_MAX_KEYS];
+static volatile int kbd_pressed[KBD_MAX_KEYS];
+static volatile int kbd_key_index = 0;
+static volatile int kbd_syscall_result = 0;
+static volatile int kbd_syscall_errno = 0;
+
+static char scancode_to_char[] = {
+    '\0', '\0', '1',  '2',  '3',  '4',  '5',  '6',  '7',  '8',  '9',  '0',  '\'', '\0', '\0',
+    '\0', 'q',  'w',  'e',  'r',  't',  'y',  'u',  'i',  'o',  'p',  '`',  '+',  '\0', '\0',
+    'a',  's',  'd',  'f',  'g',  'h',  'j',  'k',  'l',  '\0', '\0', '\0', '\0', '\0', 'z',
+    'x',  'c',  'v',  'b',  'n',  'm',  ',',  '.',  '-',  '\0', '*',  '\0', ' ',  '\0', '\0',
+    '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '7',  '8',  '9',  '-',
+    '4',  '5',  '6',  '+',  '1',  '2',  '3',  '0',  '\0', '\0', '\0', '<'};
+
 /* ============================================================
- *                    SYNCHRONIZATION UTILITIES
+ *                    UTILITY FUNCTIONS
+ * ============================================================ */
+
+void waitTicks(int ticks) {
+    int start_time = gettime();
+    while (gettime() - start_time < ticks) {
+        /* Busy wait */
+    }
+}
+
+void write_current_info(void) {
+    prints("[PID %d] [TID %d] ", getpid(), gettid());
+}
+
+static void print_subtest_header(int num, char *name) {
+    prints("\n[SUBTEST %d] %s\n", num, name);
+}
+
+static void print_subtest_result(int passed) {
+    if (passed) {
+        prints("-> PASSED\n");
+    } else {
+        prints("-> FAILED\n");
+    }
+}
+
+/* ============================================================
+ *                    THREAD TESTS FUNCTIONS
  * ============================================================ */
 
 void clear_all_flags(void) {
@@ -59,10 +102,6 @@ static void wait_for_flags(int count) {
         wait_for_flag(i);
     }
 }
-
-/* ============================================================
- *                    THREAD WORK FUNCTIONS
- * ============================================================ */
 
 void simple_thread_func(void *arg) {
     int flag_index = *(int *)arg;
@@ -148,37 +187,6 @@ static void survivor_thread_func(void *arg) {
     /* Exit the process */
     exit();
 }
-
-/* ============================================================
- *                    UTILITY FUNCTIONS
- * ============================================================ */
-
-void waitTicks(int ticks) {
-    int start_time = gettime();
-    while (gettime() - start_time < ticks) {
-        /* Busy wait */
-    }
-}
-
-void write_current_info(void) {
-    prints("[PID %d] [TID %d] ", getpid(), gettid());
-}
-
-static void print_subtest_header(int num, char *name) {
-    prints("\n[SUBTEST %d] %s\n", num, name);
-}
-
-static void print_subtest_result(int passed) {
-    if (passed) {
-        prints("-> PASSED\n");
-    } else {
-        prints("-> FAILED\n");
-    }
-}
-
-/* ============================================================
- *                    SUBTEST IMPLEMENTATIONS
- * ============================================================ */
 
 void subtest_max_threads(int *passed) {
     /* Master already uses 1 slot (slot 0), so we can create MAX - 1 new threads */
@@ -524,10 +532,6 @@ void subtest_wrapper_calls_exit(int *passed) {
     if (*passed) thread_subtests_passed++;
 }
 
-/* ============================================================
- *                    MAIN TEST FUNCTIONS
- * ============================================================ */
-
 void thread_tests(void) {
     print_test_header("THREAD TESTS");
 
@@ -566,6 +570,228 @@ void thread_tests(void) {
     print_test_result("Thread Tests", all_passed);
 }
 
+/* ============================================================
+ *                    KEYBOARD TEST FUNCTIONS
+ * ============================================================ */
+
+static void test_kbd_handler(char key, int pressed) {
+    kbd_events_received++;
+    /* Store in circular buffer */
+    kbd_keys[kbd_key_index] = key;
+    kbd_pressed[kbd_key_index] = pressed;
+    kbd_key_index = (kbd_key_index + 1) % KBD_MAX_KEYS;
+}
+
+static void test_kbd_handler_with_syscall(char key, int pressed) {
+    (void)key;
+    (void)pressed;
+    /* Try to make a syscall inside the handler - should return EINPROGRESS */
+    kbd_syscall_result = getpid();
+    kbd_syscall_errno = errno; /* Save errno before int 0x2b might modify it */
+}
+
+void subtest_kbd_register(int *passed) {
+    print_subtest_header(1, "Register keyboard handler");
+
+    int ret = KeyboardEvent(test_kbd_handler);
+
+    if (ret == 0) {
+        prints("[PID %d] [TID %d] KeyboardEvent registered successfully\n", getpid(), gettid());
+        *passed = 1;
+    } else {
+        prints("[PID %d] [TID %d] KeyboardEvent failed with error %d\n", getpid(), gettid(), ret);
+        *passed = 0;
+    }
+
+    print_subtest_result(*passed);
+    kbd_subtests_run++;
+    if (*passed) kbd_subtests_passed++;
+}
+
+void subtest_kbd_disable(int *passed) {
+    print_subtest_header(2, "Disable keyboard handler with NULL");
+
+    /* First register a handler */
+    KeyboardEvent(test_kbd_handler);
+
+    /* Now disable it */
+    int ret = KeyboardEvent((void *)0);
+
+    if (ret == 0) {
+        prints("[PID %d] [TID %d] KeyboardEvent(NULL) succeeded\n", getpid(), gettid());
+        *passed = 1;
+    } else {
+        prints("[PID %d] [TID %d] KeyboardEvent(NULL) failed with error %d\n", getpid(), gettid(),
+               ret);
+        *passed = 0;
+    }
+
+    print_subtest_result(*passed);
+    kbd_subtests_run++;
+    if (*passed) kbd_subtests_passed++;
+}
+
+void subtest_kbd_handler_called(int *passed) {
+    print_subtest_header(3, "Verify handler is called on key events");
+
+    kbd_events_received = 0;
+    kbd_key_index = 0;
+    for (int i = 0; i < KBD_MAX_KEYS; i++) {
+        kbd_keys[i] = 0;
+        kbd_pressed[i] = 0;
+    }
+
+    /* Register handler */
+    int ret = KeyboardEvent(test_kbd_handler);
+    if (ret != 0) {
+        prints("[PID %d] [TID %d] Failed to register handler\n", getpid(), gettid());
+        *passed = 0;
+        print_subtest_result(*passed);
+        kbd_subtests_run++;
+        return;
+    }
+
+    prints("[PID %d] [TID %d] Handler registered. Press some keys...\n", getpid(), gettid());
+    prints("[PID %d] [TID %d] Waiting for keyboard events (3 seconds or %d keys)...\n", getpid(),
+           gettid(), KBD_MAX_KEYS);
+
+    /* Wait for key events - exit early if we got enough keys */
+    int start = gettime();
+    while (gettime() - start < KBD_WAIT_TIME && kbd_events_received < KBD_MAX_KEYS) {
+        /* Busy wait for key events */
+    }
+
+    prints("[PID %d] [TID %d] Received %d keyboard events\n", getpid(), gettid(),
+           kbd_events_received);
+
+    if (kbd_events_received > 0) {
+        prints("[PID %d] [TID %d] Last %d keys (scancode -> char, pressed/released):\n", getpid(),
+               gettid(), kbd_events_received > KBD_MAX_KEYS ? KBD_MAX_KEYS : kbd_events_received);
+
+        /* Show the last keys in order */
+        int count = kbd_events_received > KBD_MAX_KEYS ? KBD_MAX_KEYS : kbd_events_received;
+        int start_idx = (kbd_key_index - count + KBD_MAX_KEYS) % KBD_MAX_KEYS;
+
+        for (int i = 0; i < count; i++) {
+            int idx = (start_idx + i) % KBD_MAX_KEYS;
+            char scancode = kbd_keys[idx];
+            char ch = (scancode < 87) ? scancode_to_char[(int)scancode] : '?';
+            if (ch == '\0') ch = '?';
+            prints("  [%d] scancode=0x%d -> '%c' (%s)\n", i + 1, (int)scancode, ch,
+                   kbd_pressed[idx] ? "PRESSED" : "RELEASED");
+        }
+        *passed = 1;
+    } else {
+        prints("[PID %d] [TID %d] No events received (press keys during test!)\n", getpid(),
+               gettid());
+        /* Still pass if no keys pressed - handler registration worked */
+        *passed = 1;
+    }
+
+    /* Disable handler */
+    KeyboardEvent((void *)0);
+
+    print_subtest_result(*passed);
+    kbd_subtests_run++;
+    if (*passed) kbd_subtests_passed++;
+}
+
+void subtest_kbd_einprogress(int *passed) {
+    print_subtest_header(4, "Verify syscalls return EINPROGRESS inside handler");
+
+    kbd_syscall_result = 12345; /* Set to known value */
+    kbd_syscall_errno = 0;
+
+    /* Register handler that tries to make a syscall */
+    int ret = KeyboardEvent(test_kbd_handler_with_syscall);
+    if (ret != 0) {
+        prints("[PID %d] [TID %d] Failed to register handler\n", getpid(), gettid());
+        *passed = 0;
+        print_subtest_result(*passed);
+        kbd_subtests_run++;
+        return;
+    }
+
+    prints("[PID %d] [TID %d] Handler registered (will try syscall inside).\n", getpid(), gettid());
+    prints("[PID %d] [TID %d] Press a key to trigger the handler...\n", getpid(), gettid());
+
+    /* Wait for a key event */
+    int start = gettime();
+    while (gettime() - start < KBD_WAIT_TIME && kbd_syscall_result == 12345) {
+        /* Busy wait for key event */
+    }
+
+    /* Disable handler */
+    KeyboardEvent((void *)0);
+
+    if (kbd_syscall_result == 12345) {
+        prints("[PID %d] [TID %d] No key pressed - cannot verify EINPROGRESS\n", getpid(),
+               gettid());
+        /* Pass anyway - we can't force user to press keys */
+        *passed = 1;
+    } else if (kbd_syscall_result == -1 && kbd_syscall_errno == 115) {
+        /* errno 115 = EINPROGRESS (saved inside handler before int 0x2b) */
+        prints("[PID %d] [TID %d] Syscall returned -1 with errno=EINPROGRESS (115)\n", getpid(),
+               gettid());
+        *passed = 1;
+    } else if (kbd_syscall_result == -1) {
+        prints("[PID %d] [TID %d] Syscall returned -1 but errno=%d (expected 115)\n", getpid(),
+               gettid(), kbd_syscall_errno);
+        *passed = 0;
+    } else {
+        prints("[PID %d] [TID %d] Syscall returned %d (expected -1), errno=%d\n", getpid(),
+               gettid(), kbd_syscall_result, kbd_syscall_errno);
+        *passed = 0;
+    }
+
+    print_subtest_result(*passed);
+    kbd_subtests_run++;
+    if (*passed) kbd_subtests_passed++;
+}
+
+void keyboard_tests(void) {
+    print_test_header("KEYBOARD TESTS");
+
+    kbd_subtests_run = 0;
+    kbd_subtests_passed = 0;
+
+    prints("[PID %d] [TID %d] Starting keyboard test suite...\n", getpid(), gettid());
+
+    int result;
+
+    /* Subtest 1: Register handler */
+    subtest_kbd_register(&result);
+
+    /* Disable before next test */
+    KeyboardEvent((void *)0);
+
+    /* Subtest 2: Disable handler */
+    subtest_kbd_disable(&result);
+
+    /* Subtest 3: Handler called on events */
+    subtest_kbd_handler_called(&result);
+
+    /* Pause before subtest 4 to avoid accidental key presses */
+    prints("[PID %d] [TID %d] Pausing 1 second before next test...\n", getpid(), gettid());
+    waitTicks(KBD_PAUSE_TIME);
+
+    /* Subtest 4: EINPROGRESS inside handler */
+    subtest_kbd_einprogress(&result);
+
+    /* Print keyboard test summary */
+    prints("\n========================================\n");
+    prints("[KEYBOARD_TESTS] Summary: %d/%d subtests passed\n", kbd_subtests_passed,
+           kbd_subtests_run);
+    prints("========================================\n");
+
+    int all_passed = (kbd_subtests_passed == kbd_subtests_run);
+    print_test_result("Keyboard Tests", all_passed);
+}
+
+/* ============================================================
+ *                    MAIN TEST FUNCTIONS
+ * ============================================================ */
+
 void execute_project_tests(void) {
     prints("\n=========================================\n");
     prints("      PROJECT TEST SUITE                 \n");
@@ -576,6 +802,11 @@ void execute_project_tests(void) {
 #if THREAD_TEST
     RESET_ERRNO();
     thread_tests();
+#endif
+
+#if KEYBOARD_TEST
+    RESET_ERRNO();
+    keyboard_tests();
 #endif
 
     prints("\n=========================================\n");

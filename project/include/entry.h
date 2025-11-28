@@ -49,4 +49,22 @@ extern void keyboard_handler();
  */
 extern void pageFault_handler();
 
+/**
+ * @brief Keyboard IRQ entry point for user keyboard events.
+ *
+ * Low-level keyboard interrupt handler that saves context, calls
+ * kbd_irq_handler to dispatch to user callback if registered,
+ * sends EOI, and restores context. Implemented in entry.S.
+ */
+extern void kbd_irq_entry();
+
+/**
+ * @brief Int 0x2b entry point to resume from keyboard handler.
+ *
+ * Low-level handler for int 0x2b that saves context, calls
+ * kbd_resume_handler to restore original execution context,
+ * and returns. Implemented in entry.S.
+ */
+extern void kbd_resume_entry();
+
 #endif /* __ENTRY_H__ */

@@ -10,6 +10,7 @@
 #include <hardware.h>
 #include <interrupt.h>
 #include <io.h>
+#include <keyboard.h>
 #include <mm.h>
 #include <sched.h>
 #include <segment.h>
@@ -89,6 +90,8 @@ __attribute__((__section__(".text.main"))) int main(void) {
     init_idle();
     /* Initialize task 1 data */
     init_task1();
+
+    /* Keyboard support is initialized per-task in init_task1/init_idle */
 
     /* Move user code/data now (after the page table initialization) */
     copy_data((void *)KERNEL_START + *p_sys_size, (void *)L_USER_START, *p_usr_size);

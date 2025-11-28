@@ -198,4 +198,49 @@ void prints(const char *fmt, ...);
  */
 void perror(void);
 
+/**
+ * @brief Register a keyboard event handler.
+ *
+ * This function programs a callback that will be called every time a
+ * keyboard event (key press or release) occurs. The callback receives
+ * the key scancode and a flag indicating if the key was pressed (1) or
+ * released (0).
+ *
+ * The callback is executed in the context of the current thread using
+ * an auxiliary stack. After the callback returns, execution resumes
+ * where it was interrupted (transparent to the user).
+ *
+ * System calls executed inside the callback return -EINPROGRESS.
+ *
+ * @param func Callback function, or NULL to disable keyboard events.
+ * @return 0 on success, -1 on error with errno set to:
+ *         - EFAULT: func is not a valid user address
+ *         - ENOMEM: cannot allocate auxiliary stack
+ *         - EINPROGRESS: called from within a keyboard handler
+ */
+int KeyboardEvent(void (*func)(char key, int pressed));
+
+/**
+ * @brief Keyboard event wrapper function (internal use).
+ *
+ * This function is the entry point called by the kernel when a keyboard
+ * event occurs. The kernel modifies the interrupted thread's context to
+ * jump here with the auxiliary stack containing:
+ *   - [esp+0]:  unused return address
+ *   - [esp+4]:  user handler function pointer
+ *   - [esp+8]:  key scancode (0-127)
+ *   - [esp+12]: pressed flag (1=pressed, 0=released)
+ *
+ * The wrapper:
+ *   1. Extracts handler, key, and pressed from the stack
+ *   2. Calls handler(key, pressed)
+ *   3. Executes int 0x2b to signal the kernel to resume normal execution
+ *
+ * This makes keyboard handling transparent to the user - the interrupted
+ * code continues exactly where it left off after the handler returns.
+ *
+ * @note This function never returns normally; int 0x2b restores context.
+ */
+void kbd_wrapper(void);
+
 #endif /* __LIBC_H__ */
