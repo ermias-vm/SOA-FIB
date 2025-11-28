@@ -10,6 +10,7 @@
 #include <debug.h>
 #include <interrupt.h>
 #include <io.h>
+#include <keyboard.h>
 #include <libc.h>
 #include <mm.h>
 #include <sched.h>
@@ -100,6 +101,9 @@ void init_idle(void) {
     idle_task->user_initial_esp = 0;
     idle_task->user_entry = 0;
 
+    /* Initialize keyboard fields */
+    init_keyboard_fields(idle_task);
+
     allocate_DIR(idle_task);
 
     union task_union *idle_union = (union task_union *)idle_task;
@@ -166,6 +170,9 @@ void init_task1(void) {
     init_task->user_stack_ptr = (int *)(first_mapped_page << 12);
     init_task->user_initial_esp = user_esp;
     init_task->user_entry = 0;
+
+    /* Initialize keyboard fields */
+    init_keyboard_fields(init_task);
 
     union task_union *init_union = (union task_union *)init_task;
 

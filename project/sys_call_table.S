@@ -32,7 +32,7 @@ ENTRY (sys_call_table)
     .long sys_ni_syscall	# 19
     .long sys_getpid        # 20 (ok)
     .long sys_gettid        # 21 (ok)
-    .long sys_KeyboardEvent_wrapper    # 22 KeyboardEvent
+    .long sys_keyboard_event # 22 (ok)
 
 .globl MAX_SYSCALL
 MAX_SYSCALL = (. - sys_call_table)/4 

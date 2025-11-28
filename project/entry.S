@@ -127,3 +127,18 @@ ENTRY(pageFault_handler)
     addl $4, %esp               # Discard error code
     iret
 
+
+ENTRY(kbd_irq_entry)
+    SAVE_ALL
+    call kbd_irq_handler
+    EOI
+    RESTORE_ALL
+    iret
+
+
+ENTRY(kbd_resume_entry)
+    SAVE_ALL
+    call kbd_resume_handler
+    RESTORE_ALL
+    iret
+

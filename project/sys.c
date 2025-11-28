@@ -26,6 +26,7 @@ static int find_free_stack_region(struct task_struct *master);
 static int map_stack_pages(struct task_struct *master, unsigned int first_page,
                            unsigned int pages_to_map);
 static void release_thread_stack(struct task_struct *thread);
+static int in_keyboard_context(void);
 
 char buffer_k[SYS_BUFFER_SIZE];
 
@@ -40,10 +41,16 @@ int sys_ni_syscall() {
 }
 
 int sys_getpid() {
+    if (in_keyboard_context()) {
+        return -EINPROGRESS;
+    }
     return current_task->PID;
 }
 
 int sys_gettid() {
+    if (in_keyboard_context()) {
+        return -EINPROGRESS;
+    }
     return current_task->TID;
 }
 
@@ -51,11 +58,8 @@ int ret_from_fork() {
     return 0;
 }
 
-static int check_keyboard_context(void) {
-    if (current_task && current_task->kbd_in_handler) {
-        return -EINPROGRESS; 
-    }
-    return 0;
+static int in_keyboard_context(void) {
+    return (current_task && current_task->in_kbd_context);
 }
 
 int sys_fork() {
@@ -66,7 +70,7 @@ int sys_fork() {
                      current_task->TID);
 #endif
 
-    if (check_keyboard_context()) {
+    if (in_keyboard_context()) {
         return -EINPROGRESS;
     }
 
@@ -175,6 +179,9 @@ int sys_fork() {
     init_tid_slots(child_task);
     child_task->TID = child_task->PID * 10; /* TID = PID*10 + 0 (master uses slot 0) */
 
+    /* Initialize keyboard fields - child does NOT inherit keyboard handler */
+    init_keyboard_fields(child_task);
+
     /*=== STEP: Copy parent thread's user stack if it exists ===*/
     /* This is required because the calling thread may have a dedicated stack outside data+stack */
     if (current_task->user_stack_ptr != NULL && current_task->user_stack_frames > 0) {
@@ -268,7 +275,7 @@ int sys_write(int fd, char *buffer, int size) {
     if ((ret = check_fd(fd, FD_WRITE))) return ret;
     if (!access_ok(VERIFY_READ, buffer, size)) return -EFAULT;
 
-    if (check_keyboard_context()) {
+    if (in_keyboard_context()) {
         return -EINPROGRESS;
     }
 
@@ -352,7 +359,7 @@ void sys_exit() {
     list_add_tail(&master->list, &freequeue);
 
     /* Clean up keyboard handler if registered */
-    cleanup_keyboard_handler(current_task);
+    cleanup_kbd_handler(current_task);
 
     /* === STEP 6: Schedule new process (will go to idle if no processes left) === */
     sched_next_rr();
@@ -519,6 +526,9 @@ int sys_create_thread(void (*function)(void *), void *parameter, void (*wrapper)
     new_thread->user_stack_region_pages = 0;
     new_thread->user_initial_esp = 0;
     new_thread->user_entry = 0;
+
+    /* Initialize keyboard fields - threads share master's keyboard handler */
+    init_keyboard_fields(new_thread);
 
     int region_start = find_free_stack_region(master);
     if (region_start < 0) {
@@ -713,12 +723,40 @@ int grow_user_stack(unsigned int fault_addr) {
     return 0;
 }
 
-/* Add the actual implementation */
-int sys_KeyboardEvent_wrapper(void (*func)(char key, int pressed)) {
-    /* Check if we're in keyboard handler context */
-    if (current_task && current_task->kbd_in_handler) {
+int sys_keyboard_event(void (*func)(char key, int pressed), void (*wrapper)(void)) {
+    struct task_struct *task = current_task;
+
+    /* Cannot register handler from within keyboard handler */
+    if (in_keyboard_context()) {
         return -EINPROGRESS;
     }
-    
-    return sys_KeyboardEvent(func);
+
+    /* If func is NULL, disable keyboard events */
+    if (func == NULL) {
+        cleanup_kbd_handler(task);
+        return 0;
+    }
+
+    /* Validate user function pointer is in user space */
+    if (!access_ok(VERIFY_READ, func, sizeof(void *))) {
+        return -EFAULT;
+    }
+
+    /* Validate wrapper function pointer */
+    if (!access_ok(VERIFY_READ, wrapper, sizeof(void *))) {
+        return -EFAULT;
+    }
+
+    /* Setup auxiliary stack for keyboard handler execution */
+    int ret = setup_kbd_aux_stack(task);
+    if (ret < 0) {
+        return ret;
+    }
+
+    /* Register the handler and wrapper */
+    task->kbd_handler = func;
+    task->kbd_wrapper = wrapper;
+    task->in_kbd_context = 0;
+
+    return 0;
 }

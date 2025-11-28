@@ -217,4 +217,28 @@ int grow_user_stack(unsigned int fault_addr);
  */
 int sys_gettid(void);
 
+/**
+ * @brief Register a keyboard event handler.
+ *
+ * This system call programs a function that will be called every time
+ * a keyboard event (pressing or releasing a key) is triggered.
+ * The function receives the scancode of the key and whether it was
+ * pressed (1) or released (0).
+ *
+ * When a key event occurs, the OS immediately executes the handler
+ * in the context of the current thread using an auxiliary stack.
+ * The handler must be transparent to the user - a wrapper in libc
+ * executes the user function and then calls int 0x2b to resume.
+ *
+ * System calls executed inside the handler return -EINPROGRESS.
+ *
+ * @param func User callback function, or NULL to disable keyboard events.
+ * @param wrapper User wrapper function that calls func and int 0x2b.
+ * @return 0 on success, negative error code on failure:
+ *         -EFAULT if func is not a valid user address
+ *         -ENOMEM if cannot allocate auxiliary stack
+ *         -EINPROGRESS if called from within a keyboard handler
+ */
+int sys_keyboard_event(void (*func)(char key, int pressed), void (*wrapper)(void));
+
 #endif /* __SYS_H__ */

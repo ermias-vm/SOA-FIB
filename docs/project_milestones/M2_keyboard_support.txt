@@ -1,0 +1,74 @@
+================================================================================
+                        MILESTONE 2: KEYBOARD SUPPORT IN ZEOS
+================================================================================
+
+1. SYSTEM CALL IMPLEMENTADA
+---------------------------
+
+int KeyboardEvent(void (*func)(char key, int pressed));
+
+Registra una funcion callback que se ejecutara cada vez que se pulse o suelte
+una tecla. La funcion recibe el scancode (0-127) y un flag indicando si fue
+pulsada (1) o soltada (0). Pasar NULL desactiva los eventos de teclado.
+
+Errores: -EFAULT (direccion invalida), -ENOMEM (sin memoria para stack auxiliar),
+-EINPROGRESS (llamada desde dentro del keyboard handler).
+
+2. FLUJO DE EJECUCION
+---------------------
+
+Cuando el usuario llama KeyboardEvent(mi_handler), el kernel crea un stack
+auxiliar de 1 pagina y guarda los punteros al handler y al kbd_wrapper.
+
+Al pulsar una tecla, la IRQ 1 llama a kbd_irq_handler() que lee el scancode,
+guarda el EIP/ESP actuales del usuario, prepara el stack auxiliar con los
+parametros (handler, key, pressed) y modifica el contexto para que al retornar
+de la IRQ se salte a kbd_wrapper en lugar del codigo original.
+
+kbd_wrapper (en espacio de usuario) llama al handler del usuario y despues
+ejecuta int 0x2b. Esta interrupcion ejecuta kbd_resume_handler() que restaura
+el EIP/ESP originales, permitiendo que la ejecucion continue exactamente donde
+fue interrumpida.
+
+3. STACK AUXILIAR
+-----------------
+
+Se reserva 1 pagina fisica mapeada en KBD_AUX_STACK_PAGE (pagina 1021, direccion
+0x3FD000-0x3FDFFF).
+
+El stack auxiliar evita corromper el stack normal del usuario, que podria estar
+en medio de una llamada a funcion con variables locales.
+
+4. CAMPOS DE TASK_STRUCT
+------------------------
+
+kbd_handler:    puntero a la funcion callback del usuario
+kbd_wrapper:    puntero a kbd_wrapper en user space
+kbd_aux_stack:  direccion del tope del stack auxiliar
+in_kbd_context: flag de contexto (0 normal, 1 en handler)
+kbd_saved_esp:  ESP guardado antes de entrar al handler
+kbd_saved_eip:  EIP guardado antes de entrar al handler
+
+5. ARCHIVOS MODIFICADOS
+-----------------------
+
+Headers:
+  include/keyboard.h - constantes y declaraciones de funciones auxiliares
+  include/sched.h    - campos de keyboard en task_struct
+  include/sys.h      - prototipo sys_keyboard_event()
+  include/libc.h     - declaracion KeyboardEvent() y kbd_wrapper()
+  include/entry.h    - declaraciones kbd_irq_entry, kbd_resume_entry
+
+Implementacion:
+  keyboard.c         - init_keyboard_fields, setup_kbd_aux_stack,
+                       free_kbd_aux_stack, cleanup_kbd_handler,
+                       kbd_irq_handler, kbd_resume_handler
+  sys.c              - sys_keyboard_event(), comprobacion in_kbd_context
+  sched.c            - llamadas a init_keyboard_fields() en init_idle/init_task1
+  entry.S            - entry points kbd_irq_entry y kbd_resume_entry
+  interrupt.c        - registro de handlers en IDT (INT 0x21, INT 0x2B)
+  sys_call_table.S   - entrada 22 para sys_keyboard_event
+  sys_call_wrappers.S - wrapper KeyboardEvent y kbd_wrapper
+
+================================================================================
+
