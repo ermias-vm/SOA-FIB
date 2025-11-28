@@ -37,14 +37,15 @@
 #define SHORT_WORK_TIME 500   /* 500ms */
 #define MEDIUM_WORK_TIME 1500 /* 1.5 seconds */
 #define LONG_WORK_TIME 3000   /* 3 seconds */
-#define KBD_WAIT_TIME 5000    /* 5 seconds for keyboard test */
+#define KBD_WAIT_TIME 3000    /* 3 seconds for keyboard test */
+#define KBD_PAUSE_TIME 1000   /* 1 second pause between keyboard subtests */
 
 /* Thread test constants */
 #define MAX_THREADS_PER_PROCESS 10 /* Maximum threads per process (TIDs X0-X9) */
 #define MAX_SYNC_FLAGS 10          /* Synchronization flags for thread tests */
 
 /* Keyboard test constants */
-#define KBD_MAX_KEYS 5 /* Maximum keys to track in keyboard test */
+#define KBD_MAX_KEYS 10 /* Maximum keys to track in keyboard test */
 
 /* ============================================================
  *                    MAIN TEST ENTRY POINTS

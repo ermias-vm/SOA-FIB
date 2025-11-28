@@ -652,7 +652,7 @@ void subtest_kbd_handler_called(int *passed) {
     }
 
     prints("[PID %d] [TID %d] Handler registered. Press some keys...\n", getpid(), gettid());
-    prints("[PID %d] [TID %d] Waiting for keyboard events (5 seconds or %d keys)...\n", getpid(),
+    prints("[PID %d] [TID %d] Waiting for keyboard events (3 seconds or %d keys)...\n", getpid(),
            gettid(), KBD_MAX_KEYS);
 
     /* Wait for key events - exit early if we got enough keys */
@@ -770,6 +770,10 @@ void keyboard_tests(void) {
 
     /* Subtest 3: Handler called on events */
     subtest_kbd_handler_called(&result);
+
+    /* Pause before subtest 4 to avoid accidental key presses */
+    prints("[PID %d] [TID %d] Pausing 1 second before next test...\n", getpid(), gettid());
+    waitTicks(KBD_PAUSE_TIME);
 
     /* Subtest 4: EINPROGRESS inside handler */
     subtest_kbd_einprogress(&result);
