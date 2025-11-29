@@ -10,15 +10,27 @@
 #include <libc.h>
 #include <zeos_test.h>
 
+/* Test message buffer */
 char buffer[BUFFER_SIZE];
+
+/* Large test buffer for write tests */
 char large_buffer[LARGE_BUFFER_SIZE];
+
+/* Message pointer for test output */
 char *msg;
 
+/* Test counters */
 static int tests_run = 0;
 static int tests_passed = 0;
 static int subtests_run = 0;
 static int subtests_passed = 0;
+
+/* External errno */
 extern int errno;
+
+/****************************************/
+/**    Main Test Functions             **/
+/****************************************/
 
 void test_basic_process_operations(void) {
     print_test_header("BASIC PROCESS OPERATIONS");
@@ -193,7 +205,9 @@ void execute_zeos_tests(void) {
     exit();
 }
 
-/* ---- Sys call test functions ---- */
+/****************************************/
+/**    System Call Test Functions      **/
+/****************************************/
 
 void test_write_syscall(void) {
     print_test_header("WRITE SYSCALL");
@@ -742,7 +756,9 @@ void test_block_unblock_syscalls(void) {
     print_test_result("block/unblock syscalls", passed);
 }
 
-/* -- Helper functions -- */
+/****************************************/
+/**    Helper Functions                **/
+/****************************************/
 
 void work(int ticks) {
     int start_time = gettime();
@@ -759,7 +775,7 @@ void work(int ticks) {
     write(1, msg, strlen(msg));
 }
 
-void write_current_pid() {
+void write_current_pid(void) {
     msg = "[PID ";
     write(1, msg, strlen(msg));
     itoa(getpid(), buffer);

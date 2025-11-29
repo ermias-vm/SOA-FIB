@@ -24,9 +24,6 @@ unsigned int *p_sys_size = (unsigned int *)KERNEL_START;
 unsigned int *p_usr_size = (unsigned int *)KERNEL_START + 1;
 unsigned int *p_rdtr = (unsigned int *)KERNEL_START + 2;
 
-/************************/
-/** Auxiliar functions **/
-/************************/
 /**************************
  ** setSegmentRegisters ***
  **************************

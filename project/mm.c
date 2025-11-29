@@ -12,29 +12,25 @@
 #include <segment.h>
 #include <types.h>
 
+/* Bytemap to mark the free physical pages */
 Byte phys_mem[TOTAL_PAGES];
 
-/* SEGMENTATION */
-/* Memory segements description table */
+/* Memory segments description table */
 Descriptor *gdt = (Descriptor *)GDT_START;
+
 /* Register pointing to the memory segments table */
 Register gdtR;
 
-/* PAGING */
-/* Variables containing the page directory and the page table */
-
+/* Page directories for each task */
 page_table_entry dir_pages[NR_TASKS][TOTAL_PAGES] __attribute__((__section__(".data.task")));
 
+/* User page tables for each task */
 page_table_entry pagusr_table[NR_TASKS][TOTAL_PAGES] __attribute__((__section__(".data.task")));
 
-/* TSS */
+/* Task State Segment */
 TSS tss;
 
-/***********************************************/
-/************** PAGING MANAGEMENT **************/
-/***********************************************/
-
-void init_dir_pages() {
+void init_dir_pages(void) {
     int i;
 
     for (i = 0; i < NR_TASKS; i++) {
@@ -46,7 +42,7 @@ void init_dir_pages() {
     }
 }
 
-void init_table_pages() {
+void init_table_pages(void) {
     int i, j;
     /* reset all entries */
     for (j = 0; j < NR_TASKS; j++) {
@@ -90,8 +86,6 @@ void set_user_pages(struct task_struct *task) {
     }
 }
 
-/* Writes on CR3 register producing a TLB flush */
-
 void set_cr3(page_table_entry *dir) {
     asm volatile("movl %0,%%cr3" : : "r"(dir));
 }
@@ -105,13 +99,13 @@ void set_cr3(page_table_entry *dir) {
     })
 #define write_cr0(x) __asm__("movl %0,%%cr0" : : "r"(x));
 
-void set_pe_flag() {
+void set_pe_flag(void) {
     unsigned int cr0 = read_cr0();
     cr0 |= 0x80000000;
     write_cr0(cr0);
 }
 
-void init_mm() {
+void init_mm(void) {
     init_table_pages();
     init_frames();
     init_dir_pages();
@@ -119,10 +113,8 @@ void init_mm() {
     set_cr3(get_DIR(&tasks[0].task));
     set_pe_flag();
 }
-/***********************************************/
-/************** SEGMENTATION MANAGEMENT ********/
-/***********************************************/
-void setGdt() {
+
+void setGdt(void) {
     /* Configure TSS base address, that wasn't initialized */
     gdt[KERNEL_TSS >> 3].lowBase = lowWord((DWord) & (tss));
     gdt[KERNEL_TSS >> 3].midBase = midByte((DWord) & (tss));
@@ -134,10 +126,7 @@ void setGdt() {
     set_gdt_reg(&gdtR);
 }
 
-/***********************************************/
-/************* TSS MANAGEMENT*******************/
-/***********************************************/
-void setTSS() {
+void setTSS(void) {
     tss.PreviousTaskLink = NULL;
     tss.esp0 = INITIAL_ESP;
     tss.ss0 = __KERNEL_DS;

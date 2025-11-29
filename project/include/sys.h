@@ -11,20 +11,29 @@
 
 #include <sched.h>
 
-/* File descriptor permissions */
+/** File descriptor permissions */
 #define FD_READ 0
 #define FD_WRITE 1
 
-/* System buffer size for kernel operations */
+/** System buffer size for kernel operations */
 #define SYS_BUFFER_SIZE 256
 
-/* Kernel stack offsets for accessing saved context (used in thread/fork setup) */
-#define STACK_USER_EIP (KERNEL_STACK_SIZE - 5)  /* User EIP in hardware context */
-#define STACK_USER_ESP (KERNEL_STACK_SIZE - 2)  /* User ESP in hardware context */
-#define STACK_EAX (KERNEL_STACK_SIZE - 10)      /* EAX in software context */
-#define STACK_EBP (KERNEL_STACK_SIZE - 11)      /* EBP in software context */
-#define STACK_RET_ADDR (KERNEL_STACK_SIZE - 18) /* Return address for switch_context */
-#define STACK_FAKE_EBP (KERNEL_STACK_SIZE - 19) /* Fake EBP for switch_context pop */
+/** Kernel stack offsets for accessing saved context (used in thread/fork setup) */
+#define STACK_USER_EIP (KERNEL_STACK_SIZE - 5)  /**< User EIP in hardware context */
+#define STACK_USER_ESP (KERNEL_STACK_SIZE - 2)  /**< User ESP in hardware context */
+#define STACK_EAX (KERNEL_STACK_SIZE - 10)      /**< EAX in software context */
+#define STACK_EBP (KERNEL_STACK_SIZE - 11)      /**< EBP in software context */
+#define STACK_RET_ADDR (KERNEL_STACK_SIZE - 18) /**< Return address for switch_context */
+#define STACK_FAKE_EBP (KERNEL_STACK_SIZE - 19) /**< Fake EBP for switch_context pop */
+
+/** Thread stack configuration */
+#define THREAD_STACK_REGION_PAGES 8
+#define THREAD_STACK_INITIAL_PAGES 1
+#define THREAD_STACK_BASE_PAGE (PAG_LOG_INIT_CODE + NUM_PAG_CODE)
+
+/** Temporary mapping pages - use end of address space to avoid conflicts with thread stacks */
+#define TEMP_STACK_MAPPING_PAGE (TOTAL_PAGES - THREAD_STACK_INITIAL_PAGES - 1) /**< Page 1022 */
+#define FORK_TEMP_MAPPING_PAGE (TOTAL_PAGES - NUM_PAG_DATA - 2)                /**< Page 1002 */
 
 /**
  * KERNEL STACK LAYOUT FOR CHILD PROCESS (sys_fork)
@@ -65,6 +74,58 @@
  * Higher memory addresses (top of stack)
  */
 
+/** Kernel buffer for system operations */
+extern char buffer_k[SYS_BUFFER_SIZE];
+
+/**
+ * @brief Check file descriptor validity and permissions.
+ *
+ * This function validates a file descriptor and checks if the requested
+ * permissions are allowed for that descriptor.
+ *
+ * @param fd File descriptor to check.
+ * @param permissions Requested permissions to check.
+ * @return 0 if valid, negative error code otherwise.
+ */
+int check_fd(int fd, int permissions);
+
+/**
+ * @brief Not implemented system call handler.
+ *
+ * This function handles system calls that are not implemented in the system.
+ * It serves as a placeholder for unimplemented system calls.
+ *
+ * @return Returns -ENOSYS (function not implemented error code).
+ */
+int sys_ni_syscall(void);
+
+/**
+ * @brief Gets the process identifier (PID) of the current process.
+ *
+ * This function returns the process identifier of the calling process.
+ * The PID is unique for each process in the system.
+ *
+ * @return The process identifier (PID) of the current process.
+ */
+int sys_getpid(void);
+
+/**
+ * @brief Gets the thread identifier (TID) of the current thread.
+ *
+ * @return The thread identifier (TID) of the current thread.
+ */
+int sys_gettid(void);
+
+/**
+ * @brief Return from fork system call for child process.
+ *
+ * This function is used by child processes created by fork() to return
+ * to user space with the appropriate return value (0 for child).
+ *
+ * @return Always returns 0 in the child process after fork.
+ */
+int ret_from_fork(void);
+
 /**
  * @brief Creates a new process (child process).
  *
@@ -84,19 +145,11 @@
 int sys_fork(void);
 
 /**
- * @brief Return from fork system call for child process.
- *
- * This function is used by child processes created by fork() to return
- * to user space with the appropriate return value (0 for child).
- * @return Always returns 0 in the child process after fork.
- */
-int ret_from_fork(void);
-
-/**
  * @brief Writes data to a file descriptor.
  *
  * This function writes a buffer of characters to a file descriptor.
  * Currently only supports writing to stdout (fd=1).
+ *
  * @param fd File descriptor where to write the data.
  * @param buffer Pointer to the character buffer to be written.
  * @param size Size of the buffer in bytes.
@@ -109,6 +162,7 @@ int sys_write(int fd, char *buffer, int size);
  *
  * This function returns the current system time measured in timer ticks
  * since the system started.
+ *
  * @return The current system time in ticks.
  */
 int sys_gettime(void);
@@ -133,50 +187,11 @@ void sys_block(void);
  * @brief Unblock a child process.
  *
  * This function unblocks a child process identified by its PID.
+ *
  * @param pid Process ID of the child to unblock.
  * @return 0 on success, -1 on error.
  */
 int sys_unblock(int pid);
-
-/**
- * @brief Not implemented system call handler.
- *
- * This function handles system calls that are not implemented in the system.
- * It serves as a placeholder for unimplemented system calls.
- * @return Returns -ENOSYS (function not implemented error code).
- */
-int sys_ni_syscall(void);
-
-/**
- * @brief Gets the process identifier (PID) of the current process.
- *
- * This function returns the process identifier of the calling process.
- * The PID is unique for each process in the system.
- * @return The process identifier (PID) of the current process.
- */
-int sys_getpid(void);
-
-/**
- * @brief Check file descriptor validity and permissions.
- *
- * This function validates a file descriptor and checks if the requested
- * permissions are allowed for that descriptor.
- *
- * @param fd File descriptor to check.
- * @param permissions Requested permissions to check.
- * @return 0 if valid, negative error code otherwise.
- */
-int check_fd(int fd, int permissions);
-
-/* Thread stack configuration */
-#define THREAD_STACK_REGION_PAGES 8
-#define THREAD_STACK_INITIAL_PAGES 1
-#define THREAD_STACK_BASE_PAGE (PAG_LOG_INIT_CODE + NUM_PAG_CODE)
-
-/* Temporary mapping pages - use end of address space to avoid conflicts with thread stacks */
-/* TOTAL_PAGES = 1024, so we use pages near the end for temporary mappings */
-#define TEMP_STACK_MAPPING_PAGE (TOTAL_PAGES - THREAD_STACK_INITIAL_PAGES - 1) /* Page 1022 */
-#define FORK_TEMP_MAPPING_PAGE (TOTAL_PAGES - NUM_PAG_DATA - 2)                /* Page 1002 */
 
 /**
  * @brief Create a new thread in the current process.
@@ -206,16 +221,12 @@ void sys_exit_thread(void);
  * @brief Grow the current thread's user stack on demand.
  *
  * Attempts to allocate a new page within the thread's reserved stack region
- * when a page fault occurs. Returns 0 on success or a negative errno code on failure.
+ * when a page fault occurs.
+ *
+ * @param fault_addr The address that caused the page fault.
+ * @return 0 on success or a negative errno code on failure.
  */
 int grow_user_stack(unsigned int fault_addr);
-
-/**
- * @brief Gets the thread identifier (TID) of the current thread.
- *
- * @return The thread identifier (TID) of the current thread.
- */
-int sys_gettid(void);
 
 /**
  * @brief Register a keyboard event handler.

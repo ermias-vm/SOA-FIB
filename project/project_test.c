@@ -14,16 +14,17 @@
 #include <project_test.h>
 #include <zeos_test.h>
 
+/* External variables from zeos_test */
 extern char buffer[BUFFER_SIZE];
 extern char *msg;
 extern int errno;
 
-/* Thread test*/
+/* Thread test variables */
 static volatile int sync_flags[MAX_SYNC_FLAGS];
 static int thread_subtests_run = 0;
 static int thread_subtests_passed = 0;
 
-/* Keyboard test*/
+/* Keyboard test variables */
 static int kbd_subtests_run = 0;
 static int kbd_subtests_passed = 0;
 static volatile int kbd_events_received = 0;
@@ -33,6 +34,7 @@ static volatile int kbd_key_index = 0;
 static volatile int kbd_syscall_result = 0;
 static volatile int kbd_syscall_errno = 0;
 
+/* Scancode to character mapping */
 static char scancode_to_char[] = {
     '\0', '\0', '1',  '2',  '3',  '4',  '5',  '6',  '7',  '8',  '9',  '0',  '\'', '\0', '\0',
     '\0', 'q',  'w',  'e',  'r',  't',  'y',  'u',  'i',  'o',  'p',  '`',  '+',  '\0', '\0',
@@ -41,20 +43,9 @@ static char scancode_to_char[] = {
     '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '7',  '8',  '9',  '-',
     '4',  '5',  '6',  '+',  '1',  '2',  '3',  '0',  '\0', '\0', '\0', '<'};
 
-/* ============================================================
- *                    UTILITY FUNCTIONS
- * ============================================================ */
-
-void waitTicks(int ticks) {
-    int start_time = gettime();
-    while (gettime() - start_time < ticks) {
-        /* Busy wait */
-    }
-}
-
-void write_current_info(void) {
-    prints("[PID %d] [TID %d] ", getpid(), gettid());
-}
+/**********************/
+/**  Static helpers  **/
+/**********************/
 
 static void print_subtest_header(int num, char *name) {
     prints("\n[SUBTEST %d] %s\n", num, name);
@@ -68,9 +59,109 @@ static void print_subtest_result(int passed) {
     }
 }
 
-/* ============================================================
- *                    THREAD TESTS FUNCTIONS
- * ============================================================ */
+static void wait_for_flags(int count) {
+    for (int i = 0; i < count; i++) {
+        wait_for_flag(i);
+    }
+}
+
+static void minimal_thread_func(void *arg) {
+    int flag_index = *(int *)arg;
+    set_flag(flag_index);
+    ThreadExit();
+}
+
+static void no_explicit_exit_func(void *arg) {
+    int flag_index = *(int *)arg;
+
+    prints("[PID %d] [TID %d] Thread running WITHOUT explicit ThreadExit\n", getpid(), gettid());
+
+    /* Set flag to signal we executed */
+    set_flag(flag_index);
+
+    prints("[PID %d] [TID %d] Returning from function (wrapper should call ThreadExit)\n", getpid(),
+           gettid());
+
+    /* NO ThreadExit() call - the wrapper should handle this */
+    return;
+}
+
+static void survivor_thread_func(void *arg) {
+    int flag_index = *(int *)arg;
+
+    prints("[PID %d] [TID %d] Survivor thread started, waiting for master to exit\n", getpid(),
+           gettid());
+
+    /* Signal that we're ready */
+    set_flag(flag_index);
+
+    /* Work for a while - we should become master */
+    int start = gettime();
+    while (gettime() - start < MEDIUM_WORK_TIME) {
+    }
+
+    prints("[PID %d] [TID %d] Survivor thread: I am now master (hopefully), exiting process\n",
+           getpid(), gettid());
+
+    /* Exit the process */
+    exit();
+}
+
+static void long_work_thread_func(void *arg) {
+    int flag_index = *(int *)arg;
+
+    prints("[PID %d] [TID %d] Secondary thread started, working...\n", getpid(), gettid());
+
+    /* Signal that we've started */
+    set_flag(flag_index);
+
+    /* Work for a while - this thread should NOT be copied to child */
+    int start = gettime();
+    while (gettime() - start < LONG_WORK_TIME) {
+        /* Working... */
+    }
+
+    prints("[PID %d] [TID %d] Secondary thread finished work, exiting\n", getpid(), gettid());
+
+    ThreadExit();
+}
+
+static void test_kbd_handler(char key, int pressed) {
+    kbd_events_received++;
+    /* Store first KBD_MAX_KEYS keys */
+    if (kbd_key_index < KBD_MAX_KEYS) {
+        kbd_keys[kbd_key_index] = key;
+        kbd_pressed[kbd_key_index] = pressed;
+        kbd_key_index++;
+    }
+}
+
+static void test_kbd_handler_with_syscall(char key, int pressed) {
+    (void)key;
+    (void)pressed;
+    /* Try to make a syscall inside the handler - should return EINPROGRESS */
+    kbd_syscall_result = getpid();
+    kbd_syscall_errno = errno; /* Save errno before int 0x2b might modify it */
+}
+
+/****************************************/
+/**    Utility Functions               **/
+/****************************************/
+
+void waitTicks(int ticks) {
+    int start_time = gettime();
+    while (gettime() - start_time < ticks) {
+        /* Busy wait */
+    }
+}
+
+void write_current_info(void) {
+    prints("[PID %d] [TID %d] ", getpid(), gettid());
+}
+
+/****************************************/
+/**    Synchronization Functions       **/
+/****************************************/
 
 void clear_all_flags(void) {
     for (int i = 0; i < MAX_SYNC_FLAGS; i++) {
@@ -97,11 +188,9 @@ void wait_for_flag(int flag_index) {
     }
 }
 
-static void wait_for_flags(int count) {
-    for (int i = 0; i < count; i++) {
-        wait_for_flag(i);
-    }
-}
+/****************************************/
+/**    Thread Work Functions           **/
+/****************************************/
 
 void simple_thread_func(void *arg) {
     int flag_index = *(int *)arg;
@@ -146,47 +235,9 @@ void thread_block_func(void *arg) {
     ThreadExit();
 }
 
-static void minimal_thread_func(void *arg) {
-    int flag_index = *(int *)arg;
-    set_flag(flag_index);
-    ThreadExit();
-}
-
-static void no_explicit_exit_func(void *arg) {
-    int flag_index = *(int *)arg;
-
-    prints("[PID %d] [TID %d] Thread running WITHOUT explicit ThreadExit\n", getpid(), gettid());
-
-    /* Set flag to signal we executed */
-    set_flag(flag_index);
-
-    prints("[PID %d] [TID %d] Returning from function (wrapper should call ThreadExit)\n", getpid(),
-           gettid());
-
-    /* NO ThreadExit() call - the wrapper should handle this */
-    return;
-}
-
-static void survivor_thread_func(void *arg) {
-    int flag_index = *(int *)arg;
-
-    prints("[PID %d] [TID %d] Survivor thread started, waiting for master to exit\n", getpid(),
-           gettid());
-
-    /* Signal that we're ready */
-    set_flag(flag_index);
-
-    /* Work for a while - we should become master */
-    int start = gettime();
-    while (gettime() - start < MEDIUM_WORK_TIME) {
-    }
-
-    prints("[PID %d] [TID %d] Survivor thread: I am now master (hopefully), exiting process\n",
-           getpid(), gettid());
-
-    /* Exit the process */
-    exit();
-}
+/****************************************/
+/**    Thread Test Functions           **/
+/****************************************/
 
 void subtest_max_threads(int *passed) {
     /* Master already uses 1 slot (slot 0), so we can create MAX - 1 new threads */
@@ -396,25 +447,6 @@ void subtest_master_reassignment(void) {
     }
 }
 
-static void long_work_thread_func(void *arg) {
-    int flag_index = *(int *)arg;
-
-    prints("[PID %d] [TID %d] Secondary thread started, working...\n", getpid(), gettid());
-
-    /* Signal that we've started */
-    set_flag(flag_index);
-
-    /* Work for a while - this thread should NOT be copied to child */
-    int start = gettime();
-    while (gettime() - start < LONG_WORK_TIME) {
-        /* Working... */
-    }
-
-    prints("[PID %d] [TID %d] Secondary thread finished work, exiting\n", getpid(), gettid());
-
-    ThreadExit();
-}
-
 void subtest_fork_single_thread(int *passed) {
     print_subtest_header(6, "Fork copies only current thread");
 
@@ -570,25 +602,9 @@ void thread_tests(void) {
     print_test_result("Thread Tests", all_passed);
 }
 
-/* ============================================================
- *                    KEYBOARD TEST FUNCTIONS
- * ============================================================ */
-
-static void test_kbd_handler(char key, int pressed) {
-    kbd_events_received++;
-    /* Store in circular buffer */
-    kbd_keys[kbd_key_index] = key;
-    kbd_pressed[kbd_key_index] = pressed;
-    kbd_key_index = (kbd_key_index + 1) % KBD_MAX_KEYS;
-}
-
-static void test_kbd_handler_with_syscall(char key, int pressed) {
-    (void)key;
-    (void)pressed;
-    /* Try to make a syscall inside the handler - should return EINPROGRESS */
-    kbd_syscall_result = getpid();
-    kbd_syscall_errno = errno; /* Save errno before int 0x2b might modify it */
-}
+/****************************************/
+/**    Keyboard Test Functions         **/
+/****************************************/
 
 void subtest_kbd_register(int *passed) {
     print_subtest_header(1, "Register keyboard handler");
@@ -665,20 +681,17 @@ void subtest_kbd_handler_called(int *passed) {
            kbd_events_received);
 
     if (kbd_events_received > 0) {
-        prints("[PID %d] [TID %d] Last %d keys (scancode -> char, pressed/released):\n", getpid(),
-               gettid(), kbd_events_received > KBD_MAX_KEYS ? KBD_MAX_KEYS : kbd_events_received);
+        int count = kbd_key_index; /* Number of keys stored (max KBD_MAX_KEYS) */
+        prints("[PID %d] [TID %d] First %d keys (scancode -> char, pressed/released):\n", getpid(),
+               gettid(), count);
 
-        /* Show the last keys in order */
-        int count = kbd_events_received > KBD_MAX_KEYS ? KBD_MAX_KEYS : kbd_events_received;
-        int start_idx = (kbd_key_index - count + KBD_MAX_KEYS) % KBD_MAX_KEYS;
-
+        /* Show the first keys in order */
         for (int i = 0; i < count; i++) {
-            int idx = (start_idx + i) % KBD_MAX_KEYS;
-            char scancode = kbd_keys[idx];
+            char scancode = kbd_keys[i];
             char ch = (scancode < 87) ? scancode_to_char[(int)scancode] : '?';
             if (ch == '\0') ch = '?';
             prints("  [%d] scancode=0x%d -> '%c' (%s)\n", i + 1, (int)scancode, ch,
-                   kbd_pressed[idx] ? "PRESSED" : "RELEASED");
+                   kbd_pressed[i] ? "PRESSED" : "RELEASED");
         }
         *passed = 1;
     } else {
@@ -788,9 +801,9 @@ void keyboard_tests(void) {
     print_test_result("Keyboard Tests", all_passed);
 }
 
-/* ============================================================
- *                    MAIN TEST FUNCTIONS
- * ============================================================ */
+/****************************************/
+/**    Main Test Entry Point           **/
+/****************************************/
 
 void execute_project_tests(void) {
     prints("\n=========================================\n");

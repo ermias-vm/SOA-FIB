@@ -12,28 +12,14 @@
 #include <types.h>
 #include <utils.h>
 
-/**************/
-/** Screen  ***/
-/**************/
-
 /* Current cursor column position (0-79) */
 Byte x = 0;
 
 /* Current cursor row position (starts at row 19) */
 Byte y = 19;
 
-/**
- * inb - Read a byte from an I/O port
- * @port: The I/O port number to read from
- *
- * This function performs a low-level port input operation using inline assembly.
- * It reads a single byte from the specified hardware port.
- *
- * Return: The byte value read from the port
- */
 Byte inb(unsigned short port) {
     Byte v;
-
     __asm__ __volatile__("inb %w1,%0" : "=a"(v) : "Nd"(port));
     return v;
 }
@@ -44,8 +30,7 @@ void write_char_to_screen(Byte x, Byte y, char c, Word color) {
     screen[(y * NUM_COLUMNS + x)] = ch;
 }
 
-// TODO: refactor this function to make it more efficient
-void scroll_screen() {
+void scroll_screen(void) {
     Word *screen = (Word *)VIDEO_MEMORY_BASE;
     for (int i = 0; i < (NUM_ROWS - 1) * NUM_COLUMNS; i++) {
         screen[i] = screen[i + NUM_COLUMNS];
@@ -56,7 +41,7 @@ void scroll_screen() {
     y = NUM_ROWS - 1;
 }
 
-void handle_newline() {
+void handle_newline(void) {
     x = 0;
     if (++y >= NUM_ROWS) scroll_screen();
 }
@@ -96,7 +81,7 @@ void printk_color(char *string, Word color) {
     }
 }
 
-void clear_screen() {
+void clear_screen(void) {
     Word *screen = (Word *)VIDEO_MEMORY_BASE;
     for (int i = 0; i < NUM_ROWS * NUM_COLUMNS; i++) {
         screen[i] = (Word)' ' | DEFAULT_COLOR;

@@ -9,25 +9,41 @@
 #ifndef __ZEOS_TEST_H__
 #define __ZEOS_TEST_H__
 
-/* Test configuration macros */
+/**********************/
+/**  Test Enables    **/
+/**********************/
 
 // clang-format off
-#define WRITE_TEST              1
-#define GETTIME_TEST            1
-#define GETPID_TEST             1
-#define FORK_TEST               1
-#define EXIT_TEST               1
-#define BLOCK_UNBLOCK_TEST      1
-#define PAGEFAULT_TEST          0
+#define WRITE_TEST              1   /**< Enable write syscall test */
+#define GETTIME_TEST            1   /**< Enable gettime syscall test */
+#define GETPID_TEST             1   /**< Enable getpid syscall test */
+#define FORK_TEST               1   /**< Enable fork syscall test */
+#define EXIT_TEST               1   /**< Enable exit syscall test */
+#define BLOCK_UNBLOCK_TEST      1   /**< Enable block/unblock syscall test */
+#define PAGEFAULT_TEST          0   /**< Enable page fault exception test */
 // clang-format on
 
-/* Reset errno macro */
+/** Reset errno macro */
 #define RESET_ERRNO() errno = 0
 
-/* Default Buffer size */
+/** Default Buffer size */
 #define BUFFER_SIZE 256
-/* Large Buffer size for write tests */
+
+/** Large Buffer size for write tests */
 #define LARGE_BUFFER_SIZE 300
+
+/** Test message buffer */
+extern char buffer[BUFFER_SIZE];
+
+/** Large test buffer for write tests */
+extern char large_buffer[LARGE_BUFFER_SIZE];
+
+/** Message pointer for test output */
+extern char *msg;
+
+/****************************************/
+/**    Main Test Functions             **/
+/****************************************/
 
 /**
  * @brief Test basic process operations.
@@ -53,7 +69,9 @@ void test_basic_process_operations(void);
  */
 void execute_zeos_tests(void);
 
-/* ---- Sys call test functions ---- */
+/****************************************/
+/**    System Call Test Functions      **/
+/****************************************/
 
 /**
  * @brief Test write system call functionality.
@@ -101,13 +119,16 @@ void test_exit_syscall(void);
  */
 void test_block_unblock_syscalls(void);
 
-/* ---- Helper functions ---- */
+/****************************************/
+/**    Helper Functions                **/
+/****************************************/
 
 /**
  * @brief Work for a specified number of ticks.
  *
  * This function makes the current process work (busy wait) for a specified
  * number of system ticks. 1000 ticks approximately corresponds to 1 second.
+ *
  * @param ticks Number of system ticks to work for.
  */
 void work(int ticks);
@@ -118,12 +139,13 @@ void work(int ticks);
  * This function writes the current process ID to standard output
  * in the format: [PID X]
  */
-void write_current_pid();
+void write_current_pid(void);
 
 /**
  * @brief Print formatted test header.
  *
  * This function prints a formatted header for a test section.
+ *
  * @param test_name Name of the test being executed.
  */
 void print_test_header(char *test_name);
@@ -132,6 +154,7 @@ void print_test_header(char *test_name);
  * @brief Print test result.
  *
  * This function prints the result of a test (PASSED or FAILED).
+ *
  * @param test_name Name of the test that was executed.
  * @param passed 1 if test passed, 0 if test failed.
  */

@@ -18,6 +18,7 @@
 #include <sys.h>
 #include <utils.h>
 
+/* Global array of all tasks */
 union task_union tasks[NR_TASKS] __attribute__((__section__(".data.task")));
 
 /* Global PID counter for assigning unique process identifiers */
@@ -26,11 +27,16 @@ static int next_pid = 1;
 /* Current quantum ticks remaining for the running process */
 static int current_quantum = 0;
 
+/* Pointer to current running task */
 struct task_struct *current_task = NULL;
 
+/* Pointer to idle task (PID 0) */
 struct task_struct *idle_task;
+
+/* Pointer to init task (PID 1) */
 struct task_struct *init_task;
 
+/* Process queues */
 struct list_head freequeue;
 struct list_head readyqueue;
 struct list_head blockedqueue;
@@ -56,7 +62,6 @@ int allocate_DIR(struct task_struct *task) {
 }
 
 void cpu_idle(void) {
-
     __asm__ __volatile__("sti" : : : "memory");
     printk_color_fmt(INFO_COLOR, "DEBUG->[IDLE] Idle task started. Current PID=%d, TID=%d\n",
                      current()->PID, current()->TID);
@@ -181,7 +186,7 @@ void init_task1(void) {
     set_cr3(init_task->dir_pages_baseAddr);
 }
 
-void init_queues() {
+void init_queues(void) {
     INIT_LIST_HEAD(&freequeue);
     INIT_LIST_HEAD(&readyqueue);
     INIT_LIST_HEAD(&blockedqueue);
@@ -192,11 +197,11 @@ void init_queues() {
     }
 }
 
-void init_sched() {
+void init_sched(void) {
     init_queues();
 }
 
-struct task_struct *current() {
+struct task_struct *current(void) {
     int ret_value;
 
     __asm__ __volatile__("movl %%esp, %0" : "=g"(ret_value));
@@ -333,8 +338,6 @@ void scheduler(void) {
         sched_next_rr();
     }
 }
-
-/* ---- Test functions ---- */
 
 void printDebugInfoSched(int from_pid, int from_tid, int to_pid, int to_tid) {
     printk_color_fmt(INFO_COLOR,

@@ -77,37 +77,6 @@ int access_ok(int type, const void *addr, unsigned long size) {
     return 0;
 }
 
-#define CYCLESPERTICK 109000
-
-/*
- * do_div() is NOT a C function. It wants to return
- * two values (the quotient and the remainder), but
- * since that doesn't work very well in C, what it
- * does is:
- *
- * - modifies the 64-bit dividend _in_place_
- * - returns the 32-bit remainder
- *
- * This ends up being the most efficient "calling
- * convention" on x86.
- */
-#define do_div(n, base)                                                                            \
-    ({                                                                                             \
-        unsigned long __upper, __low, __high, __mod, __base;                                       \
-        __base = (base);                                                                           \
-        asm("" : "=a"(__low), "=d"(__high) : "A"(n));                                              \
-        __upper = __high;                                                                          \
-        if (__high) {                                                                              \
-            __upper = __high % (__base);                                                           \
-            __high = __high / (__base);                                                            \
-        }                                                                                          \
-        asm("divl %2" : "=a"(__low), "=d"(__mod) : "rm"(__base), "0"(__low), "1"(__upper));        \
-        asm("" : "=A"(n) : "a"(__low), "d"(__high));                                               \
-        __mod;                                                                                     \
-    })
-
-#define rdtsc(low, high) __asm__ __volatile__("rdtsc" : "=a"(low), "=d"(high))
-
 unsigned long get_ticks(void) {
     unsigned long eax;
     unsigned long edx;
@@ -119,6 +88,13 @@ unsigned long get_ticks(void) {
     do_div(ticks, CYCLESPERTICK);
 
     return ticks;
+}
+
+void wait_ticks(int ticks_to_wait) {
+    unsigned long start_ticks = get_ticks();
+    while (get_ticks() - start_ticks < (unsigned long)ticks_to_wait) {
+        __asm__ __volatile__("nop");
+    }
 }
 
 void itoa_hex(unsigned int num, char *buffer) {
@@ -159,13 +135,6 @@ void utoa(unsigned int a, char *b) {
         b[i - i1 - 1] = c;
     }
     b[i] = 0;
-}
-
-void wait_ticks(int ticks_to_wait) {
-    unsigned long start_ticks = get_ticks();
-    while (get_ticks() - start_ticks < (unsigned long)ticks_to_wait) {
-        __asm__ __volatile__("nop");
-    }
 }
 
 void print_splash_screen(void) {

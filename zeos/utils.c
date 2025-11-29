@@ -1,16 +1,17 @@
 /**
- * @file utils.c
- * @brief Utility functions and helper routines for ZeOS.
- *
- * This file contains general-purpose utility functions including
- * memory operations, copying routines, and system helper functions.
- */
+* @file utils.c
+* @brief Utility functions and helper routines for ZeOS.
+*
+* This file contains general-purpose utility functions including
+* memory operations, copying routines, and system helper functions.
+*/
 
 #include <io.h>
 #include <mm_address.h>
 #include <types.h>
 #include <utils.h>
 
+#define CYCLESPERTICK 109000
 void copy_data(void *start, void *dest, int size) {
     DWord *p = start, *q = dest;
     Byte *p1, *q1;
@@ -78,7 +79,6 @@ int access_ok(int type, const void *addr, unsigned long size) {
     return 0;
 }
 
-#define CYCLESPERTICK 109000
 
 /*
  * do_div() is NOT a C function. It wants to return

@@ -6,6 +6,7 @@
  * including process management (fork, exit), I/O operations (write),
  * process synchronization (block, unblock), and system information.
  */
+
 #include <debug.h>
 #include <devices.h>
 #include <errno.h>
@@ -28,6 +29,7 @@ static int map_stack_pages(struct task_struct *master, unsigned int first_page,
 static void release_thread_stack(struct task_struct *thread);
 static int in_keyboard_context(void);
 
+/* Kernel buffer for system operations */
 char buffer_k[SYS_BUFFER_SIZE];
 
 int check_fd(int fd, int permissions) {
@@ -36,33 +38,29 @@ int check_fd(int fd, int permissions) {
     return 0;
 }
 
-int sys_ni_syscall() {
+int sys_ni_syscall(void) {
     return -38; /*ENOSYS*/
 }
 
-int sys_getpid() {
+int sys_getpid(void) {
     if (in_keyboard_context()) {
         return -EINPROGRESS;
     }
     return current_task->PID;
 }
 
-int sys_gettid() {
+int sys_gettid(void) {
     if (in_keyboard_context()) {
         return -EINPROGRESS;
     }
     return current_task->TID;
 }
 
-int ret_from_fork() {
+int ret_from_fork(void) {
     return 0;
 }
 
-static int in_keyboard_context(void) {
-    return (current_task && current_task->in_kbd_context);
-}
-
-int sys_fork() {
+int sys_fork(void) {
     int PID = -1;
 
 #if DEBUG_INFO_FORK
@@ -298,11 +296,11 @@ int sys_write(int fd, char *buffer, int size) {
     return size - bytes_left;
 }
 
-int sys_gettime() {
+int sys_gettime(void) {
     return zeos_ticks;
 }
 
-void sys_exit() {
+void sys_exit(void) {
 #if DEBUG_INFO_EXIT
     printk_color_fmt(INFO_COLOR, "DEBUG->[EXIT] PID %d TID %d calling exit\n", current_task->PID,
                      current_task->TID);
@@ -365,7 +363,7 @@ void sys_exit() {
     sched_next_rr();
 }
 
-void sys_block() {
+void sys_block(void) {
     if (current_task->pending_unblocks == 0) {
         update_process_state_rr(current_task, &blockedqueue);
         scheduler();
@@ -391,87 +389,6 @@ int sys_unblock(int pid) {
         }
     }
     return -1;
-}
-
-static int stack_region_overlaps(const struct task_struct *task, unsigned int start,
-                                 unsigned int pages) {
-    if (!task || task->user_stack_region_pages == 0) return 0;
-
-    unsigned int end = start + pages;
-    unsigned int existing_start = task->user_stack_region_start;
-    unsigned int existing_end = existing_start + task->user_stack_region_pages;
-
-    return !(end <= existing_start || start >= existing_end);
-}
-
-static int stack_region_in_use(struct task_struct *master, unsigned int start, unsigned int pages) {
-    if (stack_region_overlaps(master, start, pages)) return 1;
-
-    struct list_head *pos;
-    list_for_each(pos, &master->threads) {
-        struct task_struct *thread = list_entry(pos, struct task_struct, thread_list);
-        if (stack_region_overlaps(thread, start, pages)) return 1;
-    }
-
-    return 0;
-}
-
-static int find_free_stack_region(struct task_struct *master) {
-    for (unsigned int page = THREAD_STACK_BASE_PAGE;
-         page + THREAD_STACK_REGION_PAGES <= TOTAL_PAGES; page += THREAD_STACK_REGION_PAGES) {
-        if (!stack_region_in_use(master, page, THREAD_STACK_REGION_PAGES)) return page;
-    }
-    return -1;
-}
-
-static int map_stack_pages(struct task_struct *master, unsigned int first_page,
-                           unsigned int pages_to_map) {
-    page_table_entry *PT = get_PT(master);
-
-    for (unsigned int i = 0; i < pages_to_map; ++i) {
-        int frame = alloc_frame();
-        if (frame < 0) {
-            /* Roll back previously mapped pages */
-            while (i > 0) {
-                --i;
-                unsigned int page = first_page + i;
-                free_frame(get_frame(PT, page));
-                del_ss_pag(PT, page);
-            }
-            return -EAGAIN;
-        }
-        set_ss_pag(PT, first_page + i, frame);
-    }
-
-    return 0;
-}
-
-static void release_thread_stack(struct task_struct *thread) {
-    if (!thread || thread->user_stack_frames <= 0 || thread->user_stack_ptr == NULL) {
-        thread->user_stack_region_start = 0;
-        thread->user_stack_region_pages = 0;
-        thread->user_initial_esp = 0;
-        thread->user_entry = 0;
-        return;
-    }
-
-    page_table_entry *PT = get_PT(thread);
-    unsigned int first_page = ((unsigned int)thread->user_stack_ptr) >> 12;
-
-    for (int i = 0; i < thread->user_stack_frames; ++i) {
-        unsigned int page = first_page + i;
-        free_frame(get_frame(PT, page));
-        del_ss_pag(PT, page);
-    }
-
-    set_cr3(get_DIR(thread));
-
-    thread->user_stack_ptr = NULL;
-    thread->user_stack_frames = 0;
-    thread->user_stack_region_start = 0;
-    thread->user_stack_region_pages = 0;
-    thread->user_initial_esp = 0;
-    thread->user_entry = 0;
 }
 
 int sys_create_thread(void (*function)(void *), void *parameter, void (*wrapper)(void)) {
@@ -759,4 +676,89 @@ int sys_keyboard_event(void (*func)(char key, int pressed), void (*wrapper)(void
     task->in_kbd_context = 0;
 
     return 0;
+}
+
+static int in_keyboard_context(void) {
+    return (current_task && current_task->in_kbd_context);
+}
+
+static int stack_region_overlaps(const struct task_struct *task, unsigned int start,
+                                 unsigned int pages) {
+    if (!task || task->user_stack_region_pages == 0) return 0;
+
+    unsigned int end = start + pages;
+    unsigned int existing_start = task->user_stack_region_start;
+    unsigned int existing_end = existing_start + task->user_stack_region_pages;
+
+    return !(end <= existing_start || start >= existing_end);
+}
+
+static int stack_region_in_use(struct task_struct *master, unsigned int start, unsigned int pages) {
+    if (stack_region_overlaps(master, start, pages)) return 1;
+
+    struct list_head *pos;
+    list_for_each(pos, &master->threads) {
+        struct task_struct *thread = list_entry(pos, struct task_struct, thread_list);
+        if (stack_region_overlaps(thread, start, pages)) return 1;
+    }
+
+    return 0;
+}
+
+static int find_free_stack_region(struct task_struct *master) {
+    for (unsigned int page = THREAD_STACK_BASE_PAGE;
+         page + THREAD_STACK_REGION_PAGES <= TOTAL_PAGES; page += THREAD_STACK_REGION_PAGES) {
+        if (!stack_region_in_use(master, page, THREAD_STACK_REGION_PAGES)) return page;
+    }
+    return -1;
+}
+
+static int map_stack_pages(struct task_struct *master, unsigned int first_page,
+                           unsigned int pages_to_map) {
+    page_table_entry *PT = get_PT(master);
+
+    for (unsigned int i = 0; i < pages_to_map; ++i) {
+        int frame = alloc_frame();
+        if (frame < 0) {
+            /* Roll back previously mapped pages */
+            while (i > 0) {
+                --i;
+                unsigned int page = first_page + i;
+                free_frame(get_frame(PT, page));
+                del_ss_pag(PT, page);
+            }
+            return -EAGAIN;
+        }
+        set_ss_pag(PT, first_page + i, frame);
+    }
+
+    return 0;
+}
+
+static void release_thread_stack(struct task_struct *thread) {
+    if (!thread || thread->user_stack_frames <= 0 || thread->user_stack_ptr == NULL) {
+        thread->user_stack_region_start = 0;
+        thread->user_stack_region_pages = 0;
+        thread->user_initial_esp = 0;
+        thread->user_entry = 0;
+        return;
+    }
+
+    page_table_entry *PT = get_PT(thread);
+    unsigned int first_page = ((unsigned int)thread->user_stack_ptr) >> 12;
+
+    for (int i = 0; i < thread->user_stack_frames; ++i) {
+        unsigned int page = first_page + i;
+        free_frame(get_frame(PT, page));
+        del_ss_pag(PT, page);
+    }
+
+    set_cr3(get_DIR(thread));
+
+    thread->user_stack_ptr = NULL;
+    thread->user_stack_frames = 0;
+    thread->user_stack_region_start = 0;
+    thread->user_stack_region_pages = 0;
+    thread->user_initial_esp = 0;
+    thread->user_entry = 0;
 }

@@ -11,10 +11,15 @@
 #include <libc.h>
 #include <types.h>
 
+/* Global errno variable for error handling */
 int errno;
 
 /* Internal buffer for printf formatting */
 static char printf_buffer[PRINTF_BUFFER_SIZE];
+
+/****************************************/
+/**    String Functions                **/
+/****************************************/
 
 void itoa(int a, char *b) {
     int i, i1;
@@ -51,7 +56,11 @@ int strlen(char *a) {
     return i;
 }
 
-void perror() {
+/****************************************/
+/**    Error Handling Functions        **/
+/****************************************/
+
+void perror(void) {
     char buff[12];
     char *msg;
 
@@ -85,6 +94,10 @@ void perror() {
 
     return;
 }
+
+/****************************************/
+/**    I/O Functions                   **/
+/****************************************/
 
 void prints(const char *fmt, ...) {
     __builtin_va_list args;

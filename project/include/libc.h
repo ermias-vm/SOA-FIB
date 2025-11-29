@@ -11,13 +11,21 @@
 
 #include <stats.h>
 
-/* Buffer size for prints() formatting */
+/** Buffer size for prints() formatting */
 #define PRINTF_BUFFER_SIZE 256
+
+/** Global errno variable for error handling */
+extern int errno;
+
+/****************************************/
+/**    String Functions                **/
+/****************************************/
 
 /**
  * @brief Convert integer to ASCII string.
  *
  * This function converts an integer value to its ASCII string representation.
+ *
  * @param a Integer value to convert.
  * @param b Buffer to store the resulting string.
  */
@@ -27,17 +35,43 @@ void itoa(int a, char *b);
  * @brief Calculate string length.
  *
  * This function calculates the length of a null-terminated string.
+ *
  * @param a Null-terminated string to measure.
  * @return Length of the string in characters.
  */
 int strlen(char *a);
 
+/****************************************/
+/**    Error Handling Functions        **/
+/****************************************/
+
 /**
- * @brief Execute ZeOS test suite.
+ * @brief Print error message based on errno.
  *
- * This function runs the ZeOS test suite.
+ * This function prints an error message corresponding to the current
+ * value of errno.
  */
-void execute_zeos_tests(void);
+void perror(void);
+
+/****************************************/
+/**    I/O Functions                   **/
+/****************************************/
+
+/**
+ * @brief Formatted print to stdout (user space printf).
+ *
+ * This function formats a string with variable arguments and writes
+ * it to stdout. Similar to printf but simplified for ZeOS user space.
+ * Supports format specifiers: %d (int), %s (string), %c (char), %% (literal %).
+ *
+ * @param fmt Format string with optional format specifiers.
+ * @param ... Variable arguments matching format specifiers.
+ */
+void prints(const char *fmt, ...);
+
+/****************************************/
+/**    System Call Wrappers            **/
+/****************************************/
 
 /**
  * @brief User-space wrapper for gettime system call.
@@ -76,7 +110,7 @@ int write(int fd, char *buffer, int size);
  * @see sys_getpid (defined in sys.h)
  * @return Process ID of the current process, or -1 on error with errno set
  */
-int getpid();
+int getpid(void);
 
 /**
  * @brief User-space wrapper for gettid system call.
@@ -86,7 +120,7 @@ int getpid();
  *
  * @return Thread ID of the current thread, or -1 on error with errno set
  */
-int gettid();
+int gettid(void);
 
 /**
  * @brief User-space wrapper for fork system call.
@@ -103,14 +137,18 @@ int gettid();
  *         In child process: 0
  *         On error: -1 with errno set
  */
-int fork();
+int fork(void);
 
 /**
  * @brief Terminate process.
  *
  * This function terminates the current process.
  */
-void exit();
+void exit(void);
+
+/****************************************/
+/**    Process Synchronization         **/
+/****************************************/
 
 /**
  * @brief Block current process.
@@ -123,10 +161,15 @@ void block(void);
  * @brief Unblock a child process.
  *
  * This function unblocks a child process by PID.
+ *
  * @param pid Process ID to unblock.
  * @return 0 on success, -1 on error.
  */
 int unblock(int pid);
+
+/****************************************/
+/**    Thread Functions                **/
+/****************************************/
 
 /**
  * @brief Create a new thread.
@@ -178,25 +221,9 @@ void ThreadExit(void);
  */
 void thread_entry_wrapper(void);
 
-/**
- * @brief Formatted print to stdout (user space printf).
- *
- * This function formats a string with variable arguments and writes
- * it to stdout. Similar to printf but simplified for ZeOS user space.
- * Supports format specifiers: %d (int), %s (string), %c (char), %% (literal %).
- *
- * @param fmt Format string with optional format specifiers.
- * @param ... Variable arguments matching format specifiers.
- */
-void prints(const char *fmt, ...);
-
-/**
- * @brief Print error message based on errno.
- *
- * This function prints an error message corresponding to the current
- * value of errno.
- */
-void perror(void);
+/****************************************/
+/**    Keyboard Functions              **/
+/****************************************/
 
 /**
  * @brief Register a keyboard event handler.
@@ -242,5 +269,16 @@ int KeyboardEvent(void (*func)(char key, int pressed));
  * @note This function never returns normally; int 0x2b restores context.
  */
 void kbd_wrapper(void);
+
+/****************************************/
+/**    Test Functions                  **/
+/****************************************/
+
+/**
+ * @brief Execute ZeOS test suite.
+ *
+ * This function runs the ZeOS test suite.
+ */
+void execute_zeos_tests(void);
 
 #endif /* __LIBC_H__ */

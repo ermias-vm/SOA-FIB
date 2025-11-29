@@ -5,6 +5,7 @@
  * This file implements interrupt descriptor table setup, interrupt handlers,
  * keyboard processing, timer management, and system call entry points.
  */
+
 #include <entry.h>
 #include <hardware.h>
 #include <interrupt.h>
@@ -78,7 +79,7 @@ void setTrapHandler(int vector, void (*handler)(), int maxAccessibleFromPL) {
     idt[vector].highOffset = highWord((DWord)handler);
 }
 
-void setIdt() {
+void setIdt(void) {
     /* Program interrups/exception service routines */
     idtR.base = (DWord)idt;
     idtR.limit = IDT_ENTRIES * sizeof(Gate) - 1;
@@ -103,7 +104,7 @@ void setIdt() {
     set_idt_reg(&idtR);
 }
 
-void keyboard_routine() {
+void keyboard_routine(void) {
     unsigned char key = inb(0x60); // Read the value from port 0x60 (keyboard port)
     // Bit 7 indicates if the key was pressed (MAKE = 0) or released (BREAK = 1)
     int isBreak = key & 0x80; // 0x80 & 00000000 = 0 // Make  <--> 0x80 & 10000000 = 1 // Break
