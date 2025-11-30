@@ -15,18 +15,15 @@
 #include <segment.h>
 #include <sys.h>
 
-/* Stack frame offsets - must match sys.c and entry.S layout */
-#define STACK_USER_EIP (KERNEL_STACK_SIZE - 5)
-#define STACK_USER_ESP (KERNEL_STACK_SIZE - 2)
-#define STACK_EAX (KERNEL_STACK_SIZE - 10)
 
 void init_keyboard_fields(struct task_struct *task) {
     task->kbd_handler = NULL;
     task->kbd_wrapper = NULL;
     task->kbd_aux_stack = NULL;
     task->in_kbd_context = 0;
-    task->kbd_saved_esp = 0;
-    task->kbd_saved_eip = 0;
+    for (int i = 0; i < KBD_CTX_SIZE; i++) {
+        task->kbd_saved_ctx[i] = 0;
+    }
 }
 
 int setup_kbd_aux_stack(struct task_struct *task) {
@@ -74,8 +71,9 @@ void free_kbd_aux_stack(struct task_struct *task) {
 void cleanup_kbd_handler(struct task_struct *task) {
     task->kbd_handler = NULL;
     task->in_kbd_context = 0;
-    task->kbd_saved_esp = 0;
-    task->kbd_saved_eip = 0;
+    for (int i = 0; i < KBD_CTX_SIZE; i++) {
+        task->kbd_saved_ctx[i] = 0;
+    }
     free_kbd_aux_stack(task);
 }
 
@@ -100,9 +98,26 @@ void kbd_irq_handler(void) {
     /* Get the task's kernel stack to modify saved context */
     union task_union *task_union = (union task_union *)task;
 
-    /* Save original user EIP and ESP to restore later */
-    task->kbd_saved_eip = task_union->stack[STACK_USER_EIP];
-    task->kbd_saved_esp = task_union->stack[STACK_USER_ESP];
+    /*
+     * Save the complete context (SW + HW) to restore later.
+     * This includes all registers saved by SAVE_ALL plus the hardware context.
+     */
+    task->kbd_saved_ctx[0] = task_union->stack[STACK_EBX];
+    task->kbd_saved_ctx[1] = task_union->stack[STACK_ECX];
+    task->kbd_saved_ctx[2] = task_union->stack[STACK_EDX];
+    task->kbd_saved_ctx[3] = task_union->stack[STACK_ESI];
+    task->kbd_saved_ctx[4] = task_union->stack[STACK_EDI];
+    task->kbd_saved_ctx[5] = task_union->stack[STACK_EBP];
+    task->kbd_saved_ctx[6] = task_union->stack[STACK_EAX];
+    task->kbd_saved_ctx[7] = task_union->stack[STACK_DS];
+    task->kbd_saved_ctx[8] = task_union->stack[STACK_ES];
+    task->kbd_saved_ctx[9] = task_union->stack[STACK_FS];
+    task->kbd_saved_ctx[10] = task_union->stack[STACK_GS];
+    task->kbd_saved_ctx[11] = task_union->stack[STACK_USER_EIP];
+    task->kbd_saved_ctx[12] = task_union->stack[STACK_USER_CS];
+    task->kbd_saved_ctx[13] = task_union->stack[STACK_EFLAGS];
+    task->kbd_saved_ctx[14] = task_union->stack[STACK_USER_ESP];
+    task->kbd_saved_ctx[15] = task_union->stack[STACK_USER_SS];
 
     /*
      * Setup auxiliary stack for the wrapper function.
@@ -125,9 +140,6 @@ void kbd_irq_handler(void) {
     /* Modify saved context to jump to wrapper function on auxiliary stack */
     task_union->stack[STACK_USER_EIP] = (unsigned long)task->kbd_wrapper;
     task_union->stack[STACK_USER_ESP] = (unsigned long)stack_ptr;
-
-    /* Clear EAX (return value) */
-    task_union->stack[STACK_EAX] = 0;
 }
 
 void kbd_resume_handler(void) {
@@ -138,11 +150,26 @@ void kbd_resume_handler(void) {
         return;
     }
 
-    /* Restore original execution context */
+    /* Get the task's kernel stack */
     union task_union *task_union = (union task_union *)task;
 
-    task_union->stack[STACK_USER_EIP] = task->kbd_saved_eip;
-    task_union->stack[STACK_USER_ESP] = task->kbd_saved_esp;
+    /* Restore the complete saved context (SW + HW) */
+    task_union->stack[STACK_EBX] = task->kbd_saved_ctx[0];
+    task_union->stack[STACK_ECX] = task->kbd_saved_ctx[1];
+    task_union->stack[STACK_EDX] = task->kbd_saved_ctx[2];
+    task_union->stack[STACK_ESI] = task->kbd_saved_ctx[3];
+    task_union->stack[STACK_EDI] = task->kbd_saved_ctx[4];
+    task_union->stack[STACK_EBP] = task->kbd_saved_ctx[5];
+    task_union->stack[STACK_EAX] = task->kbd_saved_ctx[6];
+    task_union->stack[STACK_DS] = task->kbd_saved_ctx[7];
+    task_union->stack[STACK_ES] = task->kbd_saved_ctx[8];
+    task_union->stack[STACK_FS] = task->kbd_saved_ctx[9];
+    task_union->stack[STACK_GS] = task->kbd_saved_ctx[10];
+    task_union->stack[STACK_USER_EIP] = task->kbd_saved_ctx[11];
+    task_union->stack[STACK_USER_CS] = task->kbd_saved_ctx[12];
+    task_union->stack[STACK_EFLAGS] = task->kbd_saved_ctx[13];
+    task_union->stack[STACK_USER_ESP] = task->kbd_saved_ctx[14];
+    task_union->stack[STACK_USER_SS] = task->kbd_saved_ctx[15];
 
     /* Clear keyboard handler flag */
     task->in_kbd_context = 0;

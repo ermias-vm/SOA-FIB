@@ -19,6 +19,9 @@
 /** Size of the kernel stack for each process in words */
 #define KERNEL_STACK_SIZE 1024
 
+/**< Total registers saved: 11 SW + 5 HW */
+#define SW_AND_HW_CONTEXT_SIZE 16    
+
 /** Default quantum assigned to new processes (ticks) */
 #define DEFAULT_QUANTUM 10
 
@@ -70,8 +73,8 @@ struct task_struct {
     void (*kbd_wrapper)(void);                  /**< User wrapper function address */
     void *kbd_aux_stack;                        /**< Auxiliary stack for keyboard handler */
     int in_kbd_context;                         /**< Flag: 1 if currently in keyboard context */
-    unsigned long kbd_saved_esp;                /**< Saved ESP before entering handler */
-    unsigned long kbd_saved_eip;                /**< Saved EIP before entering handler */
+    unsigned long kbd_saved_ctx[SW_AND_HW_CONTEXT_SIZE]; /**< Saved full context (SW + HW) before handler (11 SW + 5 HW
+                                        registers) */
 };
 
 /** Union for process data and stack */

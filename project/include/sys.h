@@ -14,11 +14,23 @@
 /** System buffer size for kernel operations */
 #define SYS_BUFFER_SIZE 256
 
-/** Kernel stack offsets for accessing saved context (used in thread/fork setup) */
-#define STACK_USER_EIP (KERNEL_STACK_SIZE - 5)  /**< User EIP in hardware context */
-#define STACK_USER_ESP (KERNEL_STACK_SIZE - 2)  /**< User ESP in hardware context */
-#define STACK_EAX (KERNEL_STACK_SIZE - 10)      /**< EAX in software context */
+/** Kernel stack offsets for accessing saved context (matches entry.S SAVE_ALL layout) */
+#define STACK_EBX (KERNEL_STACK_SIZE - 16)      /**< EBX in software context */
+#define STACK_ECX (KERNEL_STACK_SIZE - 15)      /**< ECX in software context */
+#define STACK_EDX (KERNEL_STACK_SIZE - 14)      /**< EDX in software context */
+#define STACK_ESI (KERNEL_STACK_SIZE - 13)      /**< ESI in software context */
+#define STACK_EDI (KERNEL_STACK_SIZE - 12)      /**< EDI in software context */
 #define STACK_EBP (KERNEL_STACK_SIZE - 11)      /**< EBP in software context */
+#define STACK_EAX (KERNEL_STACK_SIZE - 10)      /**< EAX in software context */
+#define STACK_DS (KERNEL_STACK_SIZE - 9)        /**< DS in software context */
+#define STACK_ES (KERNEL_STACK_SIZE - 8)        /**< ES in software context */
+#define STACK_FS (KERNEL_STACK_SIZE - 7)        /**< FS in software context */
+#define STACK_GS (KERNEL_STACK_SIZE - 6)        /**< GS in software context */
+#define STACK_USER_EIP (KERNEL_STACK_SIZE - 5)  /**< User EIP in hardware context */
+#define STACK_USER_CS (KERNEL_STACK_SIZE - 4)   /**< User CS in hardware context */
+#define STACK_EFLAGS (KERNEL_STACK_SIZE - 3)    /**< EFLAGS in hardware context */
+#define STACK_USER_ESP (KERNEL_STACK_SIZE - 2)  /**< User ESP in hardware context */
+#define STACK_USER_SS (KERNEL_STACK_SIZE - 1)   /**< User SS in hardware context */
 #define STACK_RET_ADDR (KERNEL_STACK_SIZE - 18) /**< Return address for switch_context */
 #define STACK_FAKE_EBP (KERNEL_STACK_SIZE - 19) /**< Fake EBP for switch_context pop */
 

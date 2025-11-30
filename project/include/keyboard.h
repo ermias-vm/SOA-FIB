@@ -20,6 +20,9 @@ struct task_struct;
 #define KEYBOARD_DATA_PORT 0x60
 #define KEYBOARD_STATUS_PORT 0x64
 
+/* Number of registers to save (SW context + HW context) */
+#define KBD_CTX_SIZE 16
+
 /* Auxiliary stack configuration for keyboard handler */
 #define KBD_AUX_STACK_PAGES 1
 #define KBD_AUX_STACK_SIZE (KBD_AUX_STACK_PAGES * PAGE_SIZE)
@@ -85,8 +88,9 @@ void kbd_irq_handler(void);
  * @brief Handle int 0x2b to resume normal execution.
  *
  * Called when user code executes int 0x2b. If we are currently in a
- * keyboard handler context, restores the original EIP and ESP so
- * execution continues where it was interrupted.
+ * keyboard handler context, restores the complete saved context (all
+ * registers from SW and HW context) so execution continues exactly
+ * where it was interrupted with all register values preserved.
  * If called outside keyboard context, does nothing.
  */
 void kbd_resume_handler(void);

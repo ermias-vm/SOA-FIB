@@ -46,8 +46,8 @@ kbd_handler:    puntero a la funcion callback del usuario
 kbd_wrapper:    puntero a kbd_wrapper en user space
 kbd_aux_stack:  direccion del tope del stack auxiliar
 in_kbd_context: flag de contexto (0 normal, 1 en handler)
-kbd_saved_esp:  ESP guardado antes de entrar al handler
-kbd_saved_eip:  EIP guardado antes de entrar al handler
+kbd_saved_ctx:  array de 16 unsigned long con el contexto completo (SW + HW)
+                guardado antes de entrar al handler, restaurado al salir
 
 5. ARCHIVOS MODIFICADOS
 -----------------------

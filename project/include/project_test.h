@@ -29,13 +29,17 @@
 /** Default Buffer size */
 #define BUFFER_SIZE 256
 
-#define MIN_WORK_TIME 200      /**< 200ms */
-#define SHORT_WORK_TIME 500    /**< 500ms */
-#define DEFAULT_WORK_TIME 1000 /**< 1 second */
-#define MEDIUM_WORK_TIME 1500  /**< 1.5 seconds */
-#define LONG_WORK_TIME 3000    /**< 3 seconds */
-#define KBD_WAIT_TIME 3000     /**< 3 seconds for keyboard test */
-#define KBD_PAUSE_TIME 1000    /**< 1 second pause between keyboard subtests */
+#define MIN_WORK_TIME 50      /**< 50ms - minimal delay after flag sync */
+#define SHORT_WORK_TIME 100   /**< 100ms - short operations */
+#define DEFAULT_WORK_TIME 200 /**< 200ms - default delay */
+#define MEDIUM_WORK_TIME 300  /**< 300ms - child process completion */
+#define LONG_WORK_TIME 500    /**< 500ms - longer thread work */
+
+#define VISUAL_DISPLAY_TIME 700 /**< 700ms - time to display visual patterns */
+#define VISUAL_PAUSE_TIME 400   /**< 400ms - pause before visual changes */
+
+#define KBD_WAIT_TIME 3000  /**< 3 seconds for keyboard test */
+#define KBD_PAUSE_TIME 1000 /**< 1 second pause between keyboard subtests */
 
 #define MAX_THREADS_PER_PROCESS 10 /** Maximum threads per process (TIDs X0-X9) */
 #define MAX_SYNC_FLAGS 10          /** Synchronization flags for thread tests */

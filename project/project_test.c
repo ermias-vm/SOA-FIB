@@ -966,7 +966,7 @@ int test_screen_write_basic(void) {
     clear_screen_buffer(10);
     prints("[PID %d] [TID %d] Preparing to write checkerboard pattern to screen buffer...\n",
            getpid(), gettid());
-    waitTicks(DEFAULT_WORK_TIME);
+    waitTicks(VISUAL_PAUSE_TIME);
 
     /* Create a checkerboard test pattern */
     char screen_buffer[SCREEN_BUFFER_SIZE];
@@ -975,7 +975,7 @@ int test_screen_write_basic(void) {
     /* Write to screen buffer (fd=10) */
     int result = write(10, screen_buffer, sizeof(screen_buffer));
     int passed = 1;
-    waitTicks(MEDIUM_WORK_TIME);
+    waitTicks(VISUAL_DISPLAY_TIME);
     clear_screen_buffer(10);
     if (result != sizeof(screen_buffer)) {
         prints("[PID %d] [TID %d] ERROR: write returned %d, expected %d\n", getpid(), gettid(),
@@ -1007,7 +1007,7 @@ int test_screen_write_size_limits(void) {
     clear_screen_buffer(10);
     prints("[PID %d] [TID %d] Waiting some ticks before writing large buffer (%d bytes)...\n",
            getpid(), gettid(), sizeof(large_buffer));
-    waitTicks(DEFAULT_WORK_TIME);
+    waitTicks(VISUAL_PAUSE_TIME);
 
     /* Write should truncate to screen size */
     int result = write(10, large_buffer, sizeof(large_buffer));
@@ -1018,7 +1018,7 @@ int test_screen_write_size_limits(void) {
                gettid(), result, SCREEN_BUFFER_SIZE);
         passed = 0;
     } else {
-        waitTicks(MEDIUM_WORK_TIME);
+        waitTicks(VISUAL_DISPLAY_TIME);
         prints("[PID %d] [TID %d] Large buffer correctly truncated to %d bytes\n", getpid(),
                gettid(), result);
     }
@@ -1046,7 +1046,7 @@ int test_screen_visual_patterns(void) {
     clear_screen_buffer(10);
     prints("[PID %d] [TID %d] Waiting some ticks before displaying checkerboard pattern...\n",
            getpid(), gettid());
-    waitTicks(DEFAULT_WORK_TIME);
+    waitTicks(VISUAL_PAUSE_TIME);
 
     int result = write(10, frame_buffer1, sizeof(frame_buffer1));
     if (result != sizeof(frame_buffer1)) {
@@ -1054,13 +1054,13 @@ int test_screen_visual_patterns(void) {
                gettid(), result);
         passed = 0;
     }
-    waitTicks(MEDIUM_WORK_TIME);
+    waitTicks(VISUAL_DISPLAY_TIME);
 
     /* Display Pattern 2: Rainbow */
     clear_screen_buffer(10);
     prints("[PID %d] [TID %d] Waiting some ticks before displaying rainbow pattern...\n", getpid(),
            gettid());
-    waitTicks(DEFAULT_WORK_TIME);
+    waitTicks(VISUAL_PAUSE_TIME);
 
     result = write(10, frame_buffer2, sizeof(frame_buffer2));
     if (result != sizeof(frame_buffer2)) {
@@ -1068,13 +1068,13 @@ int test_screen_visual_patterns(void) {
                result);
         passed = 0;
     }
-    waitTicks(MEDIUM_WORK_TIME);
+    waitTicks(VISUAL_DISPLAY_TIME);
 
     /* Display Pattern 3: Border */
     clear_screen_buffer(10);
     prints("[PID %d] [TID %d] Waiting some ticks before displaying border pattern...\n", getpid(),
            gettid());
-    waitTicks(DEFAULT_WORK_TIME);
+    waitTicks(VISUAL_PAUSE_TIME);
 
     result = write(10, frame_buffer3, sizeof(frame_buffer3));
     if (result != sizeof(frame_buffer3)) {
@@ -1082,7 +1082,7 @@ int test_screen_visual_patterns(void) {
                result);
         passed = 0;
     }
-    waitTicks(MEDIUM_WORK_TIME);
+    waitTicks(VISUAL_DISPLAY_TIME);
     clear_screen_buffer(10);
 
     if (passed) {
