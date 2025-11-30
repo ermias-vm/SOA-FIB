@@ -19,6 +19,7 @@
 #define SCREEN_TEST             1   /**< Enable/disable screen functional tests */
 #define SCREEN_PERFORMANCE_TEST 1   /**< Enable/disable screen performance test */
 #define WAITFORTICK_TEST        1   /**< Enable/disable WaitForTick tests */
+
 #define IDLE_SWITCH_TEST        1   /**< Test idle switch (exits init) */
 // clang-format on
 
