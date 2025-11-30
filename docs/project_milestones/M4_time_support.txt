@@ -1,0 +1,59 @@
+================================================================================
+                        MILESTONE 4: TIME SUPPORT IN ZEOS
+================================================================================
+
+1. SYSTEM CALL IMPLEMENTADA
+---------------------------
+
+int WaitForTick(void);
+
+Bloquea el thread actual hasta que ocurra una interrupcion de reloj. Multiples
+threads pueden estar bloqueados simultaneamente esperando el tick.
+
+Retorna 0 en exito, -1 con errno=EINPROGRESS si se llama desde un keyboard handler.
+
+2. IMPLEMENTACION
+-----------------
+
+sys_waitfortick() mueve el thread actual a tick_blockedqueue y llama a
+sched_next_rr() para ceder la CPU.
+
+En cada interrupcion de reloj, scheduler() despierta TODOS los threads en
+tick_blockedqueue moviendolos a readyqueue antes de evaluar si hay que cambiar
+de proceso.
+
+3. ESTRUCTURAS DE DATOS
+-----------------------
+
+tick_blockedqueue: nueva cola global en sched.c para threads esperando tick.
+Inicializada junto con las otras colas en init_queues().
+
+4. FLUJO DE EJECUCION
+---------------------
+
+Thread llama WaitForTick():
+  1. sys_waitfortick() verifica que no estamos en keyboard context
+  2. update_process_state_rr() mueve thread a tick_blockedqueue
+  3. sched_next_rr() ejecuta otro thread
+
+Ocurre interrupcion de reloj:
+  1. clock_routine() incrementa zeos_ticks y llama scheduler()
+  2. scheduler() despierta todos los threads de tick_blockedqueue
+  3. Los threads despertados compiten por CPU segun round-robin
+
+5. ARCHIVOS MODIFICADOS
+-----------------------
+
+Headers:
+  include/sched.h - declaracion extern tick_blockedqueue
+  include/sys.h   - prototipo sys_waitfortick()
+  include/libc.h  - declaracion WaitForTick()
+
+Implementacion:
+  sched.c             - tick_blockedqueue, init_queues(), scheduler() con wake-up
+  sys.c               - sys_waitfortick()
+  sys_call_table.S    - entrada 23 para sys_waitfortick
+  sys_call_wrappers.S - wrapper WaitForTick
+  interrupt.c         - comentario documentando donde ocurre el wake-up
+
+================================================================================

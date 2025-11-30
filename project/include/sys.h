@@ -72,7 +72,8 @@ extern char buffer_k[SYS_BUFFER_SIZE];
  * This function handles system calls that are not implemented in the system.
  * It serves as a placeholder for unimplemented system calls.
  *
- * @return Returns -ENOSYS (function not implemented error code).
+ * @return -1 on error with errno set to:
+ *         -ENOSYS function not implemented
  */
 int sys_ni_syscall(void);
 
@@ -82,14 +83,16 @@ int sys_ni_syscall(void);
  * This function returns the process identifier of the calling process.
  * The PID is unique for each process in the system.
  *
- * @return The process identifier (PID) of the current process.
+ * @return The process identifier (PID) of the current process, or -1 on error with errno set to:
+ *         -EINPROGRESS if called from within a keyboard handler
  */
 int sys_getpid(void);
 
 /**
  * @brief Gets the thread identifier (TID) of the current thread.
  *
- * @return The thread identifier (TID) of the current thread.
+ * @return The thread identifier (TID) of the current thread, or -1 on error with errno set to:
+ *         -EINPROGRESS if called from within a keyboard handler
  */
 int sys_gettid(void);
 
@@ -106,8 +109,10 @@ int sys_gettid(void);
  *
  * @return In the parent process, returns the PID of the child process.
  *         In the child process, returns 0.
- *         Returns -ENOMEM if no free task slots available.
- *         Returns -EAGAIN if insufficient memory for child's address space.
+ *         On error returns -1 with errno set to:
+ *         -ENOMEM if no free task slots available
+ *         -EAGAIN if insufficient memory for child's address space
+ *         -EINPROGRESS if called from within a keyboard handler
  */
 int sys_fork(void);
 
@@ -122,7 +127,11 @@ int sys_fork(void);
  * @param fd File descriptor where to write the data.
  * @param buffer Pointer to the character buffer to be written.
  * @param size Size of the buffer in bytes.
- * @return The number of bytes written, or a negative error code on failure.
+ * @return The number of bytes written on success, or -1 on error with errno set to:
+ *         -EINVAL if size is negative
+ *         -EBADF if fd is not a valid file descriptor
+ *         -EFAULT if buffer is not a valid user address
+ *         -EINPROGRESS if called from within a keyboard handler
  */
 int sys_write(int fd, char *buffer, int size);
 
@@ -149,8 +158,11 @@ void sys_exit(void);
  *
  * This function blocks the current process unless there are pending
  * unblock operations.
+ *
+ * @return 0 on success, -1 on error with errno set to:
+ *         -EINPROGRESS if called from within a keyboard handler
  */
-void sys_block(void);
+int sys_block(void);
 
 /**
  * @brief Unblock a child process.
@@ -158,9 +170,23 @@ void sys_block(void);
  * This function unblocks a child process identified by its PID.
  *
  * @param pid Process ID of the child to unblock.
- * @return 0 on success, -1 on error.
+ * @return 0 on success, -1 on error with errno set to:
+ *         -ESRCH if pid does not correspond to a child process
+ *         -EINPROGRESS if called from within a keyboard handler
  */
 int sys_unblock(int pid);
+
+/**
+ * @brief Wait until next clock tick.
+ *
+ * This system call blocks the current thread until the next clock
+ * interrupt (timer tick) occurs. All threads blocked on this call
+ * are woken up simultaneously when a tick occurs.
+ *
+ * @return 0 on success, -1 on error with errno set to:
+ *         -EINPROGRESS if called from within a keyboard handler
+ */
+int sys_waitfortick(void);
 
 /**
  * @brief Create a new thread in the current process.
@@ -174,7 +200,11 @@ int sys_unblock(int pid);
  * @param function Pointer to the function the thread will execute.
  * @param parameter Parameter to pass to the thread function.
  * @param wrapper Pointer to the thread wrapper function that calls function and ThreadExit.
- * @return Thread ID (TID) of the new thread on success, negative error code on failure.
+ * @return Thread ID (TID) of the new thread on success, or -1 on error with errno set to:
+ *         -EINVAL if function or wrapper is NULL
+ *         -EFAULT if function, wrapper or parameter is not a valid user address
+ *         -ENOMEM if no free task slots or TID slots available
+ *         -EINPROGRESS if called from within a keyboard handler
  */
 int sys_create_thread(void (*function)(void *), void *parameter, void (*wrapper)(void));
 
@@ -205,7 +235,7 @@ void sys_exit_thread(void);
  *
  * @param func User callback function, or NULL to disable keyboard events.
  * @param wrapper User wrapper function that calls func and int 0x2b.
- * @return 0 on success, negative error code on failure:
+ * @return 0 on success, -1 on error with errno set to:
  *         -EFAULT if func is not a valid user address
  *         -ENOMEM if cannot allocate auxiliary stack
  *         -EINPROGRESS if called from within a keyboard handler

@@ -14,11 +14,13 @@
 /**********************/
 
 // clang-format off
-#define THREAD_TEST             0   /**< Enable/disable thread tests */
-#define KEYBOARD_TEST           0   /**< Enable/disable keyboard tests */
+#define THREAD_TEST             1   /**< Enable/disable thread tests */
+#define KEYBOARD_TEST           1   /**< Enable/disable keyboard tests */
 #define SCREEN_TEST             1   /**< Enable/disable screen functional tests */
 #define SCREEN_PERFORMANCE_TEST 1   /**< Enable/disable screen performance test */
-#define IDLE_SWITCH_TEST        0   /**< Test idle switch (exits init) */
+#define WAITFORTICK_TEST        1   /**< Enable/disable WaitForTick tests */
+
+#define IDLE_SWITCH_TEST        1   /**< Test idle switch (exits init) */
 // clang-format on
 
 /** Reset errno macro */
@@ -312,6 +314,50 @@ int test_screen_write_performance(void);
  * Verifies error handling, basic functionality, and size limits.
  */
 void screen_tests(void);
+
+/****************************************/
+/**    WaitForTick Test Functions      **/
+/****************************************/
+
+/**
+ * @brief Test basic WaitForTick functionality.
+ *
+ * Verifies that WaitForTick blocks the thread and returns after a tick.
+ * Measures time before and after to confirm a tick occurred.
+ *
+ * @param passed Pointer to store result (1 = passed, 0 = failed).
+ */
+void subtest_waitfortick_basic(int *passed);
+
+/**
+ * @brief Test multiple threads waiting for tick simultaneously.
+ *
+ * Creates multiple threads that all call WaitForTick and verifies
+ * they are all woken up when the next tick occurs.
+ *
+ * @param passed Pointer to store result (1 = passed, 0 = failed).
+ */
+void subtest_waitfortick_multiple_threads(int *passed);
+
+/**
+ * @brief Test WaitForTick timing accuracy.
+ *
+ * Calls WaitForTick multiple times and measures total time to verify
+ * it approximately matches the expected number of ticks.
+ *
+ * @param passed Pointer to store result (1 = passed, 0 = failed).
+ */
+void subtest_waitfortick_timing(int *passed);
+
+/**
+ * @brief Main WaitForTick test suite.
+ *
+ * This function runs WaitForTick tests:
+ * - Subtest 1: Basic functionality and return value
+ * - Subtest 2: Multiple threads waiting simultaneously
+ * - Subtest 3: Timing accuracy test
+ */
+void waitfortick_tests(void);
 
 /****************************************/
 /**    Main Test Entry Point           **/

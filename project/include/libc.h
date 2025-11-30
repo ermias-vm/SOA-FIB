@@ -39,7 +39,7 @@ void itoa(int a, char *b);
  * @param a Null-terminated string to measure.
  * @return Length of the string in characters.
  */
-int strlen(char *a);
+int strlen(const char *a);
 
 /****************************************/
 /**    Error Handling Functions        **/
@@ -129,6 +129,7 @@ int getpid(void);
  * This wrapper function provides the user-space interface for retrieving
  * the thread identifier of the calling thread.
  *
+ * @see sys_gettid (defined in sys.h)
  * @return Thread ID of the current thread, or -1 on error with errno set
  */
 int gettid(void);
@@ -165,8 +166,11 @@ void exit(void);
  * @brief Block current process.
  *
  * This function blocks the current process.
+ *
+ * @return 0 on success, -1 on error with errno set to:
+ *         - EINPROGRESS: called from within a keyboard handler
  */
-void block(void);
+int block(void);
 
 /**
  * @brief Unblock a child process.
@@ -174,9 +178,23 @@ void block(void);
  * This function unblocks a child process by PID.
  *
  * @param pid Process ID to unblock.
- * @return 0 on success, -1 on error.
+ * @return 0 on success, -1 on error with errno set to:
+ *         - ESRCH: pid does not correspond to a child process
+ *         - EINPROGRESS: called from within a keyboard handler
  */
 int unblock(int pid);
+
+/**
+ * @brief Wait until next clock tick.
+ *
+ * This function blocks the current thread until the next clock
+ * interrupt (timer tick) occurs. Multiple threads can be blocked
+ * simultaneously waiting for a tick.
+ *
+ * @return 0 on success, -1 on error with errno set to:
+ *         - EINPROGRESS: called from within a keyboard handler
+ */
+int WaitForTick(void);
 
 /****************************************/
 /**    Thread Functions                **/
@@ -197,6 +215,7 @@ int unblock(int pid);
  *         - EINVAL: Invalid function pointer
  *         - ENOMEM: No available task structures or TID slots
  *         - EAGAIN: Could not allocate memory for thread stack
+ *         - EINPROGRESS: Called from within a keyboard handler
  */
 int ThreadCreate(void (*function)(void *), void *parameter);
 

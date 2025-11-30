@@ -101,6 +101,9 @@ extern struct list_head readyqueue;
 /** Queue for blocked processes */
 extern struct list_head blockedqueue;
 
+/** Queue for threads blocked waiting for clock tick */
+extern struct list_head tick_blockedqueue;
+
 /**
  * @brief Convert list_head to task_struct.
  *

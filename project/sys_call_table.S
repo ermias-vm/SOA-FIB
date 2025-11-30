@@ -10,29 +10,30 @@
 #include <segment.h>
 
 ENTRY (sys_call_table)
-    .long sys_ni_syscall	# 0
-    .long sys_exit          # 1 (ok)
-    .long sys_fork          # 2 (ok)
-    .long sys_ni_syscall    # 3
-    .long sys_write			# 4 (ok)
-    .long sys_exit_thread	# 5 (ok)
-    .long sys_create_thread	# 6 (ok)
-    .long sys_ni_syscall	# 7
-    .long sys_ni_syscall	# 8
-    .long sys_ni_syscall	# 9
-    .long sys_gettime	    # 10 (ok)
-    .long sys_ni_syscall	# 11
-    .long sys_block	        # 12 (ok)
-    .long sys_unblock	    # 13 (ok)
-    .long sys_ni_syscall	# 14
-    .long sys_ni_syscall	# 15
-    .long sys_ni_syscall	# 16
-    .long sys_ni_syscall	# 17
-    .long sys_ni_syscall	# 18
-    .long sys_ni_syscall	# 19
-    .long sys_getpid        # 20 (ok)
-    .long sys_gettid        # 21 (ok)
-    .long sys_keyboard_event # 22 (ok)
+    .long sys_ni_syscall	    # 0
+    .long sys_exit              # 1 (ok) - zeos
+    .long sys_fork              # 2 (ok) - zeos        
+    .long sys_ni_syscall        # 3
+    .long sys_write			    # 4 (ok) - zeos
+    .long sys_exit_thread	    # 5 (ok) - project
+    .long sys_create_thread	    # 6 (ok) - project
+    .long sys_ni_syscall	    # 7
+    .long sys_ni_syscall	    # 8
+    .long sys_ni_syscall	    # 9
+    .long sys_gettime	        # 10 (ok) - zeos
+    .long sys_ni_syscall	    # 11
+    .long sys_block	            # 12 (ok) - zeos
+    .long sys_unblock	        # 13 (ok) - zeos
+    .long sys_ni_syscall	    # 14
+    .long sys_ni_syscall	    # 15
+    .long sys_ni_syscall	    # 16
+    .long sys_ni_syscall	    # 17
+    .long sys_ni_syscall	    # 18
+    .long sys_ni_syscall	    # 19
+    .long sys_getpid            # 20 (ok) - zeos
+    .long sys_gettid            # 21 (ok) - project
+    .long sys_keyboard_event    # 22 (ok) - project
+    .long sys_waitfortick       # 23 (ok) - project   
 
 .globl MAX_SYSCALL
 MAX_SYSCALL = (. - sys_call_table)/4 
