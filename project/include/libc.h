@@ -39,7 +39,7 @@ void itoa(int a, char *b);
  * @param a Null-terminated string to measure.
  * @return Length of the string in characters.
  */
-int strlen(char *a);
+int strlen(const char *a);
 
 /****************************************/
 /**    Error Handling Functions        **/
@@ -165,8 +165,11 @@ void exit(void);
  * @brief Block current process.
  *
  * This function blocks the current process.
+ *
+ * @return 0 on success, -1 on error with errno set to:
+ *         - EINPROGRESS: called from within a keyboard handler
  */
-void block(void);
+int block(void);
 
 /**
  * @brief Unblock a child process.
@@ -177,6 +180,18 @@ void block(void);
  * @return 0 on success, -1 on error.
  */
 int unblock(int pid);
+
+/**
+ * @brief Wait until next clock tick.
+ *
+ * This function blocks the current thread until the next clock
+ * interrupt (timer tick) occurs. Multiple threads can be blocked
+ * simultaneously waiting for a tick.
+ *
+ * @return 0 on success, -1 on error with errno set to:
+ *         - EINPROGRESS: called from within a keyboard handler
+ */
+int WaitForTick(void);
 
 /****************************************/
 /**    Thread Functions                **/

@@ -40,6 +40,7 @@ struct task_struct *init_task;
 struct list_head freequeue;
 struct list_head readyqueue;
 struct list_head blockedqueue;
+struct list_head tick_blockedqueue;
 
 struct task_struct *list_head_to_task_struct(struct list_head *l) {
     return list_entry(l, struct task_struct, list);
@@ -190,6 +191,7 @@ void init_queues(void) {
     INIT_LIST_HEAD(&freequeue);
     INIT_LIST_HEAD(&readyqueue);
     INIT_LIST_HEAD(&blockedqueue);
+    INIT_LIST_HEAD(&tick_blockedqueue);
 
     /* Initialize free queue with all available task structures */
     for (int i = 0; i < NR_TASKS; ++i) {
@@ -329,6 +331,13 @@ void sched_next_rr(void) {
 
 void scheduler(void) {
     update_sched_data_rr();
+
+    /* Wake up all threads waiting for tick */
+    while (!list_empty(&tick_blockedqueue)) {
+        struct list_head *first = list_first(&tick_blockedqueue);
+        struct task_struct *task = list_head_to_task_struct(first);
+        update_process_state_rr(task, &readyqueue);
+    }
 
     if (needs_sched_rr()) {
         /* Only add to ready queue if NOT blocked (blocked tasks are already in blocked queue) */

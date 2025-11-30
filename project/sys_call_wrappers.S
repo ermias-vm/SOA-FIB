@@ -148,6 +148,14 @@ block_return:
     popl %ebp
     addl $4, %esp
     popl %ebp
+    test %eax, %eax
+    js block_error
+    ret
+
+block_error:
+    negl %eax
+    movl %eax, errno
+    movl $-1, %eax
     ret
 
 
@@ -259,7 +267,7 @@ ENTRY(KeyboardEvent)
     movl %esp, %ebp
     pushl %ebx
 
-    movl $22, %eax              # syscall number for KeyboardEvent
+    movl $22, %eax
     movl 8(%ebp), %ebx          # func parameter
     leal kbd_wrapper, %ecx      # wrapper function address
 
@@ -278,6 +286,31 @@ ke_return:
     ret
 
 ke_error:
+    negl %eax
+    movl %eax, errno
+    movl $-1, %eax
+    ret
+
+
+ENTRY(WaitForTick)
+    pushl %ebp
+    movl %esp, %ebp
+    movl $23, %eax
+
+    pushl $wft_return
+    pushl %ebp
+    movl %esp, %ebp
+    sysenter
+
+wft_return:
+    popl %ebp
+    addl $4, %esp
+    popl %ebp
+    test %eax, %eax
+    js wft_error
+    ret
+
+wft_error:
     negl %eax
     movl %eax, errno
     movl $-1, %eax

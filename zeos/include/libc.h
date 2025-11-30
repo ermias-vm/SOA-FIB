@@ -27,7 +27,7 @@ void itoa(int a, char *b);
  * @param a Null-terminated string to measure.
  * @return Length of the string in characters.
  */
-int strlen(char *a);
+int strlen(const char *a);
 
 /**
  * @brief User-space wrapper for gettime system call.

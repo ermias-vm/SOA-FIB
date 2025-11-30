@@ -46,7 +46,7 @@ void itoa(int a, char *b) {
     b[i] = 0;
 }
 
-int strlen(char *a) {
+int strlen(const char *a) {
     int i;
 
     i = 0;

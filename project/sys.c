@@ -352,16 +352,41 @@ void sys_exit(void) {
     sched_next_rr();
 }
 
-void sys_block(void) {
+int sys_block(void) {
+    /* Cannot block from keyboard handler context */
+    if (in_keyboard_context()) {
+        return -EINPROGRESS;
+    }
+
     if (current_task->pending_unblocks == 0) {
         update_process_state_rr(current_task, &blockedqueue);
         scheduler();
     } else {
         current_task->pending_unblocks--;
     }
+    return 0;
+}
+
+int sys_waitfortick(void) {
+    /* Cannot call from keyboard handler context */
+    if (in_keyboard_context()) {
+        return -EINPROGRESS;
+    }
+
+    /* Block current thread on tick_blockedqueue until next clock interrupt */
+    update_process_state_rr(current_task, &tick_blockedqueue);
+    sched_next_rr();
+
+    /* When we return here, a clock tick has occurred and we were unblocked */
+    return 0;
 }
 
 int sys_unblock(int pid) {
+    /* Cannot unblock from keyboard handler context */
+    if (in_keyboard_context()) {
+        return -EINPROGRESS;
+    }
+
     struct list_head *pos;
 
     /* Search for child with given PID */
@@ -377,7 +402,7 @@ int sys_unblock(int pid) {
             }
         }
     }
-    return -1;
+    return -ESRCH;
 }
 
 int sys_create_thread(void (*function)(void *), void *parameter, void (*wrapper)(void)) {
@@ -385,6 +410,11 @@ int sys_create_thread(void (*function)(void *), void *parameter, void (*wrapper)
     printk_color_fmt(INFO_COLOR, "DEBUG->[THREAD_CREATE] PID %d TID %d creating new thread\n",
                      current_task->PID, current_task->TID);
 #endif
+
+    /* Cannot create thread from keyboard handler context */
+    if (in_keyboard_context()) {
+        return -EINPROGRESS;
+    }
 
     if (!function) return -EINVAL;
     if (!wrapper) return -EINVAL;

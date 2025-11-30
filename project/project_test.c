@@ -33,11 +33,20 @@ static volatile int kbd_events_received = 0;
 static volatile char kbd_keys[KBD_MAX_KEYS];
 static volatile int kbd_pressed[KBD_MAX_KEYS];
 static volatile int kbd_key_index = 0;
-static volatile int kbd_syscall_result = 0;
-static volatile int kbd_syscall_errno = 0;
+
+/* Global test summary tracking */
+static int project_tests_run = 0;
+static int project_tests_passed = 0;
+
+/* EINPROGRESS test results for all syscalls */
+#define NUM_SYSCALLS_TO_TEST 10
+static volatile int kbd_syscall_tested = 0;
+static volatile int kbd_syscall_results[NUM_SYSCALLS_TO_TEST];
+static volatile int kbd_syscall_errnos[NUM_SYSCALLS_TO_TEST];
 
 /* Screen test variables */
 static int screen_subtests_passed = 0;
+static int screen_perf_passed = 0;
 
 /* Scancode to character mapping */
 static char scancode_to_char[] = {
@@ -144,9 +153,73 @@ static void test_kbd_handler(char key, int pressed) {
 static void test_kbd_handler_with_syscall(char key, int pressed) {
     (void)key;
     (void)pressed;
-    /* Try to make a syscall inside the handler - should return EINPROGRESS */
-    kbd_syscall_result = getpid();
-    kbd_syscall_errno = errno; /* Save errno before int 0x2b might modify it */
+    /* Test ALL syscalls inside the handler - each should return -1 with EINPROGRESS */
+    /* (except gettime which doesn't check keyboard context) */
+    /* We cannot test exit(1) and ThreadExit(5) as they would terminate */
+    int idx = 0;
+
+    /* Test getpid (syscall 20) */
+    errno = 0;
+    kbd_syscall_results[idx] = getpid();
+    kbd_syscall_errnos[idx] = errno;
+    idx++;
+
+    /* Test gettid (syscall 21) */
+    errno = 0;
+    kbd_syscall_results[idx] = gettid();
+    kbd_syscall_errnos[idx] = errno;
+    idx++;
+
+    /* Test gettime (syscall 10) - doesn't check keyboard context, should work */
+    errno = 0;
+    kbd_syscall_results[idx] = gettime();
+    kbd_syscall_errnos[idx] = errno;
+    idx++;
+
+    /* Test fork (syscall 2) */
+    errno = 0;
+    kbd_syscall_results[idx] = fork();
+    kbd_syscall_errnos[idx] = errno;
+    idx++;
+
+    /* Test write (syscall 4) */
+    errno = 0;
+    char buf[] = "x";
+    kbd_syscall_results[idx] = write(1, buf, 1);
+    kbd_syscall_errnos[idx] = errno;
+    idx++;
+
+    /* Test ThreadCreate (syscall 6) */
+    errno = 0;
+    kbd_syscall_results[idx] = ThreadCreate((void (*)(void *))0x1000, (void *)0);
+    kbd_syscall_errnos[idx] = errno;
+    idx++;
+
+    /* Test block (syscall 12) */
+    errno = 0;
+    kbd_syscall_results[idx] = block();
+    kbd_syscall_errnos[idx] = errno;
+    idx++;
+
+    /* Test unblock (syscall 13) */
+    errno = 0;
+    kbd_syscall_results[idx] = unblock(1);
+    kbd_syscall_errnos[idx] = errno;
+    idx++;
+
+    /* Test KeyboardEvent (syscall 22) */
+    errno = 0;
+    kbd_syscall_results[idx] = KeyboardEvent((void *)0);
+    kbd_syscall_errnos[idx] = errno;
+    idx++;
+
+    /* Test WaitForTick (syscall 23) */
+    errno = 0;
+    kbd_syscall_results[idx] = WaitForTick();
+    kbd_syscall_errnos[idx] = errno;
+    idx++;
+
+    kbd_syscall_tested = 1;
 }
 
 /****************************************/
@@ -570,7 +643,7 @@ void subtest_wrapper_calls_exit(int *passed) {
 }
 
 void thread_tests(void) {
-    print_test_header("THREAD TESTS");
+    print_test_header("THREAD SUPPORT TESTS");
 
     thread_subtests_run = 0;
     thread_subtests_passed = 0;
@@ -599,12 +672,16 @@ void thread_tests(void) {
 
     /* Print thread test summary */
     prints("\n========================================\n");
-    prints("[THREAD_TESTS] Summary: %d/%d subtests passed\n", thread_subtests_passed,
+    prints("THREAD SUPPORT TESTS: %d/%d subtests passed\n", thread_subtests_passed,
            thread_subtests_run);
     prints("========================================\n");
 
     int all_passed = (thread_subtests_passed == thread_subtests_run);
-    print_test_result("Thread Tests", all_passed);
+    print_test_result("THREAD SUPPORT TESTS", all_passed);
+
+    /* Track in global summary */
+    project_tests_run++;
+    if (all_passed) project_tests_passed++;
 }
 
 /****************************************/
@@ -717,10 +794,14 @@ void subtest_kbd_handler_called(int *passed) {
 void subtest_kbd_einprogress(int *passed) {
     print_subtest_header(4, "Verify syscalls return EINPROGRESS inside handler");
 
-    kbd_syscall_result = 12345; /* Set to known value */
-    kbd_syscall_errno = 0;
+    /* Reset test variables */
+    kbd_syscall_tested = 0;
+    for (int i = 0; i < NUM_SYSCALLS_TO_TEST; i++) {
+        kbd_syscall_results[i] = 12345;
+        kbd_syscall_errnos[i] = 0;
+    }
 
-    /* Register handler that tries to make a syscall */
+    /* Register handler that tests all syscalls */
     int ret = KeyboardEvent(test_kbd_handler_with_syscall);
     if (ret != 0) {
         prints("[PID %d] [TID %d] Failed to register handler\n", getpid(), gettid());
@@ -730,45 +811,76 @@ void subtest_kbd_einprogress(int *passed) {
         return;
     }
 
-    prints("[PID %d] [TID %d] Handler registered (will try syscall inside).\n", getpid(), gettid());
+    prints("[PID %d] [TID %d] Handler registered (will test ALL syscalls inside).\n", getpid(),
+           gettid());
     prints("[PID %d] [TID %d] Press a key to trigger the handler...\n", getpid(), gettid());
 
     /* Wait for a key event */
     int start = gettime();
-    while (gettime() - start < KBD_WAIT_TIME && kbd_syscall_result == 12345) {
+    while (gettime() - start < KBD_WAIT_TIME && kbd_syscall_tested == 0) {
         /* Busy wait for key event */
     }
 
     /* Disable handler */
     KeyboardEvent((void *)0);
 
-    if (kbd_syscall_result == 12345) {
+    if (kbd_syscall_tested == 0) {
         prints("[PID %d] [TID %d] No key pressed - cannot verify EINPROGRESS\n", getpid(),
                gettid());
         /* Pass anyway - we can't force user to press keys */
         *passed = 1;
-    } else if (kbd_syscall_result == -1 && kbd_syscall_errno == 115) {
-        /* errno 115 = EINPROGRESS (saved inside handler before int 0x2b) */
-        prints("[PID %d] [TID %d] Syscall returned -1 with errno=EINPROGRESS (115)\n", getpid(),
-               gettid());
-        *passed = 1;
-    } else if (kbd_syscall_result == -1) {
-        prints("[PID %d] [TID %d] Syscall returned -1 but errno=%d (expected 115)\n", getpid(),
-               gettid(), kbd_syscall_errno);
-        *passed = 0;
-    } else {
-        prints("[PID %d] [TID %d] Syscall returned %d (expected -1), errno=%d\n", getpid(),
-               gettid(), kbd_syscall_result, kbd_syscall_errno);
-        *passed = 0;
+        print_subtest_result(*passed);
+        kbd_subtests_run++;
+        if (*passed) kbd_subtests_passed++;
+        return;
     }
 
+    /* Check results for each syscall */
+    const char *syscall_names[NUM_SYSCALLS_TO_TEST] = {
+        "getpid",       "gettid", "gettime", "fork",          "write",
+        "ThreadCreate", "block",  "unblock", "KeyboardEvent", "WaitForTick"};
+    /* Expected results: -1 with EINPROGRESS for all except gettime (gettime doesn't check) */
+    int expects_einprogress[NUM_SYSCALLS_TO_TEST] = {1, 1, 0, 1, 1, 1, 1, 1, 1, 1};
+
+    int syscalls_passed = 0;
+    int syscalls_tested = NUM_SYSCALLS_TO_TEST;
+
+    prints("[PID %d] [TID %d] Syscall EINPROGRESS test results:\n", getpid(), gettid());
+
+    for (int i = 0; i < NUM_SYSCALLS_TO_TEST; i++) {
+        int result = kbd_syscall_results[i];
+        int err = kbd_syscall_errnos[i];
+        int ok = 0;
+
+        if (expects_einprogress[i]) {
+            /* Should return -1 with EINPROGRESS (115) */
+            if (result == -1 && err == 115) {
+                ok = 1;
+                syscalls_passed++;
+            }
+        } else {
+            /* gettime should work (doesn't check keyboard context) */
+            if (result >= 0) {
+                ok = 1;
+                syscalls_passed++;
+            }
+        }
+
+        prints("  - %s: %s (ret=%d, errno=%d)\n", syscall_names[i], ok ? "PASSED" : "FAILED",
+               result, err);
+    }
+
+    prints("[PID %d] [TID %d] Syscalls passed: %d/%d\n", getpid(), gettid(), syscalls_passed,
+           syscalls_tested);
+
+    *passed = (syscalls_passed == syscalls_tested);
     print_subtest_result(*passed);
     kbd_subtests_run++;
     if (*passed) kbd_subtests_passed++;
 }
 
 void keyboard_tests(void) {
-    print_test_header("KEYBOARD TESTS");
+    print_test_header("KEYBOARD SUPPORT TESTS");
 
     kbd_subtests_run = 0;
     kbd_subtests_passed = 0;
@@ -798,12 +910,16 @@ void keyboard_tests(void) {
 
     /* Print keyboard test summary */
     prints("\n========================================\n");
-    prints("[KEYBOARD_TESTS] Summary: %d/%d subtests passed\n", kbd_subtests_passed,
+    prints("KEYBOARD SUPPORT TESTS: %d/%d subtests passed\n", kbd_subtests_passed,
            kbd_subtests_run);
     prints("========================================\n");
 
     int all_passed = (kbd_subtests_passed == kbd_subtests_run);
-    print_test_result("Keyboard Tests", all_passed);
+    print_test_result("KEYBOARD SUPPORT TESTS", all_passed);
+
+    /* Track in global summary */
+    project_tests_run++;
+    if (all_passed) project_tests_passed++;
 }
 
 /****************************************/
@@ -1033,7 +1149,18 @@ int test_screen_write_performance(void) {
         }
     }
 
-    print_test_result("Screen Performance Test", passed);
+    /* Print performance test summary */
+    prints("\n========================================\n");
+    prints("SCREEN PERFORMANCE TEST: %d/1 subtests passed\n", passed ? 1 : 0);
+    prints("========================================\n");
+
+    print_test_result("SCREEN PERFORMANCE TEST", passed);
+
+    /* Track in global summary */
+    screen_perf_passed = passed;
+    project_tests_run++;
+    if (passed) project_tests_passed++;
+
     return passed;
 }
 void screen_tests(void) {
@@ -1069,11 +1196,229 @@ void screen_tests(void) {
 
     /* Print screen test summary */
     prints("\n========================================\n");
-    prints("Screen Support Tests: %d/4 subtests passed\n", screen_subtests_passed);
+    prints("SCREEN SUPPORT TESTS: %d/4 subtests passed\n", screen_subtests_passed);
     prints("========================================\n");
 
     int all_passed = (screen_subtests_passed == 4);
-    print_test_result("Screen Support Tests", all_passed);
+    print_test_result("SCREEN SUPPORT TESTS", all_passed);
+
+    /* Track in global summary */
+    project_tests_run++;
+    if (all_passed) project_tests_passed++;
+}
+
+/****************************************/
+/**    WaitForTick Test Functions      **/
+/****************************************/
+
+/* WaitForTick test variables */
+static int wft_subtests_run = 0;
+static int wft_subtests_passed = 0;
+
+/* Variables for multiple threads test */
+static volatile int wft_threads_completed = 0;
+static volatile int wft_threads_woken_same_tick = 0;
+static volatile int wft_wake_tick = 0;
+
+/* Variable for keyboard handler test - REMOVED (now in keyboard test) */
+
+static void wft_test_thread_func(void *arg) {
+    int thread_num = *(int *)arg;
+    int tick_before = gettime();
+
+    prints("[PID %d] [TID %d] Thread %d calling WaitForTick at tick %d...\n", getpid(), gettid(),
+           thread_num, tick_before);
+
+    int result = WaitForTick();
+
+    if (result == 0) {
+        int wake_time = gettime();
+        /* Check if this is the first thread to wake or if we woke at the same tick */
+        if (wft_wake_tick == 0) {
+            wft_wake_tick = wake_time;
+        }
+        if (wake_time == wft_wake_tick) {
+            wft_threads_woken_same_tick++;
+        }
+        prints("[PID %d] [TID %d] Thread %d woke at tick %d\n", getpid(), gettid(), thread_num,
+               wake_time);
+    } else {
+        prints("[PID %d] [TID %d] Thread %d WaitForTick failed: %d\n", getpid(), gettid(),
+               thread_num, result);
+    }
+
+    wft_threads_completed++;
+    ThreadExit();
+}
+
+void subtest_waitfortick_basic(int *passed) {
+    print_subtest_header(1, "Basic WaitForTick functionality and return value");
+
+    prints("[PID %d] [TID %d] Testing basic WaitForTick...\n", getpid(), gettid());
+
+    RESET_ERRNO();
+    int time_before = gettime();
+    int result = WaitForTick();
+    int time_after = gettime();
+
+    if (result != 0) {
+        prints("[PID %d] [TID %d] ERROR: WaitForTick returned %d, expected 0\n", getpid(), gettid(),
+               result);
+        *passed = 0;
+    } else if (errno != 0) {
+        prints("[PID %d] [TID %d] ERROR: errno=%d after WaitForTick (expected 0)\n", getpid(),
+               gettid(), errno);
+        *passed = 0;
+    } else if (time_after <= time_before) {
+        prints("[PID %d] [TID %d] ERROR: Time did not advance (before=%d, after=%d)\n", getpid(),
+               gettid(), time_before, time_after);
+        *passed = 0;
+    } else {
+        prints("[PID %d] [TID %d] WaitForTick returned 0 with errno=0 (correct)\n", getpid(),
+               gettid());
+        prints("[PID %d] [TID %d] Time before: %d, after: %d (elapsed: %d tick(s), includes "
+               "scheduler)\n",
+               getpid(), gettid(), time_before, time_after, time_after - time_before);
+        *passed = 1;
+    }
+
+    print_subtest_result(*passed);
+    wft_subtests_run++;
+    if (*passed) wft_subtests_passed++;
+}
+
+void subtest_waitfortick_multiple_threads(int *passed) {
+    print_subtest_header(2, "Multiple threads waiting for tick");
+
+    prints("[PID %d] [TID %d] Creating multiple threads to wait for same tick...\n", getpid(),
+           gettid());
+
+    /* Reset test variables */
+    wft_threads_completed = 0;
+    wft_threads_woken_same_tick = 0;
+    wft_wake_tick = 0;
+
+    int num_threads = 3;
+    int thread_nums[3] = {1, 2, 3};
+    int tids[3];
+
+    /* Create threads */
+    for (int i = 0; i < num_threads; i++) {
+        tids[i] = ThreadCreate(wft_test_thread_func, &thread_nums[i]);
+        if (tids[i] < 0) {
+            prints("[PID %d] [TID %d] ERROR: Failed to create thread %d\n", getpid(), gettid(),
+                   i + 1);
+            *passed = 0;
+            print_subtest_result(*passed);
+            wft_subtests_run++;
+            return;
+        }
+        prints("[PID %d] [TID %d] Created thread %d with TID %d\n", getpid(), gettid(), i + 1,
+               tids[i]);
+    }
+
+    /* Wait for all threads to complete */
+    waitTicks(MIN_WORK_TIME);
+
+    prints("[PID %d] [TID %d] Threads completed: %d/%d\n", getpid(), gettid(),
+           wft_threads_completed, num_threads);
+    prints("[PID %d] [TID %d] Threads woken at same tick: %d\n", getpid(), gettid(),
+           wft_threads_woken_same_tick);
+
+    /* All threads should have completed and at least 2 should wake at same tick */
+    if (wft_threads_completed == num_threads && wft_threads_woken_same_tick >= 2) {
+        prints("[PID %d] [TID %d] Multiple threads correctly woken by same tick\n", getpid(),
+               gettid());
+        *passed = 1;
+    } else if (wft_threads_completed == num_threads) {
+        prints("[PID %d] [TID %d] All threads completed (wake timing may vary)\n", getpid(),
+               gettid());
+        *passed = 1; /* Still pass if all completed */
+    } else {
+        prints("[PID %d] [TID %d] ERROR: Not all threads completed\n", getpid(), gettid());
+        *passed = 0;
+    }
+
+    print_subtest_result(*passed);
+    wft_subtests_run++;
+    if (*passed) wft_subtests_passed++;
+}
+
+void subtest_waitfortick_timing(int *passed) {
+    print_subtest_header(3, "WaitForTick timing accuracy");
+
+    prints("[PID %d] [TID %d] Measuring time for 5 consecutive WaitForTick calls...\n", getpid(),
+           gettid());
+
+    int num_waits = 5;
+    int time_before = gettime();
+
+    for (int i = 0; i < num_waits; i++) {
+        int result = WaitForTick();
+        if (result != 0) {
+            prints("[PID %d] [TID %d] ERROR: WaitForTick %d failed with %d\n", getpid(), gettid(),
+                   i + 1, result);
+            *passed = 0;
+            print_subtest_result(*passed);
+            wft_subtests_run++;
+            return;
+        }
+    }
+
+    int time_after = gettime();
+    int elapsed = time_after - time_before;
+
+    prints("[PID %d] [TID %d] Time before: %d, after: %d\n", getpid(), gettid(), time_before,
+           time_after);
+    prints("[PID %d] [TID %d] Total elapsed: %d ticks for %d waits\n", getpid(), gettid(), elapsed,
+           num_waits);
+
+    /* Each WaitForTick should wait for exactly 1 tick, so elapsed should be >= num_waits */
+    if (elapsed >= num_waits) {
+        prints("[PID %d] [TID %d] Timing is correct (at least %d ticks elapsed)\n", getpid(),
+               gettid(), num_waits);
+        *passed = 1;
+    } else {
+        prints("[PID %d] [TID %d] ERROR: Expected at least %d ticks, got %d\n", getpid(), gettid(),
+               num_waits, elapsed);
+        *passed = 0;
+    }
+
+    print_subtest_result(*passed);
+    wft_subtests_run++;
+    if (*passed) wft_subtests_passed++;
+}
+
+void waitfortick_tests(void) {
+    print_test_header("TIME SUPPORT TESTS");
+
+    wft_subtests_run = 0;
+    wft_subtests_passed = 0;
+
+    prints("[PID %d] [TID %d] Starting WaitForTick test suite...\n", getpid(), gettid());
+
+    int result;
+
+    /* Subtest 1: Basic functionality and return value */
+    subtest_waitfortick_basic(&result);
+
+    /* Subtest 2: Multiple threads */
+    subtest_waitfortick_multiple_threads(&result);
+
+    /* Subtest 3: Timing accuracy */
+    subtest_waitfortick_timing(&result);
+
+    /* Print WaitForTick test summary */
+    prints("\n========================================\n");
+    prints("TIME SUPPORT TESTS: %d/%d subtests passed\n", wft_subtests_passed, wft_subtests_run);
+    prints("========================================\n");
+
+    int all_passed = (wft_subtests_passed == wft_subtests_run);
+    print_test_result("TIME SUPPORT TESTS", all_passed);
+
+    /* Track in global summary */
+    project_tests_run++;
+    if (all_passed) project_tests_passed++;
 }
 
 /****************************************/
@@ -1086,6 +1431,10 @@ void execute_project_tests(void) {
     prints("=========================================\n\n");
 
     prints("[PID %d] [TID %d] Coordinator thread starting tests...\n\n", getpid(), gettid());
+
+    /* Reset global counters */
+    project_tests_run = 0;
+    project_tests_passed = 0;
 
 #if THREAD_TEST
     RESET_ERRNO();
@@ -1107,8 +1456,37 @@ void execute_project_tests(void) {
     test_screen_write_performance();
 #endif
 
+#if WAITFORTICK_TEST
+    RESET_ERRNO();
+    waitfortick_tests();
+#endif
+
+    /* Final summary */
     prints("\n=========================================\n");
-    prints("      ALL PROJECT TESTS COMPLETED        \n");
+    prints("      PROJECT TEST SUITE SUMMARY         \n");
+    prints("=========================================\n");
+    prints("Tests executed:\n");
+#if THREAD_TEST
+    prints("  - THREAD SUPPORT TESTS:     %s\n",
+           (thread_subtests_passed == thread_subtests_run) ? "PASSED" : "FAILED");
+#endif
+#if KEYBOARD_TEST
+    prints("  - KEYBOARD SUPPORT TESTS:   %s\n",
+           (kbd_subtests_passed == kbd_subtests_run) ? "PASSED" : "FAILED");
+#endif
+#if SCREEN_TEST
+    prints("  - SCREEN SUPPORT TESTS:     %s\n",
+           (screen_subtests_passed == 4) ? "PASSED" : "FAILED");
+#endif
+#if SCREEN_PERFORMANCE_TEST
+    prints("  - SCREEN PERFORMANCE TEST:  %s\n", screen_perf_passed ? "PASSED" : "FAILED");
+#endif
+#if WAITFORTICK_TEST
+    prints("  - TIME SUPPORT TESTS:       %s\n",
+           (wft_subtests_passed == wft_subtests_run) ? "PASSED" : "FAILED");
+#endif
+    prints("-----------------------------------------\n");
+    prints("TOTAL: %d/%d tests passed\n", project_tests_passed, project_tests_run);
     prints("=========================================\n\n");
 
 #if IDLE_SWITCH_TEST

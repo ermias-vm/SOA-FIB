@@ -7,6 +7,7 @@
  */
 
 #include <io.h>
+#include <libc.h>
 #include <screen_samples.h>
 
 void generate_checkerboard_pattern(char *buffer) {
@@ -39,6 +40,11 @@ void generate_rainbow_pattern(char *buffer) {
 }
 
 void generate_border_pattern(char *buffer) {
+    const char *text1 = "SCREEN BUFFER TEST PATTERN - BORDER STYLE";
+    const char *text2 = "80x25 Characters, 4000 Bytes Total";
+    int text_len1 = strlen(text1);
+    int text_len2 = strlen(text2);
+
     for (int y = 0; y < NUM_ROWS; y++) {
         for (int x = 0; x < NUM_COLUMNS; x++) {
             int pos = (y * NUM_COLUMNS + x) * 2;
@@ -50,43 +56,37 @@ void generate_border_pattern(char *buffer) {
                 } else {
                     buffer[pos] = '-'; /* Horizontal border */
                 }
-                buffer[pos + 1] = 0x0F; /* White on black */
+                buffer[pos + 1] = 0x0F;
             } else if (x == 0 || x == NUM_COLUMNS - 1) {
                 /* Left and right border */
-                buffer[pos] = '|';      /* Vertical border */
-                buffer[pos + 1] = 0x0F; /* White on black */
+                buffer[pos] = '|'; /* Vertical border */
+                buffer[pos + 1] = 0x0F;
             } else {
                 /* Interior content */
                 if (y == NUM_ROWS / 2 && x >= 10 && x < 70) {
-                    /* Center text line */
-                    const char *text = "SCREEN BUFFER TEST PATTERN - BORDER STYLE";
-                    int text_len = 42; /* Length of text above */
                     int text_start = 10;
-
-                    if (x - text_start < text_len) {
-                        buffer[pos] = text[x - text_start];
-                        buffer[pos + 1] = 0x2F; /* Green on bright white */
+                    if (x - text_start < text_len1) {
+                        buffer[pos] = text1[x - text_start];
+                        buffer[pos + 1] = 0x2F;
                     } else {
                         buffer[pos] = ' ';
-                        buffer[pos + 1] = 0x07; /* Light gray on black */
+                        buffer[pos + 1] = 0x07;
                     }
                 } else if (y == NUM_ROWS / 2 + 2 && x >= 20 && x < 60) {
                     /* Second text line */
-                    const char *text = "80x25 Characters, 4000 Bytes Total";
-                    int text_len = 35;
                     int text_start = 20;
 
-                    if (x - text_start < text_len) {
-                        buffer[pos] = text[x - text_start];
-                        buffer[pos + 1] = 0x1E; /* Yellow on blue */
+                    if (x - text_start < text_len2) {
+                        buffer[pos] = text2[x - text_start];
+                        buffer[pos + 1] = 0x1E;
                     } else {
                         buffer[pos] = ' ';
-                        buffer[pos + 1] = 0x07; /* Light gray on black */
+                        buffer[pos + 1] = 0x07;
                     }
                 } else {
                     /* Empty space */
                     buffer[pos] = ' ';
-                    buffer[pos + 1] = 0x07; /* Light gray on black */
+                    buffer[pos + 1] = 0x07;
                 }
             }
         }
