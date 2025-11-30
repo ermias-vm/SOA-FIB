@@ -1,0 +1,57 @@
+================================================================================
+                        MILESTONE 3: SCREEN SUPPORT IN ZEOS
+================================================================================
+
+1. SYSTEM CALL MODIFICADA
+-------------------------
+
+int write(int fd, char *buffer, int size);
+
+Ahora acepta fd=10 para acceso directo al buffer de pantalla. Un frame completo
+de pantalla se escribe asi:
+
+    write(10, frame, 80 * 25 * 2);
+
+donde frame es un puntero a una matriz de 80x25 posiciones con 2 bytes por
+caracter (byte 0: ASCII, byte 1: atributo de color).
+
+Rendimiento: La implementacion debe permitir al menos 30 escrituras por segundo
+con un solo proceso y un solo thread en el sistema.
+
+
+2. IMPLEMENTACION
+-----------------
+
+sys_write_screen() copia directamente el buffer del usuario a la memoria de
+video en 0xb8000. Se limita automaticamente a SCREEN_BUFFER_SIZE (4000 bytes).
+
+Metodos de copia disponibles (seleccionables en tiempo de compilacion):
+  - SCREEN_METHOD_WORD_LOOP:      bucle C palabra a palabra (mas lento)
+  - SCREEN_METHOD_COPY_FROM_USER: usando copy_from_user() (medio)
+  - SCREEN_METHOD_REP_MOVSL:      instruccion REP MOVSL en ensamblador (mas rapido)
+
+Por defecto se usa REP MOVSL que copia 4 bytes por iteracion para superar los 30 FPS requeridos.
+
+
+3. FLUJO DE EJECUCION
+---------------------
+
+sys_write() detecta fd=10 y delega a sys_write_screen(). Esta funcion:
+  1. Limita size a SCREEN_BUFFER_SIZE si es mayor
+  2. Copia buffer desde user space a memoria de video
+  3. Retorna bytes escritos (maximo 4000)
+
+No se actualiza cursor ni se hace scroll. Es una escritura directa al framebuffer.
+
+4. ARCHIVOS MODIFICADOS
+-----------------------
+
+Headers:
+  include/screen.h - constantes SCREEN_METHOD_*, prototipo sys_write_screen()
+  include/io.h     - FD_SCREEN=10, SCREEN_BUFFER_SIZE
+
+Implementacion:
+  screen.c         - sys_write_screen() con 3 metodos de copia
+  sys.c            - sys_write() redirige fd=10 a sys_write_screen()
+
+================================================================================
