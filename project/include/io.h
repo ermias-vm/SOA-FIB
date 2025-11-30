@@ -38,14 +38,18 @@
 #define WARNING_COLOR MAKE_COLOR(BLACK, YELLOW)
 #define INFO_COLOR MAKE_COLOR(BLACK, LIGHT_BLUE)
 
-/** Number of columns in VGA text mode */
-#define NUM_COLUMNS 80
+#define NUM_COLUMNS 80 /** Number of columns in VGA text mode */
+#define NUM_ROWS 25    /** Number of rows in VGA text mode */
 
-/** Number of rows in VGA text mode */
-#define NUM_ROWS 25
+#define SCREEN_BUFFER_SIZE (NUM_COLUMNS * NUM_ROWS * 2) /** Screen buffer size in bytes */
 
-/** Base address of VGA text mode video memory */
-#define VIDEO_MEMORY_BASE 0xb8000
+#define VIDEO_MEMORY_BASE 0xb8000 /** Base address of VGA text mode video memory */
+
+#define FD_CONSOLE 1 /**< File descriptor for console output (stdout) */
+#define FD_SCREEN 10 /**< File descriptor for direct screen buffer access */
+
+#define O_RDONLY 0 /**< Permission flag for read operations */
+#define O_WRONLY 1 /**< Permission flag for write operations */
 
 /** Current cursor column position (0-79) */
 extern Byte x;

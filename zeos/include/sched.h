@@ -20,7 +20,7 @@
 #define KERNEL_STACK_SIZE 1024
 
 /* Default quantum assigned to new processes */
-#define DEFAULT_QUANTUM 10
+#define DEFAULT_QUANTUM 1
 
 /* Process states for scheduling */
 enum state_t {

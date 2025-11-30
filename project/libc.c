@@ -140,6 +140,24 @@ void prints(const char *fmt, ...) {
                 }
                 break;
             }
+            case 'u': {
+                unsigned int uval = __builtin_va_arg(args, unsigned int);
+                /* Convert to string */
+                int i = 0;
+                if (uval == 0) {
+                    num_buf[i++] = '0';
+                } else {
+                    while (uval > 0 && i < 15) {
+                        num_buf[i++] = (uval % 10) + '0';
+                        uval /= 10;
+                    }
+                }
+                /* Reverse and copy */
+                while (i > 0 && buf_idx < PRINTF_BUFFER_SIZE - 1) {
+                    buf[buf_idx++] = num_buf[--i];
+                }
+                break;
+            }
             case 's': {
                 char *str = __builtin_va_arg(args, char *);
                 while (*str && buf_idx < PRINTF_BUFFER_SIZE - 1) {
@@ -173,4 +191,16 @@ void prints(const char *fmt, ...) {
     if (buf_idx > 0) {
         write(1, buf, buf_idx);
     }
+}
+
+int clear_screen_buffer(int fd) {
+    char clear_buffer[80 * 25 * 2];
+
+    /* Fill buffer with spaces and default color */
+    for (int i = 0; i < 80 * 25 * 2; i += 2) {
+        clear_buffer[i] = ' ';      /* Space character */
+        clear_buffer[i + 1] = 0x07; /* Light gray on black */
+    }
+
+    return write(fd, clear_buffer, sizeof(clear_buffer));
 }

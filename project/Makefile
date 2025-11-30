@@ -49,6 +49,8 @@ SYSOBJ = \
 	list.o \
 	kernel_asm.o \
 	keyboard.o \
+	screen.o \
+	kernel_helpers.o \
 
 LIBZEOS = -L . -l zeos
 
@@ -57,7 +59,8 @@ USROBJ = \
 	libc.o \
 	sys_call_wrappers.o \
 	zeos_test.o \
-	project_test.o
+	project_test.o \
+	screen_samples.o
 
 
 ################################################################################
@@ -97,7 +100,7 @@ kernel_asm.s: kernel_asm.S $(INCLUDEDIR)/asm.h $(INCLUDEDIR)/segment.h
 
 user.o:user.c $(INCLUDEDIR)/libc.h $(INCLUDEDIR)/zeos_test.h
 
-interrupt.o:interrupt.c $(INCLUDEDIR)/entry.h $(INCLUDEDIR)/hardware.h $(INCLUDEDIR)/interrupt.h $(INCLUDEDIR)/io.h $(INCLUDEDIR)/sched.h $(INCLUDEDIR)/segment.h $(INCLUDEDIR)/types.h $(INCLUDEDIR)/utils.h $(INCLUDEDIR)/zeos_interrupt.h
+interrupt.o:interrupt.c $(INCLUDEDIR)/entry.h $(INCLUDEDIR)/hardware.h $(INCLUDEDIR)/interrupt.h $(INCLUDEDIR)/io.h $(INCLUDEDIR)/kernel_helpers.h $(INCLUDEDIR)/sched.h $(INCLUDEDIR)/segment.h $(INCLUDEDIR)/types.h $(INCLUDEDIR)/utils.h $(INCLUDEDIR)/zeos_interrupt.h
 
 io.o:io.c $(INCLUDEDIR)/io.h $(INCLUDEDIR)/types.h
 
@@ -107,11 +110,13 @@ libc.o:libc.c $(INCLUDEDIR)/libc.h
 
 zeos_test.o:zeos_test.c $(INCLUDEDIR)/errno.h $(INCLUDEDIR)/libc.h $(INCLUDEDIR)/zeos_test.h
 
-project_test.o:project_test.c $(INCLUDEDIR)/libc.h $(INCLUDEDIR)/project_test.h
+project_test.o:project_test.c $(INCLUDEDIR)/libc.h $(INCLUDEDIR)/project_test.h $(INCLUDEDIR)/screen_samples.h
+
+screen_samples.o:screen_samples.c $(INCLUDEDIR)/screen_samples.h $(INCLUDEDIR)/io.h
 
 mm.o:mm.c $(INCLUDEDIR)/hardware.h $(INCLUDEDIR)/mm.h $(INCLUDEDIR)/sched.h $(INCLUDEDIR)/segment.h $(INCLUDEDIR)/types.h
 
-sys.o:sys.c $(INCLUDEDIR)/debug.h $(INCLUDEDIR)/devices.h $(INCLUDEDIR)/errno.h $(INCLUDEDIR)/interrupt.h $(INCLUDEDIR)/io.h $(INCLUDEDIR)/libc.h $(INCLUDEDIR)/mm.h $(INCLUDEDIR)/mm_address.h $(INCLUDEDIR)/sched.h $(INCLUDEDIR)/sys.h $(INCLUDEDIR)/utils.h
+sys.o:sys.c $(INCLUDEDIR)/debug.h $(INCLUDEDIR)/devices.h $(INCLUDEDIR)/errno.h $(INCLUDEDIR)/interrupt.h $(INCLUDEDIR)/io.h $(INCLUDEDIR)/kernel_helpers.h $(INCLUDEDIR)/libc.h $(INCLUDEDIR)/mm.h $(INCLUDEDIR)/mm_address.h $(INCLUDEDIR)/sched.h $(INCLUDEDIR)/screen.h $(INCLUDEDIR)/sys.h $(INCLUDEDIR)/utils.h
 
 utils.o:utils.c $(INCLUDEDIR)/io.h $(INCLUDEDIR)/mm_address.h $(INCLUDEDIR)/types.h $(INCLUDEDIR)/utils.h
 
@@ -124,6 +129,10 @@ devices.o:devices.c $(INCLUDEDIR)/io.h $(INCLUDEDIR)/list.h $(INCLUDEDIR)/utils.
 system.o:system.c $(INCLUDEDIR)/hardware.h system.lds $(SYSOBJ) $(INCLUDEDIR)/segment.h $(INCLUDEDIR)/types.h $(INCLUDEDIR)/interrupt.h $(INCLUDEDIR)/system.h $(INCLUDEDIR)/sched.h $(INCLUDEDIR)/mm.h $(INCLUDEDIR)/io.h $(INCLUDEDIR)/mm_address.h 
 
 keyboard.o: keyboard.c $(INCLUDEDIR)/keyboard.h $(INCLUDEDIR)/sched.h $(INCLUDEDIR)/mm.h $(INCLUDEDIR)/io.h $(INCLUDEDIR)/interrupt.h $(INCLUDEDIR)/errno.h $(INCLUDEDIR)/utils.h $(INCLUDEDIR)/segment.h
+
+screen.o: screen.c $(INCLUDEDIR)/screen.h $(INCLUDEDIR)/io.h $(INCLUDEDIR)/utils.h $(INCLUDEDIR)/types.h
+
+kernel_helpers.o: kernel_helpers.c $(INCLUDEDIR)/kernel_helpers.h $(INCLUDEDIR)/sched.h $(INCLUDEDIR)/mm.h $(INCLUDEDIR)/errno.h
 
 system: system.o system.lds $(SYSOBJ)
 	$(LD) $(LDFLAGS) -T system.lds -o $@ $< $(SYSOBJ) $(LIBZEOS)

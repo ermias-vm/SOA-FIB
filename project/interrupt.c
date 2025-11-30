@@ -10,6 +10,7 @@
 #include <hardware.h>
 #include <interrupt.h>
 #include <io.h>
+#include <kernel_helpers.h>
 #include <keyboard.h>
 #include <sched.h>
 #include <segment.h>

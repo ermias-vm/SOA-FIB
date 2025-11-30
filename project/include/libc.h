@@ -101,6 +101,17 @@ int gettime(void);
 int write(int fd, char *buffer, int size);
 
 /**
+ * @brief Clear screen buffer by filling it with spaces.
+ *
+ * This function clears the specified screen file descriptor by writing
+ * a buffer filled with spaces and default color attributes (light gray on black).
+ *
+ * @param fd File descriptor to clear (typically 10 for screen buffer).
+ * @return Number of bytes written, or negative error code.
+ */
+int clear_screen_buffer(int fd);
+
+/**
  * @brief User-space wrapper for getpid system call.
  *
  * This wrapper function provides the user-space interface for retrieving

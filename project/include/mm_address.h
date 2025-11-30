@@ -54,4 +54,17 @@
 /* Convert virtual address to page number */
 #define PH_PAGE(x) (x >> 12)
 
+/*< 8 pages for the thread stack */
+#define THREAD_STACK_REGION_PAGES 8
+
+/*< 1 page for the initial stack */
+#define THREAD_STACK_INITIAL_PAGES 1
+
+/*< Base page for the thread stack */
+#define THREAD_STACK_BASE_PAGE (PAG_LOG_INIT_CODE + NUM_PAG_CODE)
+
+/* Temporary mapping pages - use end of address space to avoid conflicts with thread stacks */
+#define TEMP_STACK_MAPPING_PAGE (TOTAL_PAGES - THREAD_STACK_INITIAL_PAGES - 1) /**< Page 1022 */
+#define FORK_TEMP_MAPPING_PAGE (TOTAL_PAGES - NUM_PAG_DATA - 2)                /**< Page 1002 */
+
 #endif /* __MM_ADDRESS_H__ */
