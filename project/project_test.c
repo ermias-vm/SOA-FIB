@@ -10,8 +10,10 @@
  * - Fork copying only current thread
  */
 
+#include <errno.h>
 #include <libc.h>
 #include <project_test.h>
+#include <screen_samples.h>
 #include <zeos_test.h>
 
 /* External variables from zeos_test */
@@ -33,6 +35,9 @@ static volatile int kbd_pressed[KBD_MAX_KEYS];
 static volatile int kbd_key_index = 0;
 static volatile int kbd_syscall_result = 0;
 static volatile int kbd_syscall_errno = 0;
+
+/* Screen test variables */
+static int screen_subtests_passed = 0;
 
 /* Scancode to character mapping */
 static char scancode_to_char[] = {
@@ -673,7 +678,7 @@ void subtest_kbd_handler_called(int *passed) {
 
     /* Wait for key events - exit early if we got enough keys */
     int start = gettime();
-    while (gettime() - start < KBD_WAIT_TIME && kbd_events_received < KBD_MAX_KEYS) {
+    while (gettime() - start < KBD_WAIT_TIME && kbd_key_index < KBD_MAX_KEYS) {
         /* Busy wait for key events */
     }
 
@@ -802,6 +807,276 @@ void keyboard_tests(void) {
 }
 
 /****************************************/
+/**    Screen Support Test Functions   **/
+/****************************************/
+
+int test_screen_write_invalid_fd(void) {
+    print_subtest_header(1, "Invalid file descriptor access");
+
+    char test_buffer[10] = "test";
+    int passed = 1;
+
+    /* Test invalid fd (should return -1 and set errno to EBADF) */
+    int result = write(99, test_buffer, sizeof(test_buffer));
+    if (result != -1 || errno != EBADF) {
+        prints("[PID %d] [TID %d] ERROR: write(99, ...) returned %d (errno=%d), expected -1 "
+               "(errno=%d)\n",
+               getpid(), gettid(), result, errno, EBADF);
+        passed = 0;
+    } else {
+        prints("[PID %d] [TID %d] write(99, ...) correctly returned -1 with errno=EBADF\n",
+               getpid(), gettid());
+    }
+
+    /* Test write permission on screen fd (should work) */
+    if (passed) {
+        result = write(10, test_buffer, sizeof(test_buffer));
+        if (result < 0) {
+            prints("[PID %d] [TID %d] ERROR: write(10, ...) failed: %d\n", getpid(), gettid(),
+                   result);
+            passed = 0;
+        } else {
+            prints("[PID %d] [TID %d] write(10, ...) succeeded with result: %d\n", getpid(),
+                   gettid(), result);
+        }
+    }
+
+    print_subtest_result(passed);
+    return passed;
+}
+
+int test_screen_write_basic(void) {
+    print_subtest_header(2, "Basic screen buffer write");
+    clear_screen_buffer(10);
+    prints("[PID %d] [TID %d] Preparing to write checkerboard pattern to screen buffer...\n",
+           getpid(), gettid());
+    waitTicks(DEFAULT_WORK_TIME);
+
+    /* Create a checkerboard test pattern */
+    char screen_buffer[SCREEN_BUFFER_SIZE];
+    generate_checkerboard_pattern(screen_buffer);
+
+    /* Write to screen buffer (fd=10) */
+    int result = write(10, screen_buffer, sizeof(screen_buffer));
+    int passed = 1;
+    waitTicks(MEDIUM_WORK_TIME);
+    clear_screen_buffer(10);
+    if (result != sizeof(screen_buffer)) {
+        prints("[PID %d] [TID %d] ERROR: write returned %d, expected %d\n", getpid(), gettid(),
+               result, sizeof(screen_buffer));
+        passed = 0;
+    } else {
+        prints("[PID %d] [TID %d] Successfully wrote %d bytes to screen buffer\n", getpid(),
+               gettid(), result);
+    }
+
+    print_subtest_result(passed);
+    return passed;
+}
+
+int test_screen_write_size_limits(void) {
+    print_subtest_header(3, "Screen buffer size limits");
+
+    /* Create a buffer larger than screen (4000 bytes) */
+    char large_buffer[SCREEN_BUFFER_SIZE + 100]; /* 4100 bytes */
+    for (unsigned int i = 0; i < SCREEN_BUFFER_SIZE; i++) {
+        large_buffer[i] = 'X'; /* Fill valid part with X */
+    }
+    /* Fill the overflow part with different character and color */
+    for (unsigned int i = SCREEN_BUFFER_SIZE; i < sizeof(large_buffer); i += 2) {
+        large_buffer[i] = '!';      /* Character '!' */
+        large_buffer[i + 1] = 0x4F; /* Red background, White text */
+    }
+
+    clear_screen_buffer(10);
+    prints("[PID %d] [TID %d] Waiting some ticks before writing large buffer (%d bytes)...\n",
+           getpid(), gettid(), sizeof(large_buffer));
+    waitTicks(DEFAULT_WORK_TIME);
+
+    /* Write should truncate to screen size */
+    int result = write(10, large_buffer, sizeof(large_buffer));
+    int passed = 1;
+
+    if (result != SCREEN_BUFFER_SIZE) { /* Should return 4000 */
+        prints("[PID %d] [TID %d] ERROR: write returned %d, expected %d (screen size)\n", getpid(),
+               gettid(), result, SCREEN_BUFFER_SIZE);
+        passed = 0;
+    } else {
+        waitTicks(MEDIUM_WORK_TIME);
+        prints("[PID %d] [TID %d] Large buffer correctly truncated to %d bytes\n", getpid(),
+               gettid(), result);
+    }
+
+    clear_screen_buffer(10);
+    print_subtest_result(passed);
+    return passed;
+}
+
+int test_screen_visual_patterns(void) {
+    print_subtest_header(4, "Screen visual patterns display");
+
+    /* Create the three different patterns */
+    char frame_buffer1[SCREEN_BUFFER_SIZE]; /* Checkerboard */
+    char frame_buffer2[SCREEN_BUFFER_SIZE]; /* Rainbow */
+    char frame_buffer3[SCREEN_BUFFER_SIZE]; /* Border */
+
+    generate_checkerboard_pattern(frame_buffer1);
+    generate_rainbow_pattern(frame_buffer2);
+    generate_border_pattern(frame_buffer3);
+
+    int passed = 1;
+
+    /* Display Pattern 1: Checkerboard */
+    clear_screen_buffer(10);
+    prints("[PID %d] [TID %d] Waiting some ticks before displaying checkerboard pattern...\n",
+           getpid(), gettid());
+    waitTicks(DEFAULT_WORK_TIME);
+
+    int result = write(10, frame_buffer1, sizeof(frame_buffer1));
+    if (result != sizeof(frame_buffer1)) {
+        prints("[PID %d] [TID %d] ERROR: Checkerboard pattern write failed (%d)\n", getpid(),
+               gettid(), result);
+        passed = 0;
+    }
+    waitTicks(MEDIUM_WORK_TIME);
+
+    /* Display Pattern 2: Rainbow */
+    clear_screen_buffer(10);
+    prints("[PID %d] [TID %d] Waiting some ticks before displaying rainbow pattern...\n", getpid(),
+           gettid());
+    waitTicks(DEFAULT_WORK_TIME);
+
+    result = write(10, frame_buffer2, sizeof(frame_buffer2));
+    if (result != sizeof(frame_buffer2)) {
+        prints("[PID %d] [TID %d] ERROR: Rainbow pattern write failed (%d)\n", getpid(), gettid(),
+               result);
+        passed = 0;
+    }
+    waitTicks(MEDIUM_WORK_TIME);
+
+    /* Display Pattern 3: Border */
+    clear_screen_buffer(10);
+    prints("[PID %d] [TID %d] Waiting some ticks before displaying border pattern...\n", getpid(),
+           gettid());
+    waitTicks(DEFAULT_WORK_TIME);
+
+    result = write(10, frame_buffer3, sizeof(frame_buffer3));
+    if (result != sizeof(frame_buffer3)) {
+        prints("[PID %d] [TID %d] ERROR: Border pattern write failed (%d)\n", getpid(), gettid(),
+               result);
+        passed = 0;
+    }
+    waitTicks(MEDIUM_WORK_TIME);
+    clear_screen_buffer(10);
+
+    if (passed) {
+        prints("[PID %d] [TID %d] All visual patterns displayed successfully\n", getpid(),
+               gettid());
+    }
+
+    print_subtest_result(passed);
+    return passed;
+}
+
+int test_screen_write_performance(void) {
+    print_test_header("SCREEN PERFORMANCE TEST");
+
+    /* Clear screen before performance test */
+    clear_screen_buffer(10);
+    prints("[PID %d] [TID %d] Cleared screen, starting performance test...\n", getpid(), gettid());
+
+    /* Create a single frame buffer (4000 bytes = 80x25x2) */
+    char frame_buffer[SCREEN_BUFFER_SIZE];
+    generate_checkerboard_pattern(frame_buffer);
+
+    /* Measure time for SCREEN_WRITE_ITERATIONS consecutive writes */
+    int start_time = gettime();
+    int passed = 1;
+    unsigned int total_bytes_written = 0;
+
+    for (int frame = 0; frame < SCREEN_WRITE_ITERATIONS; frame++) {
+        int result = write(10, frame_buffer, sizeof(frame_buffer));
+        if (result != sizeof(frame_buffer)) {
+            prints("[PID %d] [TID %d] ERROR: Frame %d write failed (%d)\n", getpid(), gettid(),
+                   frame, result);
+            passed = 0;
+            break;
+        }
+        total_bytes_written += result;
+    }
+
+    int end_time = gettime();
+    int elapsed_ticks = end_time - start_time;
+
+    /* Verify total bytes written */
+    unsigned int expected_bytes = SCREEN_BUFFER_SIZE * SCREEN_WRITE_ITERATIONS;
+    if (total_bytes_written != expected_bytes) {
+        prints("[PID %d] [TID %d] ERROR: Total bytes written %u, expected %u\n", getpid(), gettid(),
+               total_bytes_written, expected_bytes);
+        passed = 0;
+    }
+
+    /* Clear screen before printing results */
+    clear_screen_buffer(10);
+
+    if (passed) {
+        prints("[PID %d] [TID %d] Performance test completed:\n", getpid(), gettid());
+        prints("  - Start ticks: %d\n", start_time);
+        prints("  - End ticks:   %d\n", end_time);
+        prints("  - Total time:  %d ticks for %d frames\n", elapsed_ticks, SCREEN_WRITE_ITERATIONS);
+        prints("  - Total bytes: %u\n", total_bytes_written);
+
+        if (elapsed_ticks > 0) {
+            prints("  - Average:     %d ticks/frame\n", elapsed_ticks / SCREEN_WRITE_ITERATIONS);
+        } else {
+            prints("  - Average:     <1 tick/frame\n");
+        }
+    }
+
+    print_test_result("Screen Performance Test", passed);
+    return passed;
+}
+void screen_tests(void) {
+    print_test_header("SCREEN SUPPORT TESTS");
+
+    screen_subtests_passed = 0;
+
+    prints("[PID %d] [TID %d] Starting screen support test suite...\n", getpid(), gettid());
+
+    /* Subtest 1: Invalid file descriptor access (first) */
+    RESET_ERRNO();
+    if (test_screen_write_invalid_fd()) {
+        screen_subtests_passed++;
+    }
+
+    /* Subtest 2: Basic functionality */
+    RESET_ERRNO();
+    if (test_screen_write_basic()) {
+        screen_subtests_passed++;
+    }
+
+    /* Subtest 3: Size limits */
+    RESET_ERRNO();
+    if (test_screen_write_size_limits()) {
+        screen_subtests_passed++;
+    }
+
+    /* Subtest 4: Visual patterns display */
+    RESET_ERRNO();
+    if (test_screen_visual_patterns()) {
+        screen_subtests_passed++;
+    }
+
+    /* Print screen test summary */
+    prints("\n========================================\n");
+    prints("Screen Support Tests: %d/4 subtests passed\n", screen_subtests_passed);
+    prints("========================================\n");
+
+    int all_passed = (screen_subtests_passed == 4);
+    print_test_result("Screen Support Tests", all_passed);
+}
+
+/****************************************/
 /**    Main Test Entry Point           **/
 /****************************************/
 
@@ -820,6 +1095,16 @@ void execute_project_tests(void) {
 #if KEYBOARD_TEST
     RESET_ERRNO();
     keyboard_tests();
+#endif
+
+#if SCREEN_TEST
+    RESET_ERRNO();
+    screen_tests();
+#endif
+
+#if SCREEN_PERFORMANCE_TEST
+    RESET_ERRNO();
+    test_screen_write_performance();
 #endif
 
     prints("\n=========================================\n");

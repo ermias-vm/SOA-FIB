@@ -12,31 +12,18 @@
 #include <errno.h>
 #include <interrupt.h>
 #include <io.h>
+#include <kernel_helpers.h>
 #include <keyboard.h>
 #include <libc.h>
 #include <mm.h>
 #include <mm_address.h>
 #include <sched.h>
+#include <screen.h>
 #include <sys.h>
 #include <utils.h>
 
-static int stack_region_overlaps(const struct task_struct *task, unsigned int start,
-                                 unsigned int pages);
-static int stack_region_in_use(struct task_struct *master, unsigned int start, unsigned int pages);
-static int find_free_stack_region(struct task_struct *master);
-static int map_stack_pages(struct task_struct *master, unsigned int first_page,
-                           unsigned int pages_to_map);
-static void release_thread_stack(struct task_struct *thread);
-static int in_keyboard_context(void);
-
 /* Kernel buffer for system operations */
 char buffer_k[SYS_BUFFER_SIZE];
-
-int check_fd(int fd, int permissions) {
-    if (fd != 1) return -EBADF;
-    if (permissions != FD_WRITE) return -EACCES;
-    return 0;
-}
 
 int sys_ni_syscall(void) {
     return -38; /*ENOSYS*/
@@ -54,10 +41,6 @@ int sys_gettid(void) {
         return -EINPROGRESS;
     }
     return current_task->TID;
-}
-
-int ret_from_fork(void) {
-    return 0;
 }
 
 int sys_fork(void) {
@@ -270,13 +253,19 @@ int sys_fork(void) {
 int sys_write(int fd, char *buffer, int size) {
     int ret;
     if (size < 0) return -EINVAL;
-    if ((ret = check_fd(fd, FD_WRITE))) return ret;
+    if ((ret = check_fd(fd, O_WRONLY))) return ret;
     if (!access_ok(VERIFY_READ, buffer, size)) return -EFAULT;
 
     if (in_keyboard_context()) {
         return -EINPROGRESS;
     }
 
+    /* Direct screen buffer write (fd = 10) */
+    if (fd == FD_SCREEN) {
+        return sys_write_screen(buffer, size);
+    }
+
+    /* Console output (fd = 1) */
     int bytes_left = size;
     int written_bytes;
 
@@ -611,35 +600,6 @@ void sys_exit_thread(void) {
     sched_next_rr();
 }
 
-int grow_user_stack(unsigned int fault_addr) {
-    struct task_struct *thread = current_task;
-    if (!thread || thread->user_stack_region_pages == 0 || thread->user_stack_ptr == NULL)
-        return -EFAULT;
-
-    unsigned int fault_page = fault_addr >> 12;
-    unsigned int region_start = thread->user_stack_region_start;
-    unsigned int region_end = region_start + thread->user_stack_region_pages;
-
-    if (fault_page < region_start || fault_page >= region_end) return -EFAULT;
-
-    if ((unsigned int)thread->user_stack_frames >= thread->user_stack_region_pages) return -ENOMEM;
-
-    unsigned int first_mapped_page = ((unsigned int)thread->user_stack_ptr) >> 12;
-    if (fault_page != first_mapped_page - 1) return -EFAULT;
-
-    page_table_entry *PT = get_PT(thread);
-    int frame = alloc_frame();
-    if (frame < 0) return frame;
-
-    set_ss_pag(PT, fault_page, frame);
-    thread->user_stack_ptr = (int *)(fault_page << 12);
-    thread->user_stack_frames++;
-
-    set_cr3(get_DIR(thread));
-
-    return 0;
-}
-
 int sys_keyboard_event(void (*func)(char key, int pressed), void (*wrapper)(void)) {
     struct task_struct *task = current_task;
 
@@ -676,89 +636,4 @@ int sys_keyboard_event(void (*func)(char key, int pressed), void (*wrapper)(void
     task->in_kbd_context = 0;
 
     return 0;
-}
-
-static int in_keyboard_context(void) {
-    return (current_task && current_task->in_kbd_context);
-}
-
-static int stack_region_overlaps(const struct task_struct *task, unsigned int start,
-                                 unsigned int pages) {
-    if (!task || task->user_stack_region_pages == 0) return 0;
-
-    unsigned int end = start + pages;
-    unsigned int existing_start = task->user_stack_region_start;
-    unsigned int existing_end = existing_start + task->user_stack_region_pages;
-
-    return !(end <= existing_start || start >= existing_end);
-}
-
-static int stack_region_in_use(struct task_struct *master, unsigned int start, unsigned int pages) {
-    if (stack_region_overlaps(master, start, pages)) return 1;
-
-    struct list_head *pos;
-    list_for_each(pos, &master->threads) {
-        struct task_struct *thread = list_entry(pos, struct task_struct, thread_list);
-        if (stack_region_overlaps(thread, start, pages)) return 1;
-    }
-
-    return 0;
-}
-
-static int find_free_stack_region(struct task_struct *master) {
-    for (unsigned int page = THREAD_STACK_BASE_PAGE;
-         page + THREAD_STACK_REGION_PAGES <= TOTAL_PAGES; page += THREAD_STACK_REGION_PAGES) {
-        if (!stack_region_in_use(master, page, THREAD_STACK_REGION_PAGES)) return page;
-    }
-    return -1;
-}
-
-static int map_stack_pages(struct task_struct *master, unsigned int first_page,
-                           unsigned int pages_to_map) {
-    page_table_entry *PT = get_PT(master);
-
-    for (unsigned int i = 0; i < pages_to_map; ++i) {
-        int frame = alloc_frame();
-        if (frame < 0) {
-            /* Roll back previously mapped pages */
-            while (i > 0) {
-                --i;
-                unsigned int page = first_page + i;
-                free_frame(get_frame(PT, page));
-                del_ss_pag(PT, page);
-            }
-            return -EAGAIN;
-        }
-        set_ss_pag(PT, first_page + i, frame);
-    }
-
-    return 0;
-}
-
-static void release_thread_stack(struct task_struct *thread) {
-    if (!thread || thread->user_stack_frames <= 0 || thread->user_stack_ptr == NULL) {
-        thread->user_stack_region_start = 0;
-        thread->user_stack_region_pages = 0;
-        thread->user_initial_esp = 0;
-        thread->user_entry = 0;
-        return;
-    }
-
-    page_table_entry *PT = get_PT(thread);
-    unsigned int first_page = ((unsigned int)thread->user_stack_ptr) >> 12;
-
-    for (int i = 0; i < thread->user_stack_frames; ++i) {
-        unsigned int page = first_page + i;
-        free_frame(get_frame(PT, page));
-        del_ss_pag(PT, page);
-    }
-
-    set_cr3(get_DIR(thread));
-
-    thread->user_stack_ptr = NULL;
-    thread->user_stack_frames = 0;
-    thread->user_stack_region_start = 0;
-    thread->user_stack_region_pages = 0;
-    thread->user_initial_esp = 0;
-    thread->user_entry = 0;
 }

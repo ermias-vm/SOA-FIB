@@ -17,45 +17,12 @@
 #include <system.h>
 #include <types.h>
 #include <utils.h>
-// #include <zeos_mm.h> /* DEPRECATED: TO BE DELETED WHEN PROCESS MANAGEMENT IS FULLY IMPLEMENTED */
 
 int (*usr_main)(void) = (void *)(PAG_LOG_INIT_CODE * PAGE_SIZE);
 unsigned int *p_sys_size = (unsigned int *)KERNEL_START;
 unsigned int *p_usr_size = (unsigned int *)KERNEL_START + 1;
 unsigned int *p_rdtr = (unsigned int *)KERNEL_START + 2;
 
-/**************************
- ** setSegmentRegisters ***
- **************************
- * Set properly all the registers, used
- * at initialization code.
- *   DS, ES, FS, GS <- DS
- *   SS:ESP <- DS:DATA_SEGMENT_SIZE
- *         (the stacks grows towards 0)
- *
- * cld -> gcc2 wants DF (Direction Flag (eFlags.df))
- *        always clear.
- */
-
-/*
- * This function MUST be 'inline' because it modifies the %esp
- */
-inline void set_seg_regs(Word data_sel, Word stack_sel, DWord esp) {
-    esp = esp - 5 * sizeof(DWord); /* To avoid overwriting task 1 */
-    __asm__ __volatile__("cld\n\t"
-                         "mov %0,%%ds\n\t"
-                         "mov %0,%%es\n\t"
-                         "mov %0,%%fs\n\t"
-                         "mov %0,%%gs\n\t"
-                         "mov %1,%%ss\n\t"
-                         "mov %2,%%esp"
-                         : /* no output */
-                         : "r"(data_sel), "r"(stack_sel), "g"(esp));
-}
-
-/*
- *   Main entry point to ZEOS Operating System
- */
 __attribute__((__section__(".text.main"))) int main(void) {
 
     set_eflags();

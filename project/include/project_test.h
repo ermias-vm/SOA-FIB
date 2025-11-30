@@ -14,9 +14,11 @@
 /**********************/
 
 // clang-format off
-#define THREAD_TEST         0   /**< Enable/disable thread tests */
-#define KEYBOARD_TEST       1   /**< Enable/disable keyboard tests */
-#define IDLE_SWITCH_TEST    0   /**< Test idle switch (exits init) */
+#define THREAD_TEST             0   /**< Enable/disable thread tests */
+#define KEYBOARD_TEST           0   /**< Enable/disable keyboard tests */
+#define SCREEN_TEST             1   /**< Enable/disable screen functional tests */
+#define SCREEN_PERFORMANCE_TEST 1   /**< Enable/disable screen performance test */
+#define IDLE_SWITCH_TEST        0   /**< Test idle switch (exits init) */
 // clang-format on
 
 /** Reset errno macro */
@@ -25,20 +27,20 @@
 /** Default Buffer size */
 #define BUFFER_SIZE 256
 
-/** Null pointer definition */
-#define NULL ((void *)0)
-
-#define MIN_WORK_TIME 200     /**< 200ms */
-#define SHORT_WORK_TIME 500   /**< 500ms */
-#define MEDIUM_WORK_TIME 1500 /**< 1.5 seconds */
-#define LONG_WORK_TIME 3000   /**< 3 seconds */
-#define KBD_WAIT_TIME 3000    /**< 3 seconds for keyboard test */
-#define KBD_PAUSE_TIME 1000   /**< 1 second pause between keyboard subtests */
+#define MIN_WORK_TIME 200      /**< 200ms */
+#define SHORT_WORK_TIME 500    /**< 500ms */
+#define DEFAULT_WORK_TIME 1000 /**< 1 second */
+#define MEDIUM_WORK_TIME 1500  /**< 1.5 seconds */
+#define LONG_WORK_TIME 3000    /**< 3 seconds */
+#define KBD_WAIT_TIME 3000     /**< 3 seconds for keyboard test */
+#define KBD_PAUSE_TIME 1000    /**< 1 second pause between keyboard subtests */
 
 #define MAX_THREADS_PER_PROCESS 10 /** Maximum threads per process (TIDs X0-X9) */
 #define MAX_SYNC_FLAGS 10          /** Synchronization flags for thread tests */
 
-#define KBD_MAX_KEYS 10 /** Maximum keys to track in keyboard test */
+#define KBD_MAX_KEYS 10 /* Maximum keys to track in keyboard test */
+
+#define SCREEN_WRITE_ITERATIONS 1000 /** Number of iterations for screen write performance test */
 
 /****************************************/
 /**    Utility Functions               **/
@@ -57,6 +59,17 @@ void waitTicks(int ticks);
  * This function writes the current PID and TID in the format: [PID X] [TID Y]
  */
 void write_current_info(void);
+
+/**
+ * @brief Clear screen buffer by filling it with spaces.
+ *
+ * This function clears the specified screen file descriptor by writing
+ * a buffer filled with spaces and default color attributes.
+ *
+ * @param fd File descriptor to clear.
+ * @return Number of bytes written, or negative error code.
+ */
+int clear_screen_buffer(int fd);
 
 /****************************************/
 /**    Synchronization Functions       **/
@@ -227,6 +240,78 @@ void subtest_kbd_einprogress(int *passed);
  * - Subtest 4: Verify syscalls return EINPROGRESS inside handler
  */
 void keyboard_tests(void);
+
+/****************************************/
+/**    Screen Support Test Functions   **/
+/****************************************/
+
+/**
+ * @brief Test invalid file descriptor access.
+ *
+ * Tests that write to invalid file descriptors returns appropriate errors.
+ *
+ * @return 1 if test passed, 0 if failed.
+ */
+int test_screen_write_invalid_fd(void);
+
+/**
+ * @brief Test basic screen buffer write functionality.
+ *
+ * This test creates a simple checkerboard pattern and writes it
+ * to the screen buffer (fd=10). Verifies that write() returns
+ * the correct number of bytes written (4000 for full screen).
+ *
+ * @return 1 if test passed, 0 if failed.
+ */
+int test_screen_write_basic(void);
+
+/**
+ * @brief Test screen buffer size limits.
+ *
+ * Tests that write(10, ...) properly handles buffer sizes larger than screen.
+ *
+ * @return 1 if test passed, 0 if failed.
+ */
+int test_screen_write_size_limits(void);
+
+/**
+ * @brief Test screen buffer visual patterns display.
+ *
+ * This test displays the three different screen patterns with delays
+ * to visually verify that the screen buffer is working correctly.
+ * Waits 0.5 seconds before starting. Displays each pattern, waits 1.5 seconds
+ * to allow viewing, clears the screen, waits 0.5 seconds, then displays the next pattern.
+ *
+ * @return 1 if test passed, 0 if failed.
+ */
+int test_screen_visual_patterns(void);
+
+/**
+ * @brief Test screen buffer performance timing.
+ *
+ * This test measures the time required to write 30 consecutive
+ * frames to the screen buffer using gettime() before and after
+ * the writes. Reports total time and average time per frame.
+ * Clears screen before starting the performance test and before
+ * printing the results.
+ *
+ * @return 1 if test passed, 0 if failed.
+ */
+int test_screen_write_performance(void);
+
+/**
+ * @brief Main screen support test suite (Functional Tests).
+ *
+ * This function runs screen buffer functional tests:
+ * - Subtest 1: Invalid file descriptor access (write to fd 99)
+ * - Subtest 2: Basic screen buffer write (checkerboard pattern)
+ * - Subtest 3: Screen buffer size limits (truncation test)
+ * - Subtest 4: Screen visual patterns display (with clear between patterns)
+ *
+ * Tests the sys_write_screen() functionality through fd=10 writes.
+ * Verifies error handling, basic functionality, and size limits.
+ */
+void screen_tests(void);
 
 /****************************************/
 /**    Main Test Entry Point           **/

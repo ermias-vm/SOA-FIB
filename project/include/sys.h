@@ -11,10 +11,6 @@
 
 #include <sched.h>
 
-/** File descriptor permissions */
-#define FD_READ 0
-#define FD_WRITE 1
-
 /** System buffer size for kernel operations */
 #define SYS_BUFFER_SIZE 256
 
@@ -25,15 +21,6 @@
 #define STACK_EBP (KERNEL_STACK_SIZE - 11)      /**< EBP in software context */
 #define STACK_RET_ADDR (KERNEL_STACK_SIZE - 18) /**< Return address for switch_context */
 #define STACK_FAKE_EBP (KERNEL_STACK_SIZE - 19) /**< Fake EBP for switch_context pop */
-
-/** Thread stack configuration */
-#define THREAD_STACK_REGION_PAGES 8
-#define THREAD_STACK_INITIAL_PAGES 1
-#define THREAD_STACK_BASE_PAGE (PAG_LOG_INIT_CODE + NUM_PAG_CODE)
-
-/** Temporary mapping pages - use end of address space to avoid conflicts with thread stacks */
-#define TEMP_STACK_MAPPING_PAGE (TOTAL_PAGES - THREAD_STACK_INITIAL_PAGES - 1) /**< Page 1022 */
-#define FORK_TEMP_MAPPING_PAGE (TOTAL_PAGES - NUM_PAG_DATA - 2)                /**< Page 1002 */
 
 /**
  * KERNEL STACK LAYOUT FOR CHILD PROCESS (sys_fork)
@@ -77,17 +64,7 @@
 /** Kernel buffer for system operations */
 extern char buffer_k[SYS_BUFFER_SIZE];
 
-/**
- * @brief Check file descriptor validity and permissions.
- *
- * This function validates a file descriptor and checks if the requested
- * permissions are allowed for that descriptor.
- *
- * @param fd File descriptor to check.
- * @param permissions Requested permissions to check.
- * @return 0 if valid, negative error code otherwise.
- */
-int check_fd(int fd, int permissions);
+/* Note: check_fd() and in_keyboard_context() are declared in kernel_helpers.h */
 
 /**
  * @brief Not implemented system call handler.
@@ -117,16 +94,6 @@ int sys_getpid(void);
 int sys_gettid(void);
 
 /**
- * @brief Return from fork system call for child process.
- *
- * This function is used by child processes created by fork() to return
- * to user space with the appropriate return value (0 for child).
- *
- * @return Always returns 0 in the child process after fork.
- */
-int ret_from_fork(void);
-
-/**
  * @brief Creates a new process (child process).
  *
  * This function creates a new process by duplicating the calling process.
@@ -148,7 +115,9 @@ int sys_fork(void);
  * @brief Writes data to a file descriptor.
  *
  * This function writes a buffer of characters to a file descriptor.
- * Currently only supports writing to stdout (fd=1).
+ * Supported file descriptors:
+ *   - fd=1 (FD_CONSOLE): Console output, character by character with cursor management.
+ *   - fd=10 (FD_SCREEN): Direct screen buffer, writes 80x25x2 bytes to video memory.
  *
  * @param fd File descriptor where to write the data.
  * @param buffer Pointer to the character buffer to be written.
@@ -217,16 +186,7 @@ int sys_create_thread(void (*function)(void *), void *parameter, void (*wrapper)
  */
 void sys_exit_thread(void);
 
-/**
- * @brief Grow the current thread's user stack on demand.
- *
- * Attempts to allocate a new page within the thread's reserved stack region
- * when a page fault occurs.
- *
- * @param fault_addr The address that caused the page fault.
- * @return 0 on success or a negative errno code on failure.
- */
-int grow_user_stack(unsigned int fault_addr);
+/* Note: grow_user_stack() is declared in kernel_helpers.h */
 
 /**
  * @brief Register a keyboard event handler.

@@ -20,7 +20,7 @@
 #define KERNEL_STACK_SIZE 1024
 
 /** Default quantum assigned to new processes (ticks) */
-#define DEFAULT_QUANTUM 100
+#define DEFAULT_QUANTUM 10
 
 /** Maximum TIDs per process: 10 threads (slots 0-9) */
 #define MAX_TIDS_PER_PROCESS 10

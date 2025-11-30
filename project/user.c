@@ -13,12 +13,8 @@
 char buff[256];
 
 __attribute__((__section__(".text.main"))) int main(void) {
-    /* Execute ZeOS test suite, configure test to execute in zeos_test.h*/
-    // execute_zeos_tests();
 
-    /* Execute project thread tests */
     execute_project_tests();
-
     write_current_pid();
     char *msg = "After tests, only task 1 should be running...\n";
     write(1, msg, strlen(msg));
