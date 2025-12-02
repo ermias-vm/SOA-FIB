@@ -3,14 +3,27 @@
  * @brief Internal kernel helper function implementations for ZeOS.
  *
  * This file contains helper functions used by system calls and kernel
- * subsystems for common operations like file descriptor validation
- * and execution context checking.
+ * subsystems for common operations like file descriptor validation,
+ * execution context checking, and time/FPS display management.
  */
 
 #include <errno.h>
+#include <interrupt.h>
+#include <io.h>
 #include <kernel_helpers.h>
 #include <mm.h>
 #include <sched.h>
+#include <screen.h>
+#include <times.h>
+
+/* Static variables for FPS calculation */
+static int last_fps_update_tick = 0;
+static int last_frame_count = 0;
+static int current_fps = 0;
+
+/* Cached display strings */
+static char cached_time[7] = "00:000";
+static char cached_fps[10] = "    0 FPS"; /* 5 digits + space + FPS + null */
 
 int ret_from_fork(void) {
     return 0;
@@ -133,4 +146,54 @@ void release_thread_stack(struct task_struct *thread) {
     thread->user_stack_region_pages = 0;
     thread->user_initial_esp = 0;
     thread->user_entry = 0;
+}
+
+/******************************************************************************/
+/*                         TIME AND FPS DISPLAY                               */
+/******************************************************************************/
+
+void update_time_and_fps(void) {
+    /* Calculate time components using adjusted ticks per second */
+    int total_ticks = zeos_ticks;
+    int total_seconds = total_ticks / TICKS_PER_SECOND;
+    int seconds = total_seconds % 100; /* Wrap at 100 seconds */
+    int remaining_ticks = total_ticks % TICKS_PER_SECOND;
+    int milliseconds = (remaining_ticks * 1000) / TICKS_PER_SECOND;
+
+    /* Format time as "SS:MMM" */
+    cached_time[0] = '0' + (seconds / 10);
+    cached_time[1] = '0' + (seconds % 10);
+    cached_time[2] = ':';
+    cached_time[3] = '0' + (milliseconds / 100);
+    cached_time[4] = '0' + ((milliseconds / 10) % 10);
+    cached_time[5] = '0' + (milliseconds % 10);
+    cached_time[6] = '\0';
+
+    /* Calculate FPS every FPS_UPDATE_INTERVAL ticks (1 second) */
+    if (zeos_ticks - last_fps_update_tick >= FPS_UPDATE_INTERVAL) {
+        /* FPS = frames written since last update */
+        current_fps = frame_count - last_frame_count;
+
+        /* Save current frame_count for next interval */
+        last_frame_count = frame_count;
+        last_fps_update_tick = zeos_ticks;
+    }
+
+    /* Format FPS as "XXXXX FPS" (right-aligned, max 99999) */
+    int fps = (current_fps > 99999) ? 99999 : current_fps;
+    cached_fps[0] = (fps >= 10000) ? ('0' + (fps / 10000)) : ' ';
+    cached_fps[1] = (fps >= 1000) ? ('0' + ((fps / 1000) % 10)) : ' ';
+    cached_fps[2] = (fps >= 100) ? ('0' + ((fps / 100) % 10)) : ' ';
+    cached_fps[3] = (fps >= 10) ? ('0' + ((fps / 10) % 10)) : ' ';
+    cached_fps[4] = '0' + (fps % 10);
+    cached_fps[5] = ' ';
+    cached_fps[6] = 'F';
+    cached_fps[7] = 'P';
+    cached_fps[8] = 'S';
+    cached_fps[9] = '\0';
+}
+
+void draw_time_and_fps(void) {
+    print_string_xy(TIME_DISPLAY_X, TIME_DISPLAY_Y, cached_time, TIME_DISPLAY_COLOR);
+    print_string_xy(FPS_DISPLAY_X, FPS_DISPLAY_Y, cached_fps, FPS_DISPLAY_COLOR);
 }

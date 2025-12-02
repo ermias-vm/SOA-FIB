@@ -8,6 +8,7 @@
 
 #include <io.h>
 #include <mm_address.h>
+#include <times.h>
 #include <types.h>
 #include <utils.h>
 
@@ -167,5 +168,6 @@ void print_splash_screen(void) {
     printk_color("                        =========================\n\n", MAKE_COLOR(BLACK, DARK_GRAY));
     printk_color("                        Booting ZeOs by Baka Baka\n", WARNING_COLOR);
     // clang-format on
-    wait_ticks(2500);
+    wait_ticks(TIME_BOOT_SPLASH);
+    clear_screen();
 }

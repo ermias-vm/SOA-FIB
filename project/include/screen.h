@@ -19,6 +19,9 @@
 /** Selected copy method for screen buffer to video memory */
 #define SCREEN_COPY_METHOD SCREEN_METHOD_REP_MOVSL
 
+/** Global frame counter - incremented each time a full screen is written */
+extern int frame_count;
+
 /**
  * @brief Write frame buffer directly to screen memory.
  *

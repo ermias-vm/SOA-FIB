@@ -15,7 +15,6 @@
 #include <segment.h>
 #include <sys.h>
 
-
 void init_keyboard_fields(struct task_struct *task) {
     task->kbd_handler = NULL;
     task->kbd_wrapper = NULL;
