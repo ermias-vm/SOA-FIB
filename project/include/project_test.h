@@ -9,17 +9,26 @@
 #ifndef __PROJECT_TEST_H__
 #define __PROJECT_TEST_H__
 
+#include <times.h>
+
 /**********************/
 /**   Test Enables   **/
 /**********************/
 
 // clang-format off
+/* MASTER SWITCH */
+#define RUN_TESTS               1   /**< Enable/disable ALL tests */
+
+/* MILESTONE TESTS */
 #define THREAD_TEST             1   /**< Enable/disable thread tests */
 #define KEYBOARD_TEST           1   /**< Enable/disable keyboard tests */
 #define SCREEN_TEST             1   /**< Enable/disable screen functional tests */
 #define SCREEN_PERFORMANCE_TEST 1   /**< Enable/disable screen performance test */
 #define WAITFORTICK_TEST        1   /**< Enable/disable WaitForTick tests */
 
+/* FUNCTIONAL TESTS */
+#define TICK_CALIBRATION_TEST   0   /**< Enable/disable tick rate calibration test */
+#define FPS_TEST                1   /**< Enable/disable FPS visual test */
 #define IDLE_SWITCH_TEST        1   /**< Test idle switch (exits init) */
 // clang-format on
 
@@ -29,24 +38,19 @@
 /** Default Buffer size */
 #define BUFFER_SIZE 256
 
-#define MIN_WORK_TIME 50      /**< 50ms - minimal delay after flag sync */
-#define SHORT_WORK_TIME 100   /**< 100ms - short operations */
-#define DEFAULT_WORK_TIME 200 /**< 200ms - default delay */
-#define MEDIUM_WORK_TIME 300  /**< 300ms - child process completion */
-#define LONG_WORK_TIME 500    /**< 500ms - longer thread work */
-
-#define VISUAL_DISPLAY_TIME 700 /**< 700ms - time to display visual patterns */
-#define VISUAL_PAUSE_TIME 400   /**< 400ms - pause before visual changes */
-
-#define KBD_WAIT_TIME 3000  /**< 3 seconds for keyboard test */
-#define KBD_PAUSE_TIME 1000 /**< 1 second pause between keyboard subtests */
-
 #define MAX_THREADS_PER_PROCESS 10 /** Maximum threads per process (TIDs X0-X9) */
 #define MAX_SYNC_FLAGS 10          /** Synchronization flags for thread tests */
 
 #define KBD_MAX_KEYS 10 /* Maximum keys to track in keyboard test */
 
 #define SCREEN_WRITE_ITERATIONS 1000 /** Number of iterations for screen write performance test */
+
+#define NUM_SYSCALLS_TO_TEST 10 /**< Number of syscalls to test for EINPROGRESS */
+
+/* Keyboard scancodes for FPS test navigation */
+#define FPS_SCANCODE_N 0x31   /**< Scancode for 'N' key (next scene) */
+#define FPS_SCANCODE_B 0x30   /**< Scancode for 'B' key (previous scene) */
+#define FPS_SCANCODE_ESC 0x01 /**< Scancode for 'Esc' key (exit test) */
 
 /****************************************/
 /**    Utility Functions               **/
@@ -58,6 +62,17 @@
  * @param ticks Number of ticks to wait.
  */
 void waitTicks(int ticks);
+
+/**
+ * @brief Wait for a specified number of ticks, yielding CPU to other threads.
+ *
+ * Unlike waitTicks() which busy-waits, this function uses WaitForTick()
+ * to yield the CPU, allowing other threads to run during the wait.
+ * Use this when waiting for threads to complete their work.
+ *
+ * @param ticks Number of ticks to wait.
+ */
+void waitTicksYield(int ticks);
 
 /**
  * @brief Write current process and thread information.
@@ -362,6 +377,66 @@ void subtest_waitfortick_timing(int *passed);
  * - Subtest 3: Timing accuracy test
  */
 void waitfortick_tests(void);
+
+/****************************************/
+/**    Tick Calibration Test Functions **/
+/****************************************/
+
+/**
+ * @brief Tick Calibration Test to measure actual tick rate.
+ *
+ * This test runs for a specified number of "expected" seconds
+ * (TICK_CALIBRATION_SECONDS) to measure the actual number of ticks
+ * per second. This helps calibrate TICKS_PER_SECOND if the hardware
+ * timer doesn't match the expected frequency.
+ *
+ * The test displays:
+ * - Expected duration in seconds
+ * - Actual elapsed ticks
+ * - Calculated ticks per second
+ * - Deviation from expected (1000 ticks/second)
+ *
+ * @note Use a stopwatch to time this test for accurate calibration.
+ */
+void tick_calibration_test(void);
+
+/****************************************/
+/**    FPS Visual Test Functions       **/
+/****************************************/
+
+/**
+ * @brief FPS Visual Test with multiple scenes.
+ *
+ * This test displays graphical scenes to verify FPS display:
+ *
+ * **Scene 1 - Starfield:**
+ * - Twinkling stars on black background
+ * - Moving elements
+ * - Low graphical complexity
+ *
+ * **Scene 2 - Bouncing Balls:**
+ * - Multiple balls bouncing and multiplying
+ * - Decorative elements (blocks, lines)
+ * - Higher graphical complexity
+ *
+ * **Navigation:**
+ * - Press 'N' for next scene
+ * - Press 'B' for previous scene
+ * - Press 'Esc' to exit test
+ *
+ * @note Row 0 displays: Time | Scene Info | FPS
+ *
+ * @return 1 if test completed successfully, 0 if failed.
+ */
+int fps_visual_test(void);
+
+/**
+ * @brief Main FPS test suite.
+ *
+ * This function runs the FPS visual test with two scenes
+ * of increasing graphical complexity.
+ */
+void fps_tests(void);
 
 /****************************************/
 /**    Main Test Entry Point           **/

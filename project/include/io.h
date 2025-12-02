@@ -169,4 +169,17 @@ void clear_screen(void);
  */
 void printk_color_fmt(Word color, char *fmt, ...);
 
+/**
+ * @brief Print string at specific screen position.
+ *
+ * Prints a null-terminated string starting at the given (x, y)
+ * coordinates with the specified color. Does not affect cursor position.
+ *
+ * @param x Starting column (0-79).
+ * @param y Row (0-24).
+ * @param str String to print.
+ * @param color Color attribute.
+ */
+void print_string_xy(Byte x, Byte y, const char *str, Word color);
+
 #endif /* __IO_H__ */

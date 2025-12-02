@@ -10,11 +10,11 @@
 #include <project_test.h>
 #include <zeos_test.h>
 
-char buff[256];
-
 __attribute__((__section__(".text.main"))) int main(void) {
 
+#if RUN_TESTS
     execute_project_tests();
+#endif
     write_current_pid();
     char *msg = "After tests, only task 1 should be running...\n";
     write(1, msg, strlen(msg));

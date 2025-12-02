@@ -9,10 +9,26 @@
 #ifndef __INTERRUPT_H__
 #define __INTERRUPT_H__
 
+#include <io.h>
+#include <times.h>
 #include <types.h>
 
 /** Maximum number of entries in the Interrupt Descriptor Table */
 #define IDT_ENTRIES 256
+
+/** Screen position for time display (top-left corner) */
+#define TIME_DISPLAY_X 0
+#define TIME_DISPLAY_Y 0
+
+/** Screen position for FPS display (top-right corner, "XXXXX FPS" = 9 chars) */
+#define FPS_DISPLAY_X (NUM_COLUMNS - 9)
+#define FPS_DISPLAY_Y 0
+
+/** Color for time display */
+#define TIME_DISPLAY_COLOR MAKE_COLOR(BLACK, LIGHT_CYAN)
+
+/** Color for FPS display */
+#define FPS_DISPLAY_COLOR MAKE_COLOR(BLACK, YELLOW)
 
 /** Interrupt Descriptor Table - array of interrupt/trap gates */
 extern Gate idt[IDT_ENTRIES];

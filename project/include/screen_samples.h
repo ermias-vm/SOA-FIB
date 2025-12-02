@@ -1,16 +1,66 @@
 /**
  * @file screen_samples.h
- * @brief Pre-defined screen test patterns for ZeOS screen buffer testing.
+ * @brief Pre-defined screen test patterns and scene rendering for ZeOS.
  *
- * This header provides three different screen patterns for testing
- * the screen buffer functionality. Each pattern is exactly 4000 bytes
- * (80 columns × 25 rows × 2 bytes per character).
+ * This header provides screen patterns for testing and animated scene
+ * rendering functions for the FPS visual test. Each pattern/scene fills
+ * the screen buffer (80 columns × 25 rows × 2 bytes per character).
  */
 
 #ifndef __SCREEN_SAMPLES_H__
 #define __SCREEN_SAMPLES_H__
 
 #include <screen.h>
+
+#define FPS_NUM_SCENES 4 /**< Number of scenes in the FPS test */
+
+/**
+ * @brief Maximum number of balls in scene */
+#define SCENE_MAX_BALLS 200
+
+/**
+ * @brief Maximum number of stars in scene */
+#define SCENE_MAX_STARS 75
+
+/**
+ * @brief Ball movement divisor for slower/smoother animation.
+ * Higher values = slower, smoother movement */
+#define BALL_SPEED_DIVISOR 30
+
+/**
+ * @brief Frames between spawning new balls */
+#define BALL_SPAWN_INTERVAL 500
+
+/**
+ * @brief Ball structure for bouncing balls scene.
+ */
+typedef struct {
+    int x, y;   /**< Position */
+    int dx, dy; /**< Velocity */
+    char ch;    /**< Character to display */
+    char color; /**< Color attribute */
+} SceneBall;
+
+/**
+ * @brief Star structure for starfield scene.
+ */
+typedef struct {
+    int x, y;    /**< Position */
+    char ch;     /**< Character ('.' or '*' or '+') */
+    char color;  /**< Color attribute */
+    int twinkle; /**< Twinkle phase */
+} SceneStar;
+
+/**
+ * @brief State for scene rendering.
+ */
+typedef struct {
+    SceneBall balls[SCENE_MAX_BALLS];
+    int num_balls;
+    SceneStar stars[SCENE_MAX_STARS];
+    int num_stars;
+    int frame_count;
+} SceneState;
 
 /**
  * @brief Test Pattern 1: Checkerboard Pattern
@@ -138,5 +188,88 @@ void generate_rainbow_pattern(char *buffer);
  * @param buffer Pointer to buffer of exactly SCREEN_BUFFER_SIZE bytes.
  */
 void generate_border_pattern(char *buffer);
+
+/****************************************/
+/**    Scene Rendering Functions       **/
+/****************************************/
+
+/**
+ * @brief Initialize scene state.
+ *
+ * @param state Pointer to SceneState to initialize.
+ */
+void scene_init(SceneState *state);
+
+/**
+ * @brief Fill screen with black (preserves row 0 for time/FPS).
+ *
+ * @param buffer Screen buffer to fill.
+ */
+void scene_fill_black(char *buffer);
+
+/**
+ * @brief Draw a single character at position (x, y).
+ *
+ * Skips row 0 which is reserved for time/FPS display.
+ *
+ * @param buffer Screen buffer.
+ * @param x Column (0-79).
+ * @param y Row (0-24, but row 0 is skipped).
+ * @param ch Character to draw.
+ * @param color VGA color attribute.
+ */
+void scene_draw_char(char *buffer, int x, int y, char ch, char color);
+
+/**
+ * @brief Draw a string at position (x, y).
+ *
+ * @param buffer Screen buffer.
+ * @param x Starting column.
+ * @param y Row.
+ * @param str String to draw.
+ * @param color VGA color attribute.
+ */
+void scene_draw_string(char *buffer, int x, int y, const char *str, char color);
+
+/**
+ * @brief Draw centered message in row 0.
+ *
+ * @param buffer Screen buffer.
+ * @param scene_num Current scene number.
+ * @param total_scenes Total number of scenes.
+ */
+void scene_draw_nav_message(char *buffer, int scene_num, int total_scenes);
+
+/**
+ * @brief Render Scene 1: Starfield with twinkling stars.
+ *
+ * @param buffer Screen buffer to render to.
+ * @param state Scene state.
+ */
+void render_scene_starfield(char *buffer, SceneState *state);
+
+/**
+ * @brief Render Scene 2: Bouncing balls with decorations.
+ *
+ * @param buffer Screen buffer to render to.
+ * @param state Scene state.
+ */
+void render_scene_balls(char *buffer, SceneState *state);
+
+/**
+ * @brief Update ball positions with boundary checking.
+ *
+ * @param state Scene state containing balls.
+ */
+void scene_update_balls(SceneState *state);
+
+/**
+ * @brief Add a new ball to the scene.
+ *
+ * @param state Scene state.
+ * @param x Initial X position.
+ * @param y Initial Y position.
+ */
+void scene_add_ball(SceneState *state, int x, int y);
 
 #endif /* __SCREEN_SAMPLES_H__ */

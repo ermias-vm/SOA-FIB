@@ -117,4 +117,22 @@ int map_stack_pages(struct task_struct *master, unsigned int first_page, unsigne
  */
 void release_thread_stack(struct task_struct *thread);
 
+/**
+ * @brief Update time and FPS counters.
+ *
+ * Called by the clock interrupt to update internal time and FPS state.
+ * This function recalculates seconds, milliseconds, and FPS values
+ * but does NOT write to video memory.
+ */
+void update_time_and_fps(void);
+
+/**
+ * @brief Draw time and FPS to video memory.
+ *
+ * Writes the current cached time (SS:MMM) and FPS (XXXX FPS) values
+ * to their respective screen positions. Call after update_time_and_fps()
+ * in the clock interrupt, or standalone after screen buffer writes.
+ */
+void draw_time_and_fps(void);
+
 #endif /* __KERNEL_HELPERS_H__ */

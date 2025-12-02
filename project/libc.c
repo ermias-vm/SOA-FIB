@@ -8,6 +8,7 @@
  */
 
 #include <errno.h>
+#include <io.h>
 #include <libc.h>
 #include <types.h>
 
@@ -194,12 +195,12 @@ void prints(const char *fmt, ...) {
 }
 
 int clear_screen_buffer(int fd) {
-    char clear_buffer[80 * 25 * 2];
+    char clear_buffer[SCREEN_BUFFER_SIZE];
 
     /* Fill buffer with spaces and default color */
-    for (int i = 0; i < 80 * 25 * 2; i += 2) {
+    for (int i = 0; i < SCREEN_BUFFER_SIZE; i += 2) {
         clear_buffer[i] = ' ';      /* Space character */
-        clear_buffer[i + 1] = 0x07; /* Light gray on black */
+        clear_buffer[i + 1] = 0x00; /* Black */
     }
 
     return write(fd, clear_buffer, sizeof(clear_buffer));

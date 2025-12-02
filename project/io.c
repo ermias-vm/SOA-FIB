@@ -89,6 +89,15 @@ void clear_screen(void) {
     x = y = 0;
 }
 
+void print_string_xy(Byte px, Byte py, const char *str, Word color) {
+    Word *screen = (Word *)VIDEO_MEMORY_BASE;
+    int pos = py * NUM_COLUMNS + px;
+
+    for (int i = 0; str[i] != '\0' && (px + i) < NUM_COLUMNS; i++) {
+        screen[pos + i] = (Word)(str[i] & 0x00FF) | color;
+    }
+}
+
 void printk_color_fmt(Word color, char *fmt, ...) {
     __builtin_va_list args;
     __builtin_va_start(args, fmt);

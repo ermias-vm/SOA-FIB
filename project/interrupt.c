@@ -13,8 +13,10 @@
 #include <kernel_helpers.h>
 #include <keyboard.h>
 #include <sched.h>
+#include <screen.h>
 #include <segment.h>
 #include <sys.h>
+#include <times.h>
 #include <types.h>
 #include <utils.h>
 #include <zeos_interrupt.h>
@@ -121,7 +123,8 @@ void keyboard_routine(void) {
 
 void clock_routine(void) {
     zeos_ticks++;
-    zeos_show_clock();
+    update_time_and_fps();
+    draw_time_and_fps();
     scheduler();
 }
 
