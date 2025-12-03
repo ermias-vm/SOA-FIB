@@ -61,12 +61,12 @@
  *
  * @param ticks Number of ticks to wait.
  */
-void waitTicks(int ticks);
+void busyWait(int ticks);
 
 /**
  * @brief Wait for a specified number of ticks, yielding CPU to other threads.
  *
- * Unlike waitTicks() which busy-waits, this function uses WaitForTick()
+ * This function uses WaitForTick()
  * to yield the CPU, allowing other threads to run during the wait.
  * Use this when waiting for threads to complete their work.
  *

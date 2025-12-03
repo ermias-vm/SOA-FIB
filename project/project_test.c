@@ -240,7 +240,7 @@ static void test_kbd_handler_with_syscall(char key, int pressed) {
 /**    Utility Functions               **/
 /****************************************/
 
-void waitTicks(int ticks) {
+void busyWait(int ticks) {
     int start_time = gettime();
     while (gettime() - start_time < ticks) {
         /* Busy wait */
@@ -425,7 +425,7 @@ void subtest_tid_reuse(int *passed) {
     wait_for_flag(0);
 
     /* Small delay to ensure cleanup */
-    waitTicks(TIME_MINIMAL);
+    busyWait(TIME_MINIMAL);
 
     /* Create another thread */
     clear_all_flags();
@@ -479,7 +479,7 @@ void subtest_last_thread_exits(void) {
 
     } else if (pid > 0) {
         /* Parent waits for child to complete */
-        waitTicks(TIME_MEDIUM);
+        busyWait(TIME_MEDIUM);
 
         prints("[PID %d] [TID %d] Parent: Child process should have terminated\n", getpid(),
                gettid());
@@ -532,7 +532,7 @@ void subtest_master_reassignment(void) {
 
     } else if (pid > 0) {
         /* Parent waits for child to complete */
-        waitTicks(TIME_LONG);
+        busyWait(TIME_LONG);
 
         prints("[PID %d] [TID %d] Parent: Child process should have completed\n", getpid(),
                gettid());
@@ -601,7 +601,7 @@ void subtest_fork_single_thread(int *passed) {
         }
 
         /* Wait for threads to complete and exit */
-        waitTicks(TIME_MEDIUM);
+        busyWait(TIME_MEDIUM);
         exit();
 
     } else if (child_pid > 0) {
@@ -609,7 +609,7 @@ void subtest_fork_single_thread(int *passed) {
         prints("[PID %d] [TID %d] Parent: Forked child PID %d\n", getpid(), gettid(), child_pid);
 
         /* Wait for child to complete its test and for secondary thread to finish */
-        waitTicks(TIME_LONG + TIME_MEDIUM);
+        busyWait(TIME_LONG + TIME_MEDIUM);
 
         prints("[PID %d] [TID %d] Parent: Test completed\n", getpid(), gettid());
 
@@ -651,7 +651,7 @@ void subtest_wrapper_calls_exit(int *passed) {
     wait_for_flag(0);
 
     /* Give time for the thread to return and wrapper to call ThreadExit */
-    waitTicks(TIME_MINIMAL);
+    busyWait(TIME_MINIMAL);
 
     /* If we get here without crashing, the wrapper worked */
     prints("[PID %d] [TID %d] System stable - wrapper called ThreadExit\n", getpid(), gettid());
@@ -923,7 +923,7 @@ void keyboard_tests(void) {
 
     /* Pause before subtest 4 to avoid accidental key presses */
     prints("[PID %d] [TID %d] Pausing 1 second before next test...\n", getpid(), gettid());
-    waitTicks(TIME_KBD_PAUSE);
+    busyWait(TIME_KBD_PAUSE);
 
     /* Subtest 4: EINPROGRESS inside handler */
     subtest_kbd_einprogress(&result);
@@ -986,7 +986,7 @@ int test_screen_write_basic(void) {
     clear_screen_buffer(10);
     prints("[PID %d] [TID %d] Preparing to write checkerboard pattern to screen buffer...\n",
            getpid(), gettid());
-    waitTicks(TIME_VISUAL_PAUSE);
+    busyWait(TIME_VISUAL_PAUSE);
 
     /* Create a checkerboard test pattern */
     char screen_buffer[SCREEN_BUFFER_SIZE];
@@ -995,7 +995,7 @@ int test_screen_write_basic(void) {
     /* Write to screen buffer (fd=10) */
     int result = write(10, screen_buffer, sizeof(screen_buffer));
     int passed = 1;
-    waitTicks(TIME_VISUAL_DISPLAY);
+    busyWait(TIME_VISUAL_DISPLAY);
     clear_screen_buffer(10);
     if (result != sizeof(screen_buffer)) {
         prints("[PID %d] [TID %d] ERROR: write returned %d, expected %d\n", getpid(), gettid(),
@@ -1027,7 +1027,7 @@ int test_screen_write_size_limits(void) {
     clear_screen_buffer(10);
     prints("[PID %d] [TID %d] Waiting some ticks before writing large buffer (%d bytes)...\n",
            getpid(), gettid(), sizeof(large_buffer));
-    waitTicks(TIME_VISUAL_PAUSE);
+    busyWait(TIME_VISUAL_PAUSE);
 
     /* Write should truncate to screen size */
     int result = write(10, large_buffer, sizeof(large_buffer));
@@ -1038,7 +1038,7 @@ int test_screen_write_size_limits(void) {
                gettid(), result, SCREEN_BUFFER_SIZE);
         passed = 0;
     } else {
-        waitTicks(TIME_VISUAL_DISPLAY);
+        busyWait(TIME_VISUAL_DISPLAY);
         prints("[PID %d] [TID %d] Large buffer correctly truncated to %d bytes\n", getpid(),
                gettid(), result);
     }
@@ -1066,7 +1066,7 @@ int test_screen_visual_patterns(void) {
     clear_screen_buffer(10);
     prints("[PID %d] [TID %d] Waiting some ticks before displaying checkerboard pattern...\n",
            getpid(), gettid());
-    waitTicks(TIME_VISUAL_PAUSE);
+    busyWait(TIME_VISUAL_PAUSE);
 
     int result = write(10, frame_buffer1, sizeof(frame_buffer1));
     if (result != sizeof(frame_buffer1)) {
@@ -1074,13 +1074,13 @@ int test_screen_visual_patterns(void) {
                gettid(), result);
         passed = 0;
     }
-    waitTicks(TIME_VISUAL_DISPLAY);
+    busyWait(TIME_VISUAL_DISPLAY);
 
     /* Display Pattern 2: Rainbow */
     clear_screen_buffer(10);
     prints("[PID %d] [TID %d] Waiting some ticks before displaying rainbow pattern...\n", getpid(),
            gettid());
-    waitTicks(TIME_VISUAL_PAUSE);
+    busyWait(TIME_VISUAL_PAUSE);
 
     result = write(10, frame_buffer2, sizeof(frame_buffer2));
     if (result != sizeof(frame_buffer2)) {
@@ -1088,13 +1088,13 @@ int test_screen_visual_patterns(void) {
                result);
         passed = 0;
     }
-    waitTicks(TIME_VISUAL_DISPLAY);
+    busyWait(TIME_VISUAL_DISPLAY);
 
     /* Display Pattern 3: Border */
     clear_screen_buffer(10);
     prints("[PID %d] [TID %d] Waiting some ticks before displaying border pattern...\n", getpid(),
            gettid());
-    waitTicks(TIME_VISUAL_PAUSE);
+    busyWait(TIME_VISUAL_PAUSE);
 
     result = write(10, frame_buffer3, sizeof(frame_buffer3));
     if (result != sizeof(frame_buffer3)) {
@@ -1102,7 +1102,7 @@ int test_screen_visual_patterns(void) {
                result);
         passed = 0;
     }
-    waitTicks(TIME_VISUAL_DISPLAY);
+    busyWait(TIME_VISUAL_DISPLAY);
     clear_screen_buffer(10);
 
     if (passed) {
@@ -1447,14 +1447,14 @@ void tick_calibration_test(void) {
     prints("[PID %d] [TID %d] USE A STOPWATCH!\n", getpid(), gettid());
     prints("[PID %d] [TID %d] Starting in 3 seconds...\n", getpid(), gettid());
 
-    waitTicks(TIME_CALIBRATION_COUNTDOWN);
+    busyWait(TIME_CALIBRATION_COUNTDOWN);
 
     prints("[PID %d] [TID %d] GO!\n", getpid(), gettid());
 
     int start_ticks = gettime();
     int expected_ticks = TIME_CALIBRATION_TICKS;
 
-    waitTicks(expected_ticks);
+    busyWait(expected_ticks);
 
     int end_ticks = gettime();
     int elapsed_ticks = end_ticks - start_ticks;
@@ -1530,7 +1530,7 @@ int fps_visual_test(void) {
     prints("[PID %d] [TID %d] Scene 4: Bouncing balls with decorations\n", getpid(), gettid());
 
     /* Small pause before starting */
-    waitTicks(TIME_VISUAL_PAUSE);
+    busyWait(TIME_VISUAL_PAUSE);
 
     int start_time = gettime();
 
@@ -1609,7 +1609,7 @@ void fps_tests(void) {
     prints("[PID %d] [TID %d] Use N/B to navigate scenes, Esc to exit.\n", getpid(), gettid());
 
     /* Small pause before starting */
-    waitTicks(TIME_VISUAL_PAUSE);
+    busyWait(TIME_VISUAL_PAUSE);
 
     fps_test_passed = fps_visual_test();
 

@@ -9,6 +9,7 @@ ZeOS is a Unix-like operating system built for educational purposes. It implemen
 - **[`README.md`](README.md)** - Project documentation
 - **[`ConfigZeos.md`](ConfigZeos.md)** - Configuration details for ZeOS setup
 - **[`zeos/`](zeos/)** - Main ZeOS source code and build directory
+- **[`project/`](project/)** - Extended ZeOS with threads, keyboard and screen support for Dig Dug game implementation
 - **[`docs/`](docs/)** - Documentation and guides
 - **[`bochs-2.6.7/`](bochs-2.6.7/)** - Bochs emulator source and binaries
 - **`backup/`** - Automatically created backup directory containing:
