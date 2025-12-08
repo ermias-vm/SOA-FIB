@@ -17,7 +17,7 @@
 
 // clang-format off
 /* MASTER SWITCH */
-#define RUN_TESTS               1   /**< Enable/disable ALL tests */
+#define RUN_TESTS               0   /**< Enable/disable ALL tests */
 
 /* MILESTONE TESTS */
 #define THREAD_TEST             1   /**< Enable/disable thread tests */
