@@ -134,6 +134,11 @@ screen.o: screen.c $(INCLUDEDIR)/screen.h $(INCLUDEDIR)/io.h $(INCLUDEDIR)/utils
 
 kernel_helpers.o: kernel_helpers.c $(INCLUDEDIR)/kernel_helpers.h $(INCLUDEDIR)/sched.h $(INCLUDEDIR)/mm.h $(INCLUDEDIR)/errno.h
 
+# Headers that will be created
+$(INCLUDEDIR)/game.h: $(INCLUDEDIR)/game_types.h $(INCLUDEDIR)/game_config.h
+
+game.o: game.c $(INCLUDEDIR)/game.h $(INCLUDEDIR)/libc.h
+
 system: system.o system.lds $(SYSOBJ)
 	$(LD) $(LDFLAGS) -T system.lds -o $@ $< $(SYSOBJ) $(LIBZEOS)
 
