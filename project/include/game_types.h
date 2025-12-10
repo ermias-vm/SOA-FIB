@@ -44,7 +44,9 @@ typedef enum {
 typedef enum {
     TILE_EMPTY = 0,     /* Excavated tunnel */
     TILE_DIRT,          /* Solid dirt (unexcavated) */
-    TILE_SKY            /* Sky area (rows 1-3) */
+    TILE_SKY,            /* Sky area (rows 1-3) */
+    TILE_WALL,              /* Solid wall (not walkable) */
+    TILE_GEM                /* Gem (collectible) */
 } TileType;
 
 /**
