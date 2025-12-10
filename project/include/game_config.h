@@ -103,6 +103,8 @@
 #define POOKA_BASE_SPEED    4       /* Pooka moves every 4 ticks */
 #define FYGAR_BASE_SPEED    5       /* Fygar is slightly slower */
 #define GHOST_SPEED         6       /* Ghost mode is slow */
+#define ENEMY_BASE_SPEED    3           /* Base enemy speed */
+#define SPEED_INCREMENT_PER_LEVEL 1    /* Speed increase per level */
 
 /* Speed increases per round (enemies get faster) */
 #define SPEED_DECREASE_PER_ROUND  1  /* Decrease tick delay = faster */

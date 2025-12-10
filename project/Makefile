@@ -62,6 +62,7 @@ USROBJ = \
 	project_test.o \
 	screen_samples.o \
 	game_map.o \
+	game_entities.o \
 
 
 ################################################################################
@@ -254,3 +255,5 @@ doxygen-pdf:
     fi
 
 game_map.o: game_map.c $(INCLUDEDIR)/game_map.h $(INCLUDEDIR)/game_types.h $(INCLUDEDIR)/game_config.h $(INCLUDEDIR)/libc.h
+
+game_entities.o: game_entities.c $(INCLUDEDIR)/game_entities.h $(INCLUDEDIR)/game_types.h $(INCLUDEDIR)/game_config.h $(INCLUDEDIR)/game_map.h $(INCLUDEDIR)/libc.h

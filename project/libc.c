@@ -205,3 +205,11 @@ int clear_screen_buffer(int fd) {
 
     return write(fd, clear_buffer, sizeof(clear_buffer));
 }
+
+/****************************************/
+/**    Utility Functions               **/
+/****************************************/
+
+int abs(int x) {
+    return (x < 0) ? -x : x;
+}

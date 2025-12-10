@@ -56,7 +56,8 @@ typedef enum {
     ENTITY_NONE = 0,
     ENTITY_PLAYER,      /* Dig Dug (the player) */
     ENTITY_POOKA,       /* Basic enemy (no special ability) */
-    ENTITY_FYGAR        /* Dragon enemy (spits fire horizontally) */
+    ENTITY_FYGAR,        /* Dragon enemy (spits fire horizontally) */
+    ENTITY_ENEMY        /* Generic enemy type */
 } EntityType;
 
 /**
@@ -101,7 +102,7 @@ typedef struct {
     EntityType type;        /* Entity type (player, pooka, fygar) */
     int active;             /* 1 = active, 0 = inactive */
     int speed_counter;      /* Counter for movement timing */
-    int speed;              /* Ticks between movements */
+    int speed_limit;              /* Ticks between movements */
     int inflate_level;      /* Inflation level (0-4, for enemies) */
     int fire_cooldown;      /* Fygar fire cooldown counter */
     union {
