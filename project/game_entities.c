@@ -9,14 +9,12 @@
 #include <game_map.h>
 #include <libc.h>
 
-/* Private helper functions */
-static int calculate_distance_squared(Position a, Position b);
-static Direction get_best_direction_to_target(Position current, Position target);
-static int is_direction_blocked(Position pos, Direction dir);
 
-/**
- * Initialize a generic entity
- */
+int calculate_distance_squared(Position a, Position b);
+Direction get_best_direction_to_target(Position current, Position target);
+int is_direction_blocked(Position pos, Direction dir);
+
+
 void entity_init(Entity *e, int x, int y, EntityType type) {
     if (!e) return;
     
@@ -41,9 +39,7 @@ void entity_init(Entity *e, int x, int y, EntityType type) {
     }
 }
 
-/**
- * Move entity in specified direction (if possible)
- */
+
 void entity_move(Entity *e, Direction dir) {
     if (!e || !e->active) return;
     
@@ -55,9 +51,7 @@ void entity_move(Entity *e, Direction dir) {
     }
 }
 
-/**
- * Check if entity can move in specified direction
- */
+
 int entity_can_move(Entity *e, Direction dir) {
     if (!e || !e->active) return 0;
     
@@ -78,9 +72,7 @@ int entity_can_move(Entity *e, Direction dir) {
     return map_is_walkable(next_pos.x, next_pos.y);
 }
 
-/**
- * Get next position if entity moves in specified direction
- */
+
 Position entity_next_pos(Entity *e, Direction dir) {
     Position next_pos = e->pos;
     
@@ -106,9 +98,7 @@ Position entity_next_pos(Entity *e, Direction dir) {
     return next_pos;
 }
 
-/**
- * Set entity position directly
- */
+
 void entity_set_position(Entity *e, int x, int y) {
     if (!e) return;
     
@@ -116,17 +106,13 @@ void entity_set_position(Entity *e, int x, int y) {
     e->pos.y = y;
 }
 
-/**
- * Initialize player entity
- */
+
 void player_init(Entity *player, int x, int y) {
     entity_init(player, x, y, ENTITY_PLAYER);
     player->speed_limit = PLAYER_SPEED;
 }
 
-/**
- * Update player based on input direction
- */
+
 void player_update(Entity *player, Direction input_dir) {
     if (!player || !player->active) return;
     
@@ -147,9 +133,6 @@ void player_update(Entity *player, Direction input_dir) {
     }
 }
 
-/**
- * Collect gem at specified position
- */
 void player_collect_gem(Entity *player, int x, int y) {
     if (!player || !player->active) return;
     
@@ -159,9 +142,6 @@ void player_collect_gem(Entity *player, int x, int y) {
     }
 }
 
-/**
- * Reset player to starting position
- */
 void player_reset_position(Entity *player) {
     if (!player) return;
     
@@ -171,9 +151,7 @@ void player_reset_position(Entity *player) {
     player->active = 1;
 }
 
-/**
- * Check if player can dig in specified direction
- */
+
 int player_can_dig(Entity *player, Direction dir) {
     if (!player || !player->active) return 0;
     
@@ -181,9 +159,7 @@ int player_can_dig(Entity *player, Direction dir) {
     return map_is_diggable(next_pos.x, next_pos.y);
 }
 
-/**
- * Dig in specified direction
- */
+
 void player_dig(Entity *player, Direction dir) {
     if (!player || !player->active) return;
     
@@ -194,17 +170,13 @@ void player_dig(Entity *player, Direction dir) {
     }
 }
 
-/**
- * Initialize enemy entity
- */
+
 void enemy_init(Entity *enemy, int x, int y) {
     entity_init(enemy, x, y, ENTITY_ENEMY);
     enemy->speed_limit = ENEMY_BASE_SPEED;
 }
 
-/**
- * Update enemy behavior (AI movement)
- */
+
 void enemy_update(Entity *enemy, Position player_pos) {
     if (!enemy || !enemy->active) return;
     
@@ -234,9 +206,7 @@ void enemy_update(Entity *enemy, Position player_pos) {
     }
 }
 
-/**
- * Simple AI to determine direction towards target
- */
+
 Direction enemy_ai_direction(Entity *enemy, Position target) {
     if (!enemy || !enemy->active) return DIR_NONE;
     
@@ -256,9 +226,7 @@ Direction enemy_ai_direction(Entity *enemy, Position target) {
     }
 }
 
-/**
- * Reset enemy to a safe spawn position
- */
+
 void enemy_reset_position(Entity *enemy, int enemy_index) {
     if (!enemy) return;
     
@@ -282,9 +250,7 @@ void enemy_reset_position(Entity *enemy, int enemy_index) {
     enemy->speed_counter = 0;
 }
 
-/**
- * Initialize all enemies for a level
- */
+
 void enemies_init_all(Entity enemies[], int count, int level) {
     if (!enemies) return;
     
@@ -299,9 +265,7 @@ void enemies_init_all(Entity enemies[], int count, int level) {
     }
 }
 
-/**
- * Update all active enemies
- */
+
 void enemies_update_all(Entity enemies[], int count, Position player_pos) {
     if (!enemies) return;
     
@@ -312,9 +276,7 @@ void enemies_update_all(Entity enemies[], int count, Position player_pos) {
     }
 }
 
-/**
- * Check collision between two entities
- */
+
 int check_collision(Entity *a, Entity *b) {
     if (!a || !b || !a->active || !b->active) {
         return 0;
@@ -323,9 +285,7 @@ int check_collision(Entity *a, Entity *b) {
     return (a->pos.x == b->pos.x && a->pos.y == b->pos.y);
 }
 
-/**
- * Check if player collides with any enemy
- */
+
 int check_player_enemy_collision(Entity *player, Entity enemies[], int count) {
     if (!player || !enemies || !player->active) {
         return 0;
@@ -340,71 +300,53 @@ int check_player_enemy_collision(Entity *player, Entity enemies[], int count) {
     return 0; /* No collision */
 }
 
-/**
- * Check collision between two positions
- */
+
 int check_position_collision(Position pos_a, Position pos_b) {
     return (pos_a.x == pos_b.x && pos_a.y == pos_b.y);
 }
 
-/**
- * Check if entity is active
- */
+
 int entity_is_active(Entity *e) {
     return (e && e->active);
 }
 
-/**
- * Deactivate entity
- */
+
 void entity_deactivate(Entity *e) {
     if (e) {
         e->active = 0;
     }
 }
 
-/**
- * Activate entity
- */
+
 void entity_activate(Entity *e) {
     if (e) {
         e->active = 1;
     }
 }
 
-/**
- * Get direction from one entity to a target position
- */
+
 Direction entity_get_direction_to(Entity *from, Position to) {
     if (!from) return DIR_NONE;
     
     return enemy_ai_direction(from, to);
 }
 
-/**
- * Calculate squared distance between entity and target position
- */
+
 int entity_distance_to(Entity *from, Position to) {
     if (!from) return 9999;
     
     return calculate_distance_squared(from->pos, to);
 }
 
-/* Private helper functions */
 
-/**
- * Calculate squared distance between two positions
- */
-static int calculate_distance_squared(Position a, Position b) {
+int calculate_distance_squared(Position a, Position b) {
     int dx = a.x - b.x;
     int dy = a.y - b.y;
     return (dx * dx + dy * dy);
 }
 
-/**
- * Get best direction to move towards target (unused but could be useful)
- */
-static Direction get_best_direction_to_target(Position current, Position target) {
+
+Direction get_best_direction_to_target(Position current, Position target) {
     int dx = target.x - current.x;
     int dy = target.y - current.y;
     
@@ -417,10 +359,8 @@ static Direction get_best_direction_to_target(Position current, Position target)
     }
 }
 
-/**
- * Check if a direction is blocked from a position (unused but could be useful)
- */
-static int is_direction_blocked(Position pos, Direction dir) {
+
+int is_direction_blocked(Position pos, Direction dir) {
     Position next_pos = pos;
     
     switch (dir) {

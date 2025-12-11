@@ -94,6 +94,7 @@
 #define MAX_ROUNDS          99
 #define MAX_SCORE           99999
 #define MAX_GEMS            20
+#define MAX_ROCKS           10
 
 /* ============================================================================
  *                           SPEEDS (ticks between movements)
