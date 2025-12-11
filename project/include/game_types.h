@@ -1,9 +1,6 @@
 /**
  * @file game_types.h
  * @brief Game types, enums and structures for Dig Dug clone.
- *
- * This header defines all game-related types including directions,
- * game scenes, tile types, entity types, and core structures.
  */
 
 #ifndef __GAME_TYPES_H__
@@ -157,15 +154,17 @@ typedef struct {
 } Rock;
 
 /**
- * @brief Input state structure.
+ * @brief Input state structure - UNIFIED VERSION.
  * Updated by keyboard handler, read by game logic.
  */
 typedef struct {
-    Direction move_dir;     /* Movement direction from WASD */
-    int pump_pressed;       /* Space bar for pump/attack */
-    int pause_pressed;      /* ESC or P for pause */
-    int quit_pressed;       /* Q to quit */
-    int start_pressed;      /* Enter to start/confirm */
+    Direction direction;        /* Current movement direction */
+    int action_pressed;         /* Action button pressed (space/enter) */
+    int pause_pressed;          /* Pause button pressed (P/ESC) */
+    int quit_pressed;           /* Quit button pressed (Q) */
+    char last_key;              /* Last raw key pressed */
+    int any_key_pressed;        /* Any key pressed flag */
+    int keys_held[256];         /* Keys currently held down */
 } InputState;
 
 /**
