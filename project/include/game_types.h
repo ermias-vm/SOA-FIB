@@ -42,19 +42,23 @@ typedef enum {
  * @brief Tile types for the game map.
  */
 typedef enum {
-    TILE_EMPTY = 0,     /* Excavated tunnel */
+    TILE_EMPTY,         /* Excavated tunnel */
     TILE_DIRT,          /* Solid dirt (unexcavated) */
-    TILE_SKY            /* Sky area (rows 1-3) */
+    TILE_SKY,           /* Sky area (rows 1-3) */
+    TILE_WALL,          /* Solid wall (not walkable) */
+    TILE_GEM            /* Gem (collectible) */
 } TileType;
 
 /**
  * @brief Entity types.
  */
 typedef enum {
-    ENTITY_NONE = 0,
+    ENTITY_NONE,
     ENTITY_PLAYER,      /* Dig Dug (the player) */
     ENTITY_POOKA,       /* Basic enemy (no special ability) */
-    ENTITY_FYGAR        /* Dragon enemy (spits fire horizontally) */
+    ENTITY_FYGAR,       /* Dragon enemy (spits fire horizontally) */
+    ENTITY_ROCK,        /* Falling rock */
+    ENTITY_ENEMY        /* Generic enemy type */
 } EntityType;
 
 /**
@@ -78,6 +82,16 @@ typedef enum {
     ENEMY_DEAD          /* Eliminated */
 } EnemyState;
 
+/**
+ * @brief Rock states.
+ */
+typedef enum {
+    ROCK_STABLE,        /* Resting on solid ground */
+    ROCK_WOBBLING,      /* About to fall */
+    ROCK_FALLING,       /* Currently falling */
+    ROCK_LANDED         /* Just landed (brief state) */
+} RockState;
+
 /* ============================================================================
  *                              STRUCTURES
  * ============================================================================ */
@@ -91,22 +105,56 @@ typedef struct {
 } Position;
 
 /**
- * @brief Base entity structure for all game entities.
+ * @brief Base entity structure (common fields only).
+ * 
+ * Type-specific data is in Player, Enemy, or Rock structs.
  */
 typedef struct {
-    Position pos;           /* Current position */
+    Position pos;           /* Current screen position */
     Direction dir;          /* Current facing direction */
-    EntityType type;        /* Entity type (player, pooka, fygar) */
-    int active;             /* 1 = active, 0 = inactive */
+    EntityType type;        /* Entity type identifier */
+    int active;             /* 1 = active, 0 = inactive/dead */
     int speed_counter;      /* Counter for movement timing */
-    int speed;              /* Ticks between movements */
-    int inflate_level;      /* Inflation level (0-4, for enemies) */
-    int fire_cooldown;      /* Fygar fire cooldown counter */
-    union {
-        PlayerState player_state;
-        EnemyState enemy_state;
-    } state;
+    int speed_limit;        /* Ticks between movements (lower = faster) */
 } Entity;
+
+/**
+ * @brief Player structure.
+ * 
+ * Use player.base for generic entity operations.
+ */
+typedef struct {
+    Entity base;            /* Base entity data */
+    PlayerState state;      /* Player-specific state */
+    int is_pumping;         /* 1 = currently firing pump */
+    int pump_length;        /* Current pump extension (0-4 cells) */
+    Direction pump_dir;     /* Direction pump is facing */
+} Player;
+
+/**
+ * @brief Enemy structure (for Pooka and Fygar).
+ * 
+ * fire_* fields only used when base.type == ENTITY_FYGAR.
+ */
+typedef struct {
+    Entity base;            /* Base entity data */
+    EnemyState state;       /* Enemy-specific state */
+    int inflate_level;      /* Inflation level 0-4 (4 = explodes) */
+    int ghost_timer;        /* Ticks until ghost mode activates */
+    int fire_cooldown;      /* Fygar: ticks until can fire again */
+    int fire_active;        /* Fygar: 1 = currently breathing fire */
+    int fire_duration;      /* Fygar: remaining fire ticks */
+} Enemy;
+
+/**
+ * @brief Rock structure.
+ */
+typedef struct {
+    Entity base;            /* Base entity data */
+    RockState state;        /* Rock-specific state */
+    int wobble_timer;       /* Frames wobbling before fall */
+    int has_crushed;        /* 1 = has crushed something this fall */
+} Rock;
 
 /**
  * @brief Input state structure.
@@ -128,7 +176,7 @@ typedef struct {
     /* Scene management */
     GameScene scene;            /* Current game scene */
     
-    /* Score and progress */
+    /* Game progress (NOT in Player) */
     int score;                  /* Current score (0-99999) */
     int round;                  /* Current round number (1-99) */
     int lives;                  /* Remaining lives (0-5) */
@@ -137,11 +185,15 @@ typedef struct {
     int time_elapsed;           /* Time in ticks since round start */
     int round_start_timer;      /* Timer for round start delay */
     
-    /* Entities */
-    Entity player;              /* The player entity */
-    Entity enemies[MAX_ENEMIES]; /* Array of enemies */
+    /* Entities - using wrapper structs */
+    Player player;              /* The player */
+    Enemy enemies[MAX_ENEMIES]; /* Array of enemies (Pooka and Fygar) */
+    Rock rocks[MAX_ROCKS];      /* Array of rocks */
+    
+    /* Entity counts */
     int enemy_count;            /* Total enemies in current round */
     int enemies_remaining;      /* Enemies still alive */
+    int rock_count;             /* Total rocks in current round */
     
     /* Game flags */
     int running;                /* Game is running (not quit) */
@@ -212,5 +264,15 @@ typedef struct {
  * @brief Check if position is in playable area (not status bars).
  */
 #define IN_PLAYABLE_AREA(x, y) ((x) >= 0 && (x) < MAP_WIDTH && (y) >= ROW_SKY_START && (y) <= ROW_GROUND_END)
+
+/**
+ * @brief Check if entity type is an enemy (Pooka or Fygar).
+ */
+#define IS_ENEMY_TYPE(type) ((type) == ENTITY_POOKA || (type) == ENTITY_FYGAR)
+
+/**
+ * @brief Check if entity type can breathe fire (only Fygar).
+ */
+#define CAN_BREATHE_FIRE(type) ((type) == ENTITY_FYGAR)
 
 #endif /* __GAME_TYPES_H__ */

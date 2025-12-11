@@ -60,7 +60,9 @@ USROBJ = \
 	sys_call_wrappers.o \
 	zeos_test.o \
 	project_test.o \
-	screen_samples.o
+	screen_samples.o \
+	game_map.o \
+	game_entities.o \
 
 
 ################################################################################
@@ -251,3 +253,7 @@ doxygen-pdf:
 	else \
         echo "Run 'make doxygen' first to generate LaTeX files."; \
     fi
+
+game_map.o: game_map.c $(INCLUDEDIR)/game_map.h $(INCLUDEDIR)/game_types.h $(INCLUDEDIR)/game_config.h $(INCLUDEDIR)/libc.h
+
+game_entities.o: game_entities.c $(INCLUDEDIR)/game_entities.h $(INCLUDEDIR)/game_types.h $(INCLUDEDIR)/game_config.h $(INCLUDEDIR)/game_map.h $(INCLUDEDIR)/libc.h

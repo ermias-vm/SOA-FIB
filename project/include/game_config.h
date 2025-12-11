@@ -93,6 +93,8 @@
 #define MAX_LIVES           5
 #define MAX_ROUNDS          99
 #define MAX_SCORE           99999
+#define MAX_GEMS            20
+#define MAX_ROCKS           10
 
 /* ============================================================================
  *                           SPEEDS (ticks between movements)
@@ -102,6 +104,8 @@
 #define POOKA_BASE_SPEED    4       /* Pooka moves every 4 ticks */
 #define FYGAR_BASE_SPEED    5       /* Fygar is slightly slower */
 #define GHOST_SPEED         6       /* Ghost mode is slow */
+#define ENEMY_BASE_SPEED    3           /* Base enemy speed */
+#define SPEED_INCREMENT_PER_LEVEL 1    /* Speed increase per level */
 
 /* Speed increases per round (enemies get faster) */
 #define SPEED_DECREASE_PER_ROUND  1  /* Decrease tick delay = faster */
