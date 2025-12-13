@@ -64,6 +64,7 @@ USROBJ = \
 	game_map.o \
 	game_entities.o \
 	game_input.o \
+	game_render.o \
 
 
 ################################################################################
@@ -260,3 +261,5 @@ game_map.o: game_map.c $(INCLUDEDIR)/game_map.h $(INCLUDEDIR)/game_types.h $(INC
 game_entities.o: game_entities.c $(INCLUDEDIR)/game_entities.h $(INCLUDEDIR)/game_types.h $(INCLUDEDIR)/game_config.h $(INCLUDEDIR)/game_map.h $(INCLUDEDIR)/libc.h
 
 game_input.o: game_input.c $(INCLUDEDIR)/game_input.h $(INCLUDEDIR)/game_types.h $(INCLUDEDIR)/game_config.h $(INCLUDEDIR)/libc.h
+
+game_render.o: game_render.c $(INCLUDEDIR)/game_render.h $(INCLUDEDIR)/game_types.h $(INCLUDEDIR)/libc.h
