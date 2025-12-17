@@ -1,12 +1,13 @@
 /**
  * @file game_render.c
  * @brief Double-buffered rendering system implementation for ZeOS Miner
+ * 
+ * Uses direct screen buffer writes via fd=10 for efficient rendering.
  */
 
 #include <game_render.h>
 #include <game_types.h>
 #include <libc.h>
-#include <stddef.h>
 
 /* ============================================================================
  *                            GLOBAL VARIABLES
@@ -16,12 +17,11 @@
 ScreenBuffer g_front_buffer;
 ScreenBuffer g_back_buffer;
 
+/* VGA format buffer for direct screen writes (80*25*2 = 4000 bytes) */
+static char g_vga_buffer[SCREEN_SIZE];
+
 /* Default color for rendering operations */
 static Color g_default_color = {COLOR_WHITE, COLOR_BLACK};
-
-/* Last cursor position (optimization for gotoXY calls) */
-static int g_last_cursor_x = -1;
-static int g_last_cursor_y = -1;
 
 /* ============================================================================
  *                            INITIALIZATION
@@ -36,42 +36,25 @@ void render_init(void) {
     render_clear_buffer(&g_front_buffer);
     render_clear_buffer(&g_back_buffer);
     
-    /* Reset cursor tracking */
-    g_last_cursor_x = -1;
-    g_last_cursor_y = -1;
-    
-    /* Clear screen using ZeOS syscalls */
-    set_color(COLOR_WHITE, COLOR_BLACK);
-    gotoXY(0, 0);
-    
-    /* Fill screen with spaces */
-    char spaces[SCREEN_WIDTH + 1];
-    for (int i = 0; i < SCREEN_WIDTH; i++) {
-        spaces[i] = ' ';
+    /* Clear the VGA buffer */
+    for (int i = 0; i < SCREEN_SIZE; i += 2) {
+        g_vga_buffer[i] = ' ';
+        g_vga_buffer[i + 1] = 0x07;  /* Light gray on black */
     }
-    spaces[SCREEN_WIDTH] = '\0';
     
-    for (int y = 0; y < SCREEN_HEIGHT; y++) {
-        gotoXY(0, y);
-        write(1, spaces, SCREEN_WIDTH);
-    }
+    /* Write initial cleared buffer to screen */
+    write(10, g_vga_buffer, SCREEN_SIZE);
 }
 
 void render_cleanup(void) {
-    /* Clear screen */
-    set_color(COLOR_WHITE, COLOR_BLACK);
-    gotoXY(0, 0);
-    
-    char spaces[SCREEN_WIDTH + 1];
-    for (int i = 0; i < SCREEN_WIDTH; i++) {
-        spaces[i] = ' ';
+    /* Fill VGA buffer with spaces */
+    for (int i = 0; i < SCREEN_SIZE; i += 2) {
+        g_vga_buffer[i] = ' ';
+        g_vga_buffer[i + 1] = 0x07;  /* Light gray on black */
     }
-    spaces[SCREEN_WIDTH] = '\0';
     
-    for (int y = 0; y < SCREEN_HEIGHT; y++) {
-        gotoXY(0, y);
-        write(1, spaces, SCREEN_WIDTH);
-    }
+    /* Write to screen */
+    write(10, g_vga_buffer, SCREEN_SIZE);
 }
 
 /* ============================================================================
@@ -213,99 +196,61 @@ Color render_make_color(unsigned char fg, unsigned char bg) {
  *                            PRESENTATION
  * ============================================================================ */
 
+/**
+ * @brief Convert a cell to VGA format and write to VGA buffer.
+ */
+void render_cell_to_vga(char* vga_buffer, const ScreenCell* cell, int offset) {
+    /* VGA format: byte 0 = character, byte 1 = attribute */
+    /* Attribute: bits 0-3 = foreground, bits 4-6 = background, bit 7 = blink */
+    vga_buffer[offset] = cell->character;
+    vga_buffer[offset + 1] = (cell->color.bg << 4) | (cell->color.fg & 0x0F);
+}
+
 void render_swap_buffers(void) {
-    /* Fast pointer swap */
-    ScreenBuffer temp = g_front_buffer;
-    g_front_buffer = g_back_buffer;
-    g_back_buffer = temp;
-    
-    /* Clear dirty flag on new front buffer */
-    g_front_buffer.dirty = 0;
-}
-
-void render_present(void) {
-    /* Optimized rendering: only update changed cells */
+    /* Copy back to front buffer */
     for (int y = 0; y < SCREEN_HEIGHT; y++) {
-        for (int x = 0; x < SCREEN_WIDTH; x++) {
-            ScreenCell* back_cell = &g_back_buffer.cells[y][x];
-            ScreenCell* front_cell = &g_front_buffer.cells[y][x];
-            
-            /* Only update if cell changed */
-            if (back_cell->character != front_cell->character ||
-                back_cell->color.fg != front_cell->color.fg ||
-                back_cell->color.bg != front_cell->color.bg) {
-                
-                /* Position cursor only if needed */
-                if (g_last_cursor_x != x || g_last_cursor_y != y) {
-                    gotoXY(x, y);
-                    g_last_cursor_x = x;
-                    g_last_cursor_y = y;
-                }
-                
-                /* Set color for this cell */
-                set_color(back_cell->color.fg, back_cell->color.bg);
-                
-                /* Write character */
-                write(1, &back_cell->character, 1);
-                
-                /* Update cursor tracking */
-                g_last_cursor_x = (x + 1) % SCREEN_WIDTH;
-                if (g_last_cursor_x == 0) {
-                    g_last_cursor_y = (g_last_cursor_y + 1) % SCREEN_HEIGHT;
-                }
-                
-                /* Update front buffer */
-                *front_cell = *back_cell;
-            }
-        }
-    }
-    
-    /* Clear back buffer dirty flag */
-    g_back_buffer.dirty = 0;
-}
-
-void render_present_full(void) {
-    /* Force complete screen update */
-    for (int y = 0; y < SCREEN_HEIGHT; y++) {
-        gotoXY(0, y);
-        
-        /* Build line buffer for efficiency */
-        char line_buffer[SCREEN_WIDTH];
-        Color line_color = g_back_buffer.cells[y][0].color;
-        int same_color = 1;
-        
-        /* Check if whole line has same color */
-        for (int x = 0; x < SCREEN_WIDTH; x++) {
-            line_buffer[x] = g_back_buffer.cells[y][x].character;
-            if (g_back_buffer.cells[y][x].color.fg != line_color.fg ||
-                g_back_buffer.cells[y][x].color.bg != line_color.bg) {
-                same_color = 0;
-            }
-        }
-        
-        if (same_color) {
-            /* Optimized: write whole line with one color */
-            set_color(line_color.fg, line_color.bg);
-            write(1, line_buffer, SCREEN_WIDTH);
-        } else {
-            /* Write each cell individually */
-            for (int x = 0; x < SCREEN_WIDTH; x++) {
-                ScreenCell* cell = &g_back_buffer.cells[y][x];
-                gotoXY(x, y);
-                set_color(cell->color.fg, cell->color.bg);
-                write(1, &cell->character, 1);
-            }
-        }
-        
-        /* Copy to front buffer */
         for (int x = 0; x < SCREEN_WIDTH; x++) {
             g_front_buffer.cells[y][x] = g_back_buffer.cells[y][x];
         }
     }
     
-    /* Reset cursor tracking */
-    g_last_cursor_x = -1;
-    g_last_cursor_y = -1;
+    /* Clear dirty flag */
+    g_front_buffer.dirty = 0;
+}
+
+void render_present(void) {
+    /* Convert back buffer to VGA format and write to screen */
+    render_present_buffer();
+}
+
+void render_present_buffer(void) {
+    /* Convert ScreenCell format to VGA format */
+    int offset = 0;
+    for (int y = 0; y < SCREEN_HEIGHT; y++) {
+        for (int x = 0; x < SCREEN_WIDTH; x++) {
+            ScreenCell* cell = &g_back_buffer.cells[y][x];
+            render_cell_to_vga(g_vga_buffer, cell, offset);
+            offset += 2;
+        }
+    }
+    
+    /* Write entire buffer to screen using fd=10 */
+    write(10, g_vga_buffer, SCREEN_SIZE);
+    
+    /* Copy back to front buffer for change tracking */
+    for (int y = 0; y < SCREEN_HEIGHT; y++) {
+        for (int x = 0; x < SCREEN_WIDTH; x++) {
+            g_front_buffer.cells[y][x] = g_back_buffer.cells[y][x];
+        }
+    }
+    
+    /* Clear dirty flag */
+    g_back_buffer.dirty = 0;
+}
+
+void render_present_full(void) {
+    /* Same as render_present_buffer - full screen update */
+    render_present_buffer();
 }
 
 /* ============================================================================
@@ -361,25 +306,7 @@ int render_is_valid_pos(int x, int y) {
 
 const ScreenCell* render_get_cell(int x, int y) {
     if (!render_is_valid_pos(x, y)) {
-        return NULL;
+        return 0;  /* NULL */
     }
     return &g_back_buffer.cells[y][x];
-}
-
-/* ============================================================================
- *                            PRIVATE HELPERS
- * ============================================================================ */
-
-void render_clear_buffer(ScreenBuffer* buffer) {
-    if (!buffer) return;
-    
-    for (int y = 0; y < SCREEN_HEIGHT; y++) {
-        Color layer_color = render_get_layer_color(y);
-        
-        for (int x = 0; x < SCREEN_WIDTH; x++) {
-            buffer->cells[y][x].character = ' ';
-            buffer->cells[y][x].color = layer_color;
-        }
-    }
-    buffer->dirty = 1;
 }

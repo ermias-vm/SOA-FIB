@@ -13,23 +13,23 @@
  * ============================================================================ */
 
 /* Keyboard scancodes for movement keys */
-#define KEY_W           0x11    /* W key scancode */
-#define KEY_A           0x1E    /* A key scancode */
-#define KEY_S           0x1F    /* S key scancode */
-#define KEY_D           0x20    /* D key scancode */
+#define KEY_W 0x11 /* W key scancode */
+#define KEY_A 0x1E /* A key scancode */
+#define KEY_S 0x1F /* S key scancode */
+#define KEY_D 0x20 /* D key scancode */
 
 /* Control keys */
-#define KEY_ESC         0x01    /* Escape key */
-#define KEY_Q           0x10    /* Q key */
-#define KEY_ENTER       0x1C    /* Enter key */
-#define KEY_SPACE       0x39    /* Spacebar */
-#define KEY_P           0x19    /* P key */
+#define KEY_ESC 0x01   /* Escape key */
+#define KEY_Q 0x10     /* Q key */
+#define KEY_ENTER 0x1C /* Enter key */
+#define KEY_SPACE 0x39 /* Spacebar */
+#define KEY_P 0x19     /* P key */
 
 /* Arrow keys (extended scancodes) */
-#define KEY_ARROW_UP    0x48    /* Up arrow */
-#define KEY_ARROW_DOWN  0x50    /* Down arrow */
-#define KEY_ARROW_LEFT  0x4B    /* Left arrow */
-#define KEY_ARROW_RIGHT 0x4D    /* Right arrow */
+#define KEY_ARROW_UP 0x48    /* Up arrow */
+#define KEY_ARROW_DOWN 0x50  /* Down arrow */
+#define KEY_ARROW_LEFT 0x4B  /* Left arrow */
+#define KEY_ARROW_RIGHT 0x4D /* Right arrow */
 
 /* ============================================================================
  *                            INITIALIZATION
@@ -37,7 +37,7 @@
 
 /**
  * @brief Initialize the input system.
- * 
+ *
  * Registers keyboard event handler and initializes input state.
  * Must be called before using any other input functions.
  */
@@ -45,7 +45,7 @@ void input_init(void);
 
 /**
  * @brief Cleanup the input system.
- * 
+ *
  * Unregisters keyboard event handler and cleans up resources.
  */
 void input_cleanup(void);
@@ -56,7 +56,7 @@ void input_cleanup(void);
 
 /**
  * @brief Update input state (if using polling mode).
- * 
+ *
  * In interrupt-driven mode (KeyboardEvent), this function does nothing
  * as input is processed automatically by the keyboard handler.
  * In polling mode, this would read from keyboard device.
@@ -67,7 +67,7 @@ void input_update(void);
  * @brief Internal keyboard event handler function.
  * @param key Scancode of the key
  * @param pressed 1 if key was pressed, 0 if released
- * 
+ *
  * This function is called automatically by the keyboard interrupt system.
  * Do not call this function directly.
  */
@@ -80,7 +80,7 @@ void input_keyboard_handler(char key, int pressed);
 /**
  * @brief Get current movement direction and clear it.
  * @return Direction enum value (DIR_UP, DIR_DOWN, DIR_LEFT, DIR_RIGHT, DIR_NONE)
- * 
+ *
  * This function "consumes" the direction input, meaning subsequent calls
  * will return DIR_NONE until a new direction key is pressed.
  */
@@ -89,7 +89,7 @@ Direction input_get_direction(void);
 /**
  * @brief Check if action button was pressed and clear the flag.
  * @return 1 if action button (space) was pressed, 0 otherwise
- * 
+ *
  * This function "consumes" the action input.
  */
 int input_is_action_pressed(void);
@@ -97,7 +97,7 @@ int input_is_action_pressed(void);
 /**
  * @brief Check if pause button was pressed and clear the flag.
  * @return 1 if pause button (P or ESC) was pressed, 0 otherwise
- * 
+ *
  * This function "consumes" the pause input.
  */
 int input_is_pause_pressed(void);
@@ -105,7 +105,7 @@ int input_is_pause_pressed(void);
 /**
  * @brief Check if quit button was pressed.
  * @return 1 if quit button (Q) was pressed, 0 otherwise
- * 
+ *
  * This function does NOT consume the quit input - it persists until cleared.
  */
 int input_is_quit_pressed(void);
@@ -113,7 +113,7 @@ int input_is_quit_pressed(void);
 /**
  * @brief Check if any key was pressed and clear the flag.
  * @return 1 if any key was pressed, 0 otherwise
- * 
+ *
  * Useful for menu navigation and "press any key to continue" screens.
  */
 int input_any_key_pressed(void);
@@ -121,7 +121,7 @@ int input_any_key_pressed(void);
 /**
  * @brief Get the last raw key pressed.
  * @return Scancode of last key pressed
- * 
+ *
  * Useful for debugging input issues.
  */
 char input_get_last_key(void);
@@ -132,7 +132,7 @@ char input_get_last_key(void);
 
 /**
  * @brief Clear all input state flags.
- * 
+ *
  * Clears direction, action, pause, and any_key flags.
  * Does NOT clear quit flag (use input_clear_quit for that).
  */
@@ -140,14 +140,14 @@ void input_clear(void);
 
 /**
  * @brief Clear the quit flag.
- * 
+ *
  * Use this when you've processed the quit request.
  */
 void input_clear_quit(void);
 
 /**
  * @brief Reset input system to initial state.
- * 
+ *
  * Clears all flags and resets all state to initial values.
  */
 void input_reset(void);
@@ -161,7 +161,7 @@ void input_reset(void);
  * @param scancode Keyboard scancode to check
  * @return 1 if key is held, 0 otherwise
  */
-int input_is_key_held(char scancode);
+int input_is_key_held(unsigned char scancode);
 
 /**
  * @brief Convert scancode to printable character (for debugging).

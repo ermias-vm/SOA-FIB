@@ -13,28 +13,66 @@
  *                            SCREEN CONSTANTS
  * ============================================================================ */
 
+/* Use game_config.h definitions where available, provide defaults otherwise */
+#ifndef SCREEN_WIDTH
 #define SCREEN_WIDTH        80
-#define SCREEN_HEIGHT       25  
-#define SCREEN_SIZE         4000        /* 80*25*2 (char+attr) for VGA */
+#endif
+#ifndef SCREEN_HEIGHT
+#define SCREEN_HEIGHT       25
+#endif
+
+/* VGA buffer size (80*25*2 bytes for char+attr pairs) */
+#ifndef SCREEN_SIZE
+#define SCREEN_SIZE         4000
+#endif
+
 #define BUFFER_SIZE         2000        /* 80*25 chars only */
 
-/* Screen areas */
-#define STATUS_TOP_ROW      0
-#define SKY_START_ROW       1
-#define SKY_END_ROW         3
-#define GROUND_START_ROW    4
-#define GROUND_END_ROW      23
-#define STATUS_BOTTOM_ROW   24
+/* Screen areas - use game_config.h names if available */
+#ifndef STATUS_TOP_ROW
+#define STATUS_TOP_ROW      ROW_STATUS_TOP
+#endif
+#ifndef SKY_START_ROW
+#define SKY_START_ROW       ROW_SKY_START
+#endif
+#ifndef SKY_END_ROW
+#define SKY_END_ROW         ROW_SKY_END
+#endif
+#ifndef GROUND_START_ROW
+#define GROUND_START_ROW    ROW_GROUND_START
+#endif
+#ifndef GROUND_END_ROW
+#define GROUND_END_ROW      ROW_GROUND_END
+#endif
+#ifndef STATUS_BOTTOM_ROW
+#define STATUS_BOTTOM_ROW   ROW_STATUS_BOTTOM
+#endif
 
 /* Layer definitions for Dig Dug scoring */
-#define LAYER1_START        4
-#define LAYER1_END          8
-#define LAYER2_START        9
-#define LAYER2_END          13
-#define LAYER3_START        14
-#define LAYER3_END          18
-#define LAYER4_START        19
-#define LAYER4_END          23
+#ifndef LAYER1_START
+#define LAYER1_START        LAYER_1_START
+#endif
+#ifndef LAYER1_END
+#define LAYER1_END          LAYER_1_END
+#endif
+#ifndef LAYER2_START
+#define LAYER2_START        LAYER_2_START
+#endif
+#ifndef LAYER2_END
+#define LAYER2_END          LAYER_2_END
+#endif
+#ifndef LAYER3_START
+#define LAYER3_START        LAYER_3_START
+#endif
+#ifndef LAYER3_END
+#define LAYER3_END          LAYER_3_END
+#endif
+#ifndef LAYER4_START
+#define LAYER4_START        LAYER_4_START
+#endif
+#ifndef LAYER4_END
+#define LAYER4_END          LAYER_4_END
+#endif
 
 /* ============================================================================
  *                            COLOR DEFINITIONS
@@ -58,13 +96,25 @@
 #define COLOR_YELLOW        14
 #define COLOR_WHITE         15
 
-/* Game-specific colors */
+/* Game-specific colors - use ifndef to avoid conflicts with game_config.h */
+#ifndef COLOR_SKY_BG
 #define COLOR_SKY_BG        COLOR_LIGHT_BLUE
+#endif
+#ifndef COLOR_LAYER1_BG
 #define COLOR_LAYER1_BG     COLOR_BROWN
+#endif
+#ifndef COLOR_LAYER2_BG
 #define COLOR_LAYER2_BG     COLOR_RED
+#endif
+#ifndef COLOR_LAYER3_BG
 #define COLOR_LAYER3_BG     COLOR_MAGENTA
+#endif
+#ifndef COLOR_LAYER4_BG
 #define COLOR_LAYER4_BG     COLOR_DARK_GRAY
+#endif
+#ifndef COLOR_STATUS_BG
 #define COLOR_STATUS_BG     COLOR_BLACK
+#endif
 
 /* ============================================================================
  *                            STRUCTURES
@@ -290,5 +340,27 @@ int render_is_valid_pos(int x, int y);
  * @return Pointer to cell, or NULL if out of bounds
  */
 const ScreenCell* render_get_cell(int x, int y);
+
+/**
+ * @brief Clear a specific buffer with layer-appropriate colors.
+ * @param buffer Pointer to the buffer to clear
+ */
+void render_clear_buffer(ScreenBuffer* buffer);
+
+/**
+ * @brief Convert internal buffer to VGA format and write to screen.
+ * 
+ * Uses write(10, ...) to send the buffer directly to video memory.
+ * This is more efficient than cell-by-cell rendering.
+ */
+void render_present_buffer(void);
+
+/**
+ * @brief Copy a cell's character and color to a VGA-format buffer.
+ * @param vga_buffer Target VGA buffer (2 bytes per character)
+ * @param cell Source screen cell
+ * @param offset Byte offset in VGA buffer
+ */
+void render_cell_to_vga(char* vga_buffer, const ScreenCell* cell, int offset);
 
 #endif /* __GAME_RENDER_H__ */

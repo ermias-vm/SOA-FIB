@@ -277,6 +277,18 @@ void thread_entry_wrapper(void);
  */
 int KeyboardEvent(void (*func)(char key, int pressed));
 
+/****************************************/
+/**    Math Functions                  **/
+/****************************************/
+
+/**
+ * @brief Compute absolute value of an integer.
+ *
+ * @param x Integer value.
+ * @return Absolute value of x.
+ */
+int abs(int x);
+
 /**
  * @brief Keyboard event wrapper function (internal use).
  *

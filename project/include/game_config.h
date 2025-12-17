@@ -216,24 +216,6 @@
 /* ============================================================================
  *                           KEYBOARD SCANCODES
  * ============================================================================ */
-
-/* Movement keys (WASD) */
-#define KEY_W               'w'
-#define KEY_A               'a'
-#define KEY_S               's'
-#define KEY_D               'd'
-
-/* Action keys */
-#define KEY_SPACE           ' '     /* Pump/Attack */
-#define KEY_ESC             27      /* Pause/Menu */
-#define KEY_Q               'q'     /* Quit */
-#define KEY_ENTER           '\n'    /* Confirm/Start */
-#define KEY_P               'p'     /* Pause alternative */
-
-/* Arrow keys (optional, if supported) */
-#define KEY_UP              'W'
-#define KEY_DOWN            'S'
-#define KEY_LEFT            'A'
-#define KEY_RIGHT           'D'
+/* NOTE: Key scancodes are defined in game_input.h to avoid redefinition */
 
 #endif /* __GAME_CONFIG_H__ */
