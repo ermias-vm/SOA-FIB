@@ -8,82 +8,30 @@
 #include <game_map.h>
 #include <game_input.h>
 #include <game_render.h>
-/*
-#include <game_ui.h>
-#include <game_logic.h>
-*/
 
 /**
  * @file game.h
  * @brief Main game header that includes all subsystems and defines global state
+ * 
+ * NOTE: GameState and InputState are defined in game_types.h
+ * This file only declares the global variables and function prototypes.
+ * DO NOT redefine these structures here!
  */
 
 /* Forward declarations */
 struct task_struct;
 
 /* ============================================================================
- *                            GLOBAL STATE STRUCTURES
- * ============================================================================ */
-
-/**
- * @brief Global game state shared between logic and render threads.
- * 
- * This structure contains all the game state information that needs to be
- * accessed by both the logic thread and render thread. All fields must be
- * volatile since they're accessed by multiple threads.
- */
-typedef struct {
-    GameScene scene;                    /**< Current game scene (menu, playing, paused, etc.) */
-    int score;                          /**< Player's current score */
-    int level;                          /**< Current level number (1-based) */
-    int lives;                          /**< Remaining player lives */
-    int gem_count;                      /**< Number of gems remaining in current level */
-    
-    Entity player;                      /**< Player entity structure */
-    Entity enemies[MAX_ENEMIES];        /**< Array of enemy entities */
-    int enemy_count;                    /**< Number of active enemies in current level */
-    
-    int paused;                         /**< Game paused flag (1=paused, 0=running) */
-    int game_over;                      /**< Game over flag (1=game over, 0=playing) */
-    int level_complete;                 /**< Level complete flag (1=completed, 0=in progress) */
-    
-    /* Timing and synchronization */
-    int ticks_elapsed;                  /**< Total game ticks elapsed since start */
-    int last_update_tick;               /**< Last tick when logic was updated */
-} GameState;
-
-/**
- * @brief Global input state updated by keyboard handler.
- * 
- * This structure contains the current input state from the keyboard.
- * Must be volatile since it's updated by interrupt handler and read
- * by the main game logic thread.
- */
-typedef struct {
-    Direction move_dir;                 /**< Current movement direction from WASD keys */
-    int pause_pressed;                  /**< ESC key pressed flag (1=pressed this frame) */
-    int quit_pressed;                   /**< Q key pressed flag (1=pressed this frame) */
-    int action_pressed;                 /**< SPACE/ENTER pressed flag (1=pressed this frame) */
-    int any_key_pressed;                /**< Any key pressed flag (for menu navigation) */
-} InputState;
-
-/* ============================================================================
  *                            GLOBAL VARIABLES
  * ============================================================================ */
 
 /**
- * @brief Global game state variable.
- * 
- * This variable holds the current state of the game and is shared between
- * the logic thread and render thread. Must be volatile for thread safety.
+ * @brief Global game state variable (type defined in game_types.h).
  */
 extern volatile GameState g_game;
 
 /**
- * @brief Global input state variable.
- * 
- * This variable holds the current input state from the keyboard handler.
- * Updated by interrupt handler, read by main logic thread.
+ * @brief Global input state variable (type defined in game_types.h).
  */
 extern volatile InputState g_input;
 
@@ -93,17 +41,11 @@ extern volatile InputState g_input;
 
 /**
  * @brief Frame ready flag for thread synchronization.
- * 
- * Set to 1 by logic thread when a new frame is ready to render.
- * Reset to 0 by render thread after rendering is complete.
  */
 extern volatile int g_frame_ready;
 
 /**
  * @brief Game running flag for thread control.
- * 
- * Set to 1 when game is running, 0 when game should exit.
- * Used by both threads to know when to terminate.
  */
 extern volatile int g_running;
 

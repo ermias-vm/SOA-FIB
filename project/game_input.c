@@ -50,9 +50,6 @@ void input_keyboard_handler(char key, int pressed) {
         g_input.any_key_pressed = 1;
     }
 
-    /* Update key held state (key is unsigned char so always < 256) */
-    g_input.keys_held[(unsigned char)key] = pressed;
-
     /* Only process key press events, not releases */
     if (!pressed) {
         return;
@@ -155,11 +152,6 @@ void input_reset(void) {
     g_input.quit_pressed = 0;
     g_input.last_key = 0;
     g_input.any_key_pressed = 0;
-
-    /* Clear all key held states */
-    for (int i = 0; i < 256; i++) {
-        g_input.keys_held[i] = 0;
-    }
 }
 
 /* ============================================================================
@@ -167,7 +159,8 @@ void input_reset(void) {
  * ============================================================================ */
 
 int input_is_key_held(unsigned char scancode) {
-    return g_input.keys_held[scancode];
+    (void)scancode; /* Unused - keys_held removed for simplicity */
+    return 0;
 }
 
 char input_scancode_to_char(char scancode) {

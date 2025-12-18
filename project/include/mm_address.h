@@ -25,13 +25,13 @@
 #define FRAME_INIT_CODE (PH_USER_START >> 12)
 
 /* Number of pages for user code segment */
-#define NUM_PAG_CODE 8
+#define NUM_PAG_CODE 12
 
 /* Logical page number where user data starts */
 #define PAG_LOG_INIT_DATA (L_USER_START >> 12)
 
 /* Number of pages for user data segment */
-#define NUM_PAG_DATA 40
+#define NUM_PAG_DATA 20
 
 /* Size of a page in bytes (4KB) */
 #define PAGE_SIZE 0x1000

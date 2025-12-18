@@ -1,8 +1,8 @@
 #ifndef __GAME_RENDER_H__
 #define __GAME_RENDER_H__
 
-#include <game_types.h>
 #include <game_config.h>
+#include <game_types.h>
 
 /**
  * @file game_render.h
@@ -15,63 +15,63 @@
 
 /* Use game_config.h definitions where available, provide defaults otherwise */
 #ifndef SCREEN_WIDTH
-#define SCREEN_WIDTH        80
+#define SCREEN_WIDTH 80
 #endif
 #ifndef SCREEN_HEIGHT
-#define SCREEN_HEIGHT       25
+#define SCREEN_HEIGHT 25
 #endif
 
 /* VGA buffer size (80*25*2 bytes for char+attr pairs) */
 #ifndef SCREEN_SIZE
-#define SCREEN_SIZE         4000
+#define SCREEN_SIZE 4000
 #endif
 
-#define BUFFER_SIZE         2000        /* 80*25 chars only */
+#define RENDER_BUFFER_SIZE 2000 /* 80*25 chars only */
 
 /* Screen areas - use game_config.h names if available */
 #ifndef STATUS_TOP_ROW
-#define STATUS_TOP_ROW      ROW_STATUS_TOP
+#define STATUS_TOP_ROW ROW_STATUS_TOP
 #endif
 #ifndef SKY_START_ROW
-#define SKY_START_ROW       ROW_SKY_START
+#define SKY_START_ROW ROW_SKY_START
 #endif
 #ifndef SKY_END_ROW
-#define SKY_END_ROW         ROW_SKY_END
+#define SKY_END_ROW ROW_SKY_END
 #endif
 #ifndef GROUND_START_ROW
-#define GROUND_START_ROW    ROW_GROUND_START
+#define GROUND_START_ROW ROW_GROUND_START
 #endif
 #ifndef GROUND_END_ROW
-#define GROUND_END_ROW      ROW_GROUND_END
+#define GROUND_END_ROW ROW_GROUND_END
 #endif
 #ifndef STATUS_BOTTOM_ROW
-#define STATUS_BOTTOM_ROW   ROW_STATUS_BOTTOM
+#define STATUS_BOTTOM_ROW ROW_STATUS_BOTTOM
 #endif
 
 /* Layer definitions for Dig Dug scoring */
 #ifndef LAYER1_START
-#define LAYER1_START        LAYER_1_START
+#define LAYER1_START LAYER_1_START
 #endif
 #ifndef LAYER1_END
-#define LAYER1_END          LAYER_1_END
+#define LAYER1_END LAYER_1_END
 #endif
 #ifndef LAYER2_START
-#define LAYER2_START        LAYER_2_START
+#define LAYER2_START LAYER_2_START
 #endif
 #ifndef LAYER2_END
-#define LAYER2_END          LAYER_2_END
+#define LAYER2_END LAYER_2_END
 #endif
 #ifndef LAYER3_START
-#define LAYER3_START        LAYER_3_START
+#define LAYER3_START LAYER_3_START
 #endif
 #ifndef LAYER3_END
-#define LAYER3_END          LAYER_3_END
+#define LAYER3_END LAYER_3_END
 #endif
 #ifndef LAYER4_START
-#define LAYER4_START        LAYER_4_START
+#define LAYER4_START LAYER_4_START
 #endif
 #ifndef LAYER4_END
-#define LAYER4_END          LAYER_4_END
+#define LAYER4_END LAYER_4_END
 #endif
 
 /* ============================================================================
@@ -79,41 +79,41 @@
  * ============================================================================ */
 
 /* VGA Color constants */
-#define COLOR_BLACK         0
-#define COLOR_BLUE          1
-#define COLOR_GREEN         2
-#define COLOR_CYAN          3
-#define COLOR_RED           4
-#define COLOR_MAGENTA       5
-#define COLOR_BROWN         6
-#define COLOR_LIGHT_GRAY    7
-#define COLOR_DARK_GRAY     8
-#define COLOR_LIGHT_BLUE    9
-#define COLOR_LIGHT_GREEN   10
-#define COLOR_LIGHT_CYAN    11
-#define COLOR_LIGHT_RED     12
+#define COLOR_BLACK 0
+#define COLOR_BLUE 1
+#define COLOR_GREEN 2
+#define COLOR_CYAN 3
+#define COLOR_RED 4
+#define COLOR_MAGENTA 5
+#define COLOR_BROWN 6
+#define COLOR_LIGHT_GRAY 7
+#define COLOR_DARK_GRAY 8
+#define COLOR_LIGHT_BLUE 9
+#define COLOR_LIGHT_GREEN 10
+#define COLOR_LIGHT_CYAN 11
+#define COLOR_LIGHT_RED 12
 #define COLOR_LIGHT_MAGENTA 13
-#define COLOR_YELLOW        14
-#define COLOR_WHITE         15
+#define COLOR_YELLOW 14
+#define COLOR_WHITE 15
 
 /* Game-specific colors - use ifndef to avoid conflicts with game_config.h */
 #ifndef COLOR_SKY_BG
-#define COLOR_SKY_BG        COLOR_LIGHT_BLUE
+#define COLOR_SKY_BG COLOR_LIGHT_BLUE
 #endif
 #ifndef COLOR_LAYER1_BG
-#define COLOR_LAYER1_BG     COLOR_BROWN
+#define COLOR_LAYER1_BG COLOR_BROWN
 #endif
 #ifndef COLOR_LAYER2_BG
-#define COLOR_LAYER2_BG     COLOR_RED
+#define COLOR_LAYER2_BG COLOR_RED
 #endif
 #ifndef COLOR_LAYER3_BG
-#define COLOR_LAYER3_BG     COLOR_MAGENTA
+#define COLOR_LAYER3_BG COLOR_MAGENTA
 #endif
 #ifndef COLOR_LAYER4_BG
-#define COLOR_LAYER4_BG     COLOR_DARK_GRAY
+#define COLOR_LAYER4_BG COLOR_DARK_GRAY
 #endif
 #ifndef COLOR_STATUS_BG
-#define COLOR_STATUS_BG     COLOR_BLACK
+#define COLOR_STATUS_BG COLOR_BLACK
 #endif
 
 /* ============================================================================
@@ -124,29 +124,29 @@
  * @brief Color pair for foreground and background.
  */
 typedef struct {
-    unsigned char fg;   /**< Foreground color (0-15) */
-    unsigned char bg;   /**< Background color (0-15) */
+    unsigned char fg; /**< Foreground color (0-15) */
+    unsigned char bg; /**< Background color (0-15) */
 } Color;
 
 /**
  * @brief Screen cell containing character and color.
  */
 typedef struct {
-    char character;     /**< Character to display */
-    Color color;        /**< Colors for this cell */
+    char character; /**< Character to display */
+    Color color;    /**< Colors for this cell */
 } ScreenCell;
 
 /**
  * @brief Double buffer structure for flicker-free rendering.
  */
 typedef struct {
-    ScreenCell cells[SCREEN_HEIGHT][SCREEN_WIDTH];  /**< Screen cells grid */
-    int dirty;                                      /**< Flag indicating changes */
+    ScreenCell cells[SCREEN_HEIGHT][SCREEN_WIDTH]; /**< Screen cells grid */
+    int dirty;                                     /**< Flag indicating changes */
 } ScreenBuffer;
 
 /* Global buffers */
-extern ScreenBuffer g_front_buffer;    /* Currently displayed buffer */
-extern ScreenBuffer g_back_buffer;     /* Buffer being drawn to */
+extern ScreenBuffer g_front_buffer; /* Currently displayed buffer */
+extern ScreenBuffer g_back_buffer;  /* Buffer being drawn to */
 
 /* ============================================================================
  *                            INITIALIZATION
@@ -154,7 +154,7 @@ extern ScreenBuffer g_back_buffer;     /* Buffer being drawn to */
 
 /**
  * @brief Initialize the rendering system.
- * 
+ *
  * Clears both front and back buffers and sets up default colors.
  */
 void render_init(void);
@@ -170,7 +170,7 @@ void render_cleanup(void);
 
 /**
  * @brief Clear the back buffer with appropriate background colors.
- * 
+ *
  * Each row gets its layer-appropriate background color.
  */
 void render_clear(void);
@@ -198,7 +198,7 @@ void render_put_char(int x, int y, char c);
  * @param y Row position
  * @param str String to draw
  */
-void render_put_string(int x, int y, const char* str);
+void render_put_string(int x, int y, const char *str);
 
 /**
  * @brief Draw a string with specific color.
@@ -207,7 +207,7 @@ void render_put_string(int x, int y, const char* str);
  * @param str String to draw
  * @param color Color for the string
  */
-void render_put_string_colored(int x, int y, const char* str, Color color);
+void render_put_string_colored(int x, int y, const char *str, Color color);
 
 /* ============================================================================
  *                            DRAWING PRIMITIVES
@@ -280,7 +280,7 @@ void render_swap_buffers(void);
 
 /**
  * @brief Present the current front buffer to screen.
- * 
+ *
  * Uses ZeOS syscalls (gotoXY, set_color, write) to display the buffer.
  * Only updates cells that have changed since last frame.
  */
@@ -288,7 +288,7 @@ void render_present(void);
 
 /**
  * @brief Force a complete screen refresh.
- * 
+ *
  * Updates every cell regardless of changes. Use sparingly.
  */
 void render_present_full(void);
@@ -339,17 +339,17 @@ int render_is_valid_pos(int x, int y);
  * @param y Row position
  * @return Pointer to cell, or NULL if out of bounds
  */
-const ScreenCell* render_get_cell(int x, int y);
+const ScreenCell *render_get_cell(int x, int y);
 
 /**
  * @brief Clear a specific buffer with layer-appropriate colors.
  * @param buffer Pointer to the buffer to clear
  */
-void render_clear_buffer(ScreenBuffer* buffer);
+void render_clear_buffer(ScreenBuffer *buffer);
 
 /**
  * @brief Convert internal buffer to VGA format and write to screen.
- * 
+ *
  * Uses write(10, ...) to send the buffer directly to video memory.
  * This is more efficient than cell-by-cell rendering.
  */
@@ -361,6 +361,6 @@ void render_present_buffer(void);
  * @param cell Source screen cell
  * @param offset Byte offset in VGA buffer
  */
-void render_cell_to_vga(char* vga_buffer, const ScreenCell* cell, int offset);
+void render_cell_to_vga(char *vga_buffer, const ScreenCell *cell, int offset);
 
 #endif /* __GAME_RENDER_H__ */
