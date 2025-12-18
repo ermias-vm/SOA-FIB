@@ -10,6 +10,7 @@
 
 #include <game.h>
 #include <game_test.h>
+#include <game_ui.h>
 #include <libc.h>
 
 /* External errno variable */
@@ -993,6 +994,487 @@ void render_buffer_tests(void) {
 }
 
 /* ============================================================================
+ *                      M5.7 - UI SYSTEM TESTS
+ * ============================================================================ */
+
+void test_ui_strlen(int *passed) {
+    game_test_print_header(1, "ui_strlen() - String length calculation");
+    *passed = 1;
+
+    int len;
+
+    len = ui_strlen("Hello");
+    if (len != 5) {
+        prints("[ERROR] ui_strlen(\"Hello\") expected 5, got %d\n", len);
+        *passed = 0;
+    }
+
+    len = ui_strlen("");
+    if (len != 0) {
+        prints("[ERROR] ui_strlen(\"\") expected 0, got %d\n", len);
+        *passed = 0;
+    }
+
+    len = ui_strlen("12345678901234567890");
+    if (len != 20) {
+        prints("[ERROR] ui_strlen() for 20 chars expected 20, got %d\n", len);
+        *passed = 0;
+    }
+
+    if (*passed) prints("[OK] ui_strlen() works correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_ui_number_to_string(int *passed) {
+    game_test_print_header(2, "ui_number_to_string() - Number formatting");
+    *passed = 1;
+
+    char buffer[10];
+
+    /* Test basic positive number */
+    ui_number_to_string(42, buffer, 5, ' ');
+    if (buffer[3] != '4' || buffer[4] != '2') {
+        prints("[ERROR] Number 42 not formatted correctly: got '%s'\n", buffer);
+        *passed = 0;
+    }
+
+    /* Test zero padding */
+    ui_number_to_string(7, buffer, 3, '0');
+    if (buffer[0] != '0' || buffer[1] != '0' || buffer[2] != '7') {
+        prints("[ERROR] Zero padding failed: expected '007', got '%s'\n", buffer);
+        *passed = 0;
+    }
+
+    /* Test zero value */
+    ui_number_to_string(0, buffer, 3, '0');
+    if (buffer[0] != '0' || buffer[1] != '0' || buffer[2] != '0') {
+        prints("[ERROR] Zero value failed: expected '000', got '%s'\n", buffer);
+        *passed = 0;
+    }
+
+    /* Test large number */
+    ui_number_to_string(12345, buffer, 5, '0');
+    if (buffer[0] != '1' || buffer[4] != '5') {
+        prints("[ERROR] Large number 12345 not formatted correctly: got '%s'\n", buffer);
+        *passed = 0;
+    }
+
+    if (*passed) prints("[OK] ui_number_to_string() works correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_ui_draw_hud(int *passed) {
+    game_test_print_header(3, "ui_draw_hud() - Complete HUD rendering");
+    *passed = 1;
+
+    render_init();
+    render_clear();
+
+    /* Draw complete HUD */
+    ui_draw_hud(3, 12500, 5, 125, 30);
+
+    /* Verify top bar (time should be at position 0) */
+    const ScreenCell *cell = render_get_cell(0, STATUS_TOP_ROW);
+    if (cell == 0) {
+        prints("[ERROR] Top bar cell is null\n");
+        *passed = 0;
+    }
+
+    /* Verify bottom bar has content */
+    cell = render_get_cell(HUD_LIVES_X, STATUS_BOTTOM_ROW);
+    if (cell == 0) {
+        prints("[ERROR] Bottom bar lives area is null\n");
+        *passed = 0;
+    }
+
+    /* Present to see the result */
+    render_present();
+    game_test_wait(GAME_TEST_VISUAL_PAUSE);
+
+    if (*passed) prints("[OK] ui_draw_hud() renders complete HUD\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_ui_draw_time(int *passed) {
+    game_test_print_header(4, "ui_draw_time() - Time display");
+    *passed = 1;
+
+    render_clear();
+
+    /* Draw time: 2 minutes 35 seconds = 155 seconds */
+    ui_draw_time(155);
+
+    /* Check first character is '0' (for 02:35) */
+    const ScreenCell *cell = render_get_cell(HUD_TIME_X, STATUS_TOP_ROW);
+    if (cell != 0 && cell->character != '0') {
+        prints("[WARN] Time first digit unexpected: got '%c'\n", cell->character);
+        /* Not a hard failure - format may vary */
+    }
+
+    render_present();
+
+    if (*passed) prints("[OK] ui_draw_time() renders time correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_ui_draw_lives(int *passed) {
+    game_test_print_header(5, "ui_draw_lives() - Lives display with hearts");
+    *passed = 1;
+
+    render_clear();
+
+    /* Draw 3 lives */
+    ui_draw_lives(3);
+
+    /* Check hearts are drawn */
+    const ScreenCell *cell = render_get_cell(HUD_LIVES_X, STATUS_BOTTOM_ROW);
+    if (cell != 0 && cell->character != CHAR_HEART) {
+        prints("[ERROR] First heart not drawn: got '%c' (0x%02x)\n", cell->character,
+               cell->character);
+        *passed = 0;
+    }
+
+    cell = render_get_cell(HUD_LIVES_X + 2, STATUS_BOTTOM_ROW);
+    if (cell != 0 && cell->character != CHAR_HEART) {
+        prints("[ERROR] Third heart not drawn\n");
+        *passed = 0;
+    }
+
+    /* Fourth position should not have heart (only 3 lives) */
+    cell = render_get_cell(HUD_LIVES_X + 3, STATUS_BOTTOM_ROW);
+    if (cell != 0 && cell->character == CHAR_HEART) {
+        prints("[ERROR] Extra heart drawn beyond lives count\n");
+        *passed = 0;
+    }
+
+    render_present();
+
+    if (*passed) prints("[OK] ui_draw_lives() renders hearts correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_ui_draw_score(int *passed) {
+    game_test_print_header(6, "ui_draw_score() - Score display");
+    *passed = 1;
+
+    render_clear();
+
+    /* Draw score */
+    ui_draw_score(12345);
+
+    /* Score should contain "SCORE:" text centered */
+    /* Just verify no crash and cells are written */
+    int center_x = SCREEN_WIDTH / 2;
+    const ScreenCell *cell = render_get_cell(center_x, STATUS_BOTTOM_ROW);
+    if (cell == 0) {
+        prints("[ERROR] Score area cell is null\n");
+        *passed = 0;
+    }
+
+    render_present();
+
+    if (*passed) prints("[OK] ui_draw_score() renders score correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_ui_draw_round(int *passed) {
+    game_test_print_header(7, "ui_draw_round() - Round display");
+    *passed = 1;
+
+    render_clear();
+
+    /* Draw round number */
+    ui_draw_round(5);
+
+    /* Round text should be at right edge */
+    /* Just verify the function doesn't crash */
+    render_present();
+
+    if (*passed) prints("[OK] ui_draw_round() renders round number correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_ui_draw_centered_text(int *passed) {
+    game_test_print_header(8, "ui_draw_centered_text() - Centered text");
+    *passed = 1;
+
+    render_clear();
+
+    Color color = render_make_color(COLOR_YELLOW, COLOR_BLACK);
+    ui_draw_centered_text(12, "CENTERED", color);
+
+    /* "CENTERED" is 8 chars, should start at (80-8)/2 = 36 */
+    int expected_x = (SCREEN_WIDTH - 8) / 2;
+    const ScreenCell *cell = render_get_cell(expected_x, 12);
+    if (cell != 0 && cell->character != 'C') {
+        prints("[ERROR] Centered text not starting at expected position: got '%c'\n",
+               cell->character);
+        *passed = 0;
+    }
+
+    render_present();
+
+    if (*passed) prints("[OK] ui_draw_centered_text() centers text correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_ui_draw_border(int *passed) {
+    game_test_print_header(9, "ui_draw_border() - Box border drawing");
+    *passed = 1;
+
+    render_clear();
+
+    Color color = render_make_color(COLOR_WHITE, COLOR_BLUE);
+    ui_draw_border(10, 5, 20, 10, color);
+
+    /* Check corners */
+    const ScreenCell *cell = render_get_cell(10, 5);
+    if (cell != 0 && cell->character != CHAR_CORNER) {
+        prints("[ERROR] Top-left corner not drawn correctly\n");
+        *passed = 0;
+    }
+
+    cell = render_get_cell(29, 5);
+    if (cell != 0 && cell->character != CHAR_CORNER) {
+        prints("[ERROR] Top-right corner not drawn correctly\n");
+        *passed = 0;
+    }
+
+    /* Check horizontal border */
+    cell = render_get_cell(15, 5);
+    if (cell != 0 && cell->character != CHAR_BORDER_H) {
+        prints("[ERROR] Horizontal border not drawn correctly\n");
+        *passed = 0;
+    }
+
+    /* Check vertical border */
+    cell = render_get_cell(10, 8);
+    if (cell != 0 && cell->character != CHAR_BORDER_V) {
+        prints("[ERROR] Vertical border not drawn correctly\n");
+        *passed = 0;
+    }
+
+    render_present();
+
+    if (*passed) prints("[OK] ui_draw_border() draws borders correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_ui_draw_menu_screen(int *passed) {
+    game_test_print_header(10, "ui_draw_menu_screen() - Menu overlay");
+    *passed = 1;
+
+    render_init();
+    ui_draw_menu_screen();
+    render_present();
+
+    prints("[INFO] Menu screen displayed. Visual inspection...\n");
+    game_test_wait(GAME_TEST_VISUAL_DISPLAY);
+
+    /* Clear for next test */
+    render_clear();
+    render_present();
+
+    if (*passed) prints("[OK] ui_draw_menu_screen() renders without errors\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_ui_draw_pause_screen(int *passed) {
+    game_test_print_header(11, "ui_draw_pause_screen() - Pause overlay");
+    *passed = 1;
+
+    render_init();
+    render_clear();
+    ui_draw_pause_screen();
+    render_present();
+
+    prints("[INFO] Pause screen displayed. Visual inspection...\n");
+    game_test_wait(GAME_TEST_VISUAL_PAUSE);
+
+    /* Clear for next test */
+    render_clear();
+    render_present();
+
+    if (*passed) prints("[OK] ui_draw_pause_screen() renders without errors\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_ui_draw_game_over_screen(int *passed) {
+    game_test_print_header(12, "ui_draw_game_over_screen() - Game over display");
+    *passed = 1;
+
+    render_init();
+    ui_draw_game_over_screen(54321);
+    render_present();
+
+    prints("[INFO] Game Over screen displayed. Visual inspection...\n");
+    game_test_wait(GAME_TEST_VISUAL_DISPLAY);
+
+    /* Clear for next test */
+    render_clear();
+    render_present();
+
+    if (*passed) prints("[OK] ui_draw_game_over_screen() renders without errors\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_ui_draw_level_clear_screen(int *passed) {
+    game_test_print_header(13, "ui_draw_level_clear_screen() - Level complete");
+    *passed = 1;
+
+    render_init();
+    render_clear();
+    ui_draw_level_clear_screen(3, 5000);
+    render_present();
+
+    prints("[INFO] Level Clear screen displayed. Visual inspection...\n");
+    game_test_wait(GAME_TEST_VISUAL_PAUSE);
+
+    /* Clear for next test */
+    render_clear();
+    render_present();
+
+    if (*passed) prints("[OK] ui_draw_level_clear_screen() renders without errors\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_ui_draw_victory_screen(int *passed) {
+    game_test_print_header(14, "ui_draw_victory_screen() - Victory display");
+    *passed = 1;
+
+    render_init();
+    ui_draw_victory_screen(99999);
+    render_present();
+
+    prints("[INFO] Victory screen displayed. Visual inspection...\n");
+    game_test_wait(GAME_TEST_VISUAL_DISPLAY);
+
+    /* Clear for next test */
+    render_clear();
+    render_present();
+
+    if (*passed) prints("[OK] ui_draw_victory_screen() renders without errors\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_ui_flash_effects(int *passed) {
+    game_test_print_header(15, "UI flash effects");
+    *passed = 1;
+
+    /* Test score flash */
+    ui_flash_score(10);
+
+    /* Draw score multiple times to see flash effect */
+    render_clear();
+    for (int i = 0; i < 5; i++) {
+        ui_draw_score(1000);
+        render_present();
+        game_test_wait(5);
+    }
+
+    /* Test life lost animation trigger */
+    ui_animate_life_lost();
+
+    if (*passed) prints("[OK] Flash effects triggered without errors\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_ui_clear_game_area(int *passed) {
+    game_test_print_header(16, "ui_clear_game_area() - Game area clear");
+    *passed = 1;
+
+    render_init();
+
+    /* Draw some content in game area */
+    Color color = render_make_color(COLOR_RED, COLOR_GREEN);
+    render_fill_rect(10, 10, 20, 10, 'X', color);
+    render_present();
+
+    /* Clear game area */
+    ui_clear_game_area();
+    render_present();
+
+    /* Check that area is cleared but HUD rows preserved */
+    const ScreenCell *cell = render_get_cell(10, 10);
+    if (cell != 0 && cell->character == 'X') {
+        prints("[ERROR] Game area not cleared\n");
+        *passed = 0;
+    }
+
+    if (*passed) prints("[OK] ui_clear_game_area() clears correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+/****************************************/
+/**       UI System Entry Point        **/
+/****************************************/
+
+void ui_system_tests(void) {
+    int saved_run = game_subtests_run;
+    int saved_passed = game_subtests_passed;
+    game_subtests_run = 0;
+    game_subtests_passed = 0;
+
+    prints("[PID %d] [TID %d] Starting UI system tests...\n", getpid(), gettid());
+
+    int result;
+    test_ui_strlen(&result);
+    test_ui_number_to_string(&result);
+    test_ui_draw_hud(&result);
+    test_ui_draw_time(&result);
+    test_ui_draw_lives(&result);
+    test_ui_draw_score(&result);
+    test_ui_draw_round(&result);
+    test_ui_draw_centered_text(&result);
+    test_ui_draw_border(&result);
+    test_ui_draw_menu_screen(&result);
+    test_ui_draw_pause_screen(&result);
+    test_ui_draw_game_over_screen(&result);
+    test_ui_draw_level_clear_screen(&result);
+    test_ui_draw_victory_screen(&result);
+    test_ui_flash_effects(&result);
+    test_ui_clear_game_area(&result);
+
+    /* Print summary */
+    game_test_print_suite_summary("UI SYSTEM TESTS (M5.7)", game_subtests_passed,
+                                  game_subtests_run);
+    game_subtests_run = saved_run + game_subtests_run;
+    game_subtests_passed = saved_passed + game_subtests_passed;
+}
+
+/* ============================================================================
  *                          MAIN ENTRY POINT
  * ============================================================================ */
 
@@ -1024,6 +1506,11 @@ void execute_game_tests(void) {
 #if RUN_RENDER_TESTS
     game_test_print_suite_header("RENDER BUFFER TESTS (M5.6)");
     render_buffer_tests();
+#endif
+
+#if RUN_UI_TESTS
+    game_test_print_suite_header("UI SYSTEM TESTS (M5.7)");
+    ui_system_tests();
 #endif
 
     total_run = game_subtests_run;

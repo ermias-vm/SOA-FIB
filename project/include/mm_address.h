@@ -25,7 +25,7 @@
 #define FRAME_INIT_CODE (PH_USER_START >> 12)
 
 /* Number of pages for user code segment */
-#define NUM_PAG_CODE 12
+#define NUM_PAG_CODE 16
 
 /* Logical page number where user data starts */
 #define PAG_LOG_INIT_DATA (L_USER_START >> 12)
