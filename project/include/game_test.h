@@ -1,11 +1,12 @@
 /**
  * @file game_test.h
- * @brief Test suite for game subsystems (M5.4-M5.6).
+ * @brief Test suite for game subsystems (M5.4-M5.7).
  *
  * Milestones:
  *   M5.4 - Entity System (player, enemies, movement)
  *   M5.5 - Input System (keyboard events, direction mapping)
  *   M5.6 - Render Buffer (double buffering, screen output)
+ *   M5.7 - UI System (HUD, menus, overlays)
  */
 
 #ifndef __GAME_TEST_H__
@@ -16,6 +17,7 @@
 #include <game_input.h>
 #include <game_render.h>
 #include <game_types.h>
+#include <game_ui.h>
 
 /* ============================================================================
  *                              TEST SWITCHES
@@ -27,6 +29,7 @@
 #define RUN_ENTITY_TESTS    1   /**< M5.4: Entity system tests */
 #define RUN_INPUT_TESTS     1   /**< M5.5: Input system tests */
 #define RUN_RENDER_TESTS    1   /**< M5.6: Render buffer tests */
+#define RUN_UI_TESTS        1   /**< M5.7: UI system tests */
 // clang-format on
 
 /* ============================================================================
@@ -86,6 +89,28 @@ void test_render_present(int *passed);
 void test_render_numbers(int *passed);
 void test_render_visual_patterns(int *passed);
 void render_buffer_tests(void);
+
+/* ============================================================================
+ *                      M5.7 - UI SYSTEM TEST FUNCTIONS
+ * ============================================================================ */
+
+void test_ui_strlen(int *passed);
+void test_ui_number_to_string(int *passed);
+void test_ui_draw_hud(int *passed);
+void test_ui_draw_time(int *passed);
+void test_ui_draw_lives(int *passed);
+void test_ui_draw_score(int *passed);
+void test_ui_draw_round(int *passed);
+void test_ui_draw_centered_text(int *passed);
+void test_ui_draw_border(int *passed);
+void test_ui_draw_menu_screen(int *passed);
+void test_ui_draw_pause_screen(int *passed);
+void test_ui_draw_game_over_screen(int *passed);
+void test_ui_draw_level_clear_screen(int *passed);
+void test_ui_draw_victory_screen(int *passed);
+void test_ui_flash_effects(int *passed);
+void test_ui_clear_game_area(int *passed);
+void ui_system_tests(void);
 
 /* ============================================================================
  *                          MAIN ENTRY POINT
