@@ -4,6 +4,7 @@
 #include <game_config.h>
 #include <game_entities.h>
 #include <game_input.h>
+#include <game_logic.h>
 #include <game_map.h>
 #include <game_render.h>
 #include <game_types.h>
