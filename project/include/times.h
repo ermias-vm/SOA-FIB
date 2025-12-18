@@ -71,14 +71,14 @@
  * @param ms Milliseconds to convert.
  * @return Equivalent ticks after adjustment.
  */
-#define MS_TO_TICKS(ms) ((int)((ms)*TIME_ADJUSTMENT))
+#define MS_TO_TICKS(ms) ((int)((ms) * TIME_ADJUSTMENT))
 
 /**
  * @brief Convert seconds to ticks.
  * @param s Seconds to convert.
  * @return Equivalent ticks after adjustment.
  */
-#define SECONDS_TO_TICKS(s) ((s)*TICKS_PER_SECOND)
+#define SECONDS_TO_TICKS(s) ((s) * TICKS_PER_SECOND)
 
 /*============================================================================*
  *                    STANDARD TIME INTERVALS                                 *

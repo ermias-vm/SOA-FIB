@@ -17,7 +17,7 @@
 
 // clang-format off
 /* MASTER SWITCH */
-#define RUN_TESTS               0   /**< Enable/disable ALL tests */
+#define RUN_TESTS               1   /**< Enable/disable ALL tests */
 
 /* MILESTONE TESTS */
 #define THREAD_TEST             1   /**< Enable/disable thread tests */
@@ -29,7 +29,7 @@
 /* FUNCTIONAL TESTS */
 #define TICK_CALIBRATION_TEST   0   /**< Enable/disable tick rate calibration test */
 #define FPS_TEST                1   /**< Enable/disable FPS visual test */
-#define IDLE_SWITCH_TEST        1   /**< Test idle switch (exits init) */
+#define IDLE_SWITCH_TEST        0   /**< Test idle switch (exits init) */
 // clang-format on
 
 /** Reset errno macro */

@@ -3,9 +3,9 @@
  * @brief Map system implementation for ZeOS Miner game
  */
 
+#include <game_config.h>
 #include <game_map.h>
 #include <game_types.h>
-#include <game_config.h>
 #include <libc.h>
 
 /* Private map data */
@@ -94,7 +94,7 @@ void map_place_tile(int x, int y, TileType type) {
 int map_count_gems(void) {
     int count = 0;
     int x, y;
-    
+
     for (y = 0; y < MAP_HEIGHT; y++) {
         for (x = 0; x < MAP_WIDTH; x++) {
             if (g_map[y][x] == TILE_GEM) {
@@ -109,22 +109,22 @@ void map_place_gems(int count) {
     int placed = 0;
     int attempts = 0;
     const int max_attempts = count * 10;
-    
+
     g_current_gem_count = 0;
-    
+
     while (placed < count && attempts < max_attempts) {
         int x = random_int(MAP_WIDTH);
         int y = random_int(MAP_HEIGHT);
-        
+
         if (map_get_tile(x, y) == TILE_EMPTY) {
             map_set_tile(x, y, TILE_GEM);
-            
+
             if (g_current_gem_count < MAX_GEMS) {
                 g_gem_positions[g_current_gem_count][0] = x;
                 g_gem_positions[g_current_gem_count][1] = y;
                 g_current_gem_count++;
             }
-            
+
             placed++;
         }
         attempts++;
@@ -134,7 +134,7 @@ void map_place_gems(int count) {
 void map_remove_gem(int x, int y) {
     if (map_get_tile(x, y) == TILE_GEM) {
         map_set_tile(x, y, TILE_EMPTY);
-        
+
         for (int i = 0; i < g_current_gem_count; i++) {
             if (g_gem_positions[i][0] == x && g_gem_positions[i][1] == y) {
                 for (int j = i; j < g_current_gem_count - 1; j++) {
@@ -158,28 +158,28 @@ int map_has_gem(int x, int y) {
 
 void map_generate_level(int level) {
     map_create_borders();
-    
+
     int dirt_density = 60 + (level * 5);
     if (dirt_density > 85) dirt_density = 85;
-    
+
     place_random_dirt(dirt_density);
     create_initial_tunnels();
     map_fill_area(1, 1, 3, 3, TILE_EMPTY);
-    
+
     int gem_count = 3 + (level * 2);
     if (gem_count > MAX_GEMS) gem_count = MAX_GEMS;
-    
+
     map_place_gems(gem_count);
 }
 
 void map_create_borders(void) {
     int x, y;
-    
+
     for (x = 0; x < MAP_WIDTH; x++) {
         map_set_tile(x, 0, TILE_WALL);
         map_set_tile(x, MAP_HEIGHT - 1, TILE_WALL);
     }
-    
+
     for (y = 0; y < MAP_HEIGHT; y++) {
         map_set_tile(0, y, TILE_WALL);
         map_set_tile(MAP_WIDTH - 1, y, TILE_WALL);
@@ -193,6 +193,7 @@ void map_create_dirt_pattern(int level) {
 }
 
 void map_create_tunnels(int level) {
+    (void)level; /* Suppress unused parameter warning */
     create_initial_tunnels();
 }
 
@@ -202,10 +203,18 @@ void map_create_tunnels(int level) {
 
 void map_fill_area(int x1, int y1, int x2, int y2, TileType type) {
     int x, y;
-    
-    if (x1 > x2) { int temp = x1; x1 = x2; x2 = temp; }
-    if (y1 > y2) { int temp = y1; y1 = y2; y2 = temp; }
-    
+
+    if (x1 > x2) {
+        int temp = x1;
+        x1 = x2;
+        x2 = temp;
+    }
+    if (y1 > y2) {
+        int temp = y1;
+        y1 = y2;
+        y2 = temp;
+    }
+
     for (y = y1; y <= y2; y++) {
         for (x = x1; x <= x2; x++) {
             if (map_is_valid_position(x, y)) {
@@ -219,18 +228,18 @@ void map_draw_line(int x1, int y1, int x2, int y2, TileType type) {
     int dx = x2 - x1;
     int dy = y2 - y1;
     int steps = (dx > dy ? (dx > -dx ? dx : -dx) : (dy > -dy ? dy : -dy));
-    
+
     if (steps == 0) {
         map_set_tile(x1, y1, type);
         return;
     }
-    
+
     float x_inc = (float)dx / steps;
     float y_inc = (float)dy / steps;
-    
+
     float x = x1;
     float y = y1;
-    
+
     for (int i = 0; i <= steps; i++) {
         map_set_tile((int)(x + 0.5), (int)(y + 0.5), type);
         x += x_inc;
@@ -241,11 +250,11 @@ void map_draw_line(int x1, int y1, int x2, int y2, TileType type) {
 int map_get_random_empty_position(Position *pos) {
     int attempts = 0;
     const int max_attempts = 100;
-    
+
     while (attempts < max_attempts) {
         int x = 1 + random_int(MAP_WIDTH - 2);
         int y = 1 + random_int(MAP_HEIGHT - 2);
-        
+
         if (map_is_walkable(x, y)) {
             pos->x = x;
             pos->y = y;
@@ -253,7 +262,7 @@ int map_get_random_empty_position(Position *pos) {
         }
         attempts++;
     }
-    
+
     pos->x = 1;
     pos->y = 1;
     return 0;
@@ -263,14 +272,14 @@ int map_get_safe_spawn_position(Position *pos, int min_distance_from_player) {
     int attempts = 0;
     const int max_attempts = 50;
     Position player_pos = {1, 1};
-    
+
     while (attempts < max_attempts) {
         Position candidate;
         if (map_get_random_empty_position(&candidate)) {
             int dx = candidate.x - player_pos.x;
             int dy = candidate.y - player_pos.y;
             int distance = dx * dx + dy * dy;
-            
+
             if (distance >= min_distance_from_player * min_distance_from_player) {
                 *pos = candidate;
                 return 1;
@@ -278,7 +287,7 @@ int map_get_safe_spawn_position(Position *pos, int min_distance_from_player) {
         }
         attempts++;
     }
-    
+
     return map_get_random_empty_position(pos);
 }
 
@@ -294,13 +303,13 @@ int random_int(int max) {
 
 void place_random_dirt(int density) {
     int x, y;
-    
+
     for (y = 1; y < MAP_HEIGHT - 1; y++) {
         for (x = 1; x < MAP_WIDTH - 1; x++) {
             if (map_get_tile(x, y) == TILE_WALL) {
                 continue;
             }
-            
+
             if (random_int(100) < density) {
                 map_set_tile(x, y, TILE_DIRT);
             } else {
@@ -313,16 +322,16 @@ void place_random_dirt(int density) {
 void create_initial_tunnels(void) {
     int mid_y = MAP_HEIGHT / 2;
     map_draw_line(1, mid_y, MAP_WIDTH - 2, mid_y, TILE_EMPTY);
-    
+
     int mid_x = MAP_WIDTH / 2;
     map_draw_line(mid_x, 1, mid_x, MAP_HEIGHT - 2, TILE_EMPTY);
-    
+
     for (int i = 0; i < 3; i++) {
         int x1 = 1 + random_int(MAP_WIDTH - 2);
         int y1 = 1 + random_int(MAP_HEIGHT - 2);
         int x2 = 1 + random_int(MAP_WIDTH - 2);
         int y2 = 1 + random_int(MAP_HEIGHT - 2);
-        
+
         map_draw_line(x1, y1, x2, y2, TILE_EMPTY);
     }
 }
@@ -332,18 +341,5 @@ void create_initial_tunnels(void) {
  * ============================================================================ */
 
 void map_print_debug(void) {
-    int x, y;
-    
-    for (y = 0; y < MAP_HEIGHT; y++) {
-        for (x = 0; x < MAP_WIDTH; x++) {
-            char c;
-            switch (map_get_tile(x, y)) {
-                case TILE_EMPTY: c = '.'; break;
-                case TILE_DIRT:  c = '#'; break;
-                case TILE_WALL:  c = 'X'; break;
-                case TILE_GEM:   c = '*'; break;
-                default:         c = '?'; break;
-            }
-        }
-    }
+    (void)0; /* Debug function - implementation placeholder */
 }
