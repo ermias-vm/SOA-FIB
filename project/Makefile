@@ -66,6 +66,7 @@ USROBJ = \
 	game_input.o \
 	game_render.o \
 	game_test.o \
+	game_ui.o \
 
 
 ################################################################################
@@ -266,3 +267,5 @@ game_input.o: game_input.c $(INCLUDEDIR)/game_input.h $(INCLUDEDIR)/game_types.h
 game_render.o: game_render.c $(INCLUDEDIR)/game_render.h $(INCLUDEDIR)/game_types.h $(INCLUDEDIR)/libc.h
 
 game_test.o: game_test.c $(INCLUDEDIR)/game_test.h $(INCLUDEDIR)/game_render.h $(INCLUDEDIR)/game_types.h $(INCLUDEDIR)/libc.h
+
+game_ui.o: game_ui.c $(INCLUDEDIR)/game_ui.h $(INCLUDEDIR)/game_render.h $(INCLUDEDIR)/game_types.h $(INCLUDEDIR)/libc.h
