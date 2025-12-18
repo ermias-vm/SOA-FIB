@@ -1,8 +1,8 @@
 #ifndef __GAME_MAP_H__
 #define __GAME_MAP_H__
 
-#include <game_types.h>
 #include <game_config.h>
+#include <game_types.h>
 
 /**
  * @file game_map.h

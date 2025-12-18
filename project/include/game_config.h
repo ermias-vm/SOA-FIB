@@ -113,22 +113,20 @@
 #define SPEED_DECREASE_PER_ROUND 1 /* Decrease tick delay = faster */
 #define MIN_ENEMY_SPEED 2          /* Minimum ticks between moves */
 
-
 /*============================================================================*
  *                    GAME-SPECIFIC TIMES                                     *
  *============================================================================*/
 
-#define FYGAR_FIRE_RANGE 2  /* Fire reaches 2 blocks horizontally */
+#define FYGAR_FIRE_RANGE 2                   /* Fire reaches 2 blocks horizontally */
 #define FYGAR_FIRE_COOLDOWN (ONE_SECOND * 2) /* Ticks between fire attacks */
-#define FYGAR_FIRE_DURATION HALF_SECOND /* Ticks fire stays active */
+#define FYGAR_FIRE_DURATION HALF_SECOND      /* Ticks fire stays active */
 
-#define INFLATE_LEVELS 4        /* Levels before enemy explodes */
+#define INFLATE_LEVELS 4                /* Levels before enemy explodes */
 #define INFLATE_DEFLATE_TIME ONE_SECOND /* Ticks to deflate one level */
-#define PUMP_RANGE 1                                   /* Pump reaches 1 block ahead */
+#define PUMP_RANGE 1                    /* Pump reaches 1 block ahead */
 
 #define ROUND_START_DELAY (ONE_SECOND * 2) /* Delay at round start */
 #define DEATH_DELAY ONE_SECOND             /* Delay after death */
-
 
 /* ============================================================================
  *                           GAME CHARACTERS (ASCII)

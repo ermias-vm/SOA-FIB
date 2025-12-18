@@ -33,7 +33,7 @@
  *                              TEST TIMING (uses times.h constants)
  * ============================================================================ */
 
-#define GAME_TEST_VISUAL_PAUSE TIME_DEFAULT     /**< Ticks to pause for visual tests */
+#define GAME_TEST_VISUAL_PAUSE TIME_DEFAULT  /**< Ticks to pause for visual tests */
 #define GAME_TEST_VISUAL_DISPLAY TIME_MEDIUM /**< Ticks to display visual patterns */
 
 /* ============================================================================

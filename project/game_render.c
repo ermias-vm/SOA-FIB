@@ -1,7 +1,7 @@
 /**
  * @file game_render.c
  * @brief Double-buffered rendering system implementation for ZeOS Miner
- * 
+ *
  * Uses direct screen buffer writes via fd=10 for efficient rendering.
  */
 
@@ -31,17 +31,17 @@ void render_init(void) {
     /* Initialize default color */
     g_default_color.fg = COLOR_WHITE;
     g_default_color.bg = COLOR_BLACK;
-    
+
     /* Clear both buffers */
     render_clear_buffer(&g_front_buffer);
     render_clear_buffer(&g_back_buffer);
-    
+
     /* Clear the VGA buffer */
     for (int i = 0; i < SCREEN_SIZE; i += 2) {
         g_vga_buffer[i] = ' ';
-        g_vga_buffer[i + 1] = 0x07;  /* Light gray on black */
+        g_vga_buffer[i + 1] = 0x07; /* Light gray on black */
     }
-    
+
     /* Write initial cleared buffer to screen */
     write(10, g_vga_buffer, SCREEN_SIZE);
 }
@@ -50,9 +50,9 @@ void render_cleanup(void) {
     /* Fill VGA buffer with spaces */
     for (int i = 0; i < SCREEN_SIZE; i += 2) {
         g_vga_buffer[i] = ' ';
-        g_vga_buffer[i + 1] = 0x07;  /* Light gray on black */
+        g_vga_buffer[i + 1] = 0x07; /* Light gray on black */
     }
-    
+
     /* Write to screen */
     write(10, g_vga_buffer, SCREEN_SIZE);
 }
@@ -65,12 +65,12 @@ void render_clear(void) {
     render_clear_buffer(&g_back_buffer);
 }
 
-void render_clear_buffer(ScreenBuffer* buffer) {
+void render_clear_buffer(ScreenBuffer *buffer) {
     if (!buffer) return;
-    
+
     for (int y = 0; y < SCREEN_HEIGHT; y++) {
         Color layer_color = render_get_layer_color(y);
-        
+
         for (int x = 0; x < SCREEN_WIDTH; x++) {
             buffer->cells[y][x].character = ' ';
             buffer->cells[y][x].color = layer_color;
@@ -83,7 +83,7 @@ void render_set_cell(int x, int y, char c, Color color) {
     if (!render_is_valid_pos(x, y)) {
         return;
     }
-    
+
     g_back_buffer.cells[y][x].character = c;
     g_back_buffer.cells[y][x].color = color;
     g_back_buffer.dirty = 1;
@@ -93,15 +93,15 @@ void render_put_char(int x, int y, char c) {
     render_set_cell(x, y, c, g_default_color);
 }
 
-void render_put_string(int x, int y, const char* str) {
+void render_put_string(int x, int y, const char *str) {
     render_put_string_colored(x, y, str, g_default_color);
 }
 
-void render_put_string_colored(int x, int y, const char* str, Color color) {
+void render_put_string_colored(int x, int y, const char *str, Color color) {
     if (!str || !render_is_valid_pos(x, y)) {
         return;
     }
-    
+
     int pos = x;
     while (*str && pos < SCREEN_WIDTH) {
         render_set_cell(pos, y, *str, color);
@@ -151,7 +151,7 @@ void render_set_default_color(Color color) {
 Color render_get_layer_color(int y) {
     Color color;
     color.fg = COLOR_WHITE;
-    
+
     if (y == STATUS_TOP_ROW || y == STATUS_BOTTOM_ROW) {
         /* Status bars: white text on black */
         color.fg = COLOR_WHITE;
@@ -181,7 +181,7 @@ Color render_get_layer_color(int y) {
         color.fg = COLOR_WHITE;
         color.bg = COLOR_BLACK;
     }
-    
+
     return color;
 }
 
@@ -199,7 +199,7 @@ Color render_make_color(unsigned char fg, unsigned char bg) {
 /**
  * @brief Convert a cell to VGA format and write to VGA buffer.
  */
-void render_cell_to_vga(char* vga_buffer, const ScreenCell* cell, int offset) {
+void render_cell_to_vga(char *vga_buffer, const ScreenCell *cell, int offset) {
     /* VGA format: byte 0 = character, byte 1 = attribute */
     /* Attribute: bits 0-3 = foreground, bits 4-6 = background, bit 7 = blink */
     vga_buffer[offset] = cell->character;
@@ -213,7 +213,7 @@ void render_swap_buffers(void) {
             g_front_buffer.cells[y][x] = g_back_buffer.cells[y][x];
         }
     }
-    
+
     /* Clear dirty flag */
     g_front_buffer.dirty = 0;
 }
@@ -228,22 +228,22 @@ void render_present_buffer(void) {
     int offset = 0;
     for (int y = 0; y < SCREEN_HEIGHT; y++) {
         for (int x = 0; x < SCREEN_WIDTH; x++) {
-            ScreenCell* cell = &g_back_buffer.cells[y][x];
+            ScreenCell *cell = &g_back_buffer.cells[y][x];
             render_cell_to_vga(g_vga_buffer, cell, offset);
             offset += 2;
         }
     }
-    
+
     /* Write entire buffer to screen using fd=10 */
     write(10, g_vga_buffer, SCREEN_SIZE);
-    
+
     /* Copy back to front buffer for change tracking */
     for (int y = 0; y < SCREEN_HEIGHT; y++) {
         for (int x = 0; x < SCREEN_WIDTH; x++) {
             g_front_buffer.cells[y][x] = g_back_buffer.cells[y][x];
         }
     }
-    
+
     /* Clear dirty flag */
     g_back_buffer.dirty = 0;
 }
@@ -268,13 +268,13 @@ void render_number_padded(int x, int y, int number, int digits) {
 void render_number_padded_char(int x, int y, int number, int digits, char pad_char) {
     char buffer[16];
     int i;
-    
+
     /* Handle negative numbers */
     int negative = (number < 0);
     if (negative) {
         number = -number;
     }
-    
+
     /* Convert to string (reverse order) */
     for (i = digits - 1; i >= 0; i--) {
         if (number > 0) {
@@ -284,7 +284,7 @@ void render_number_padded_char(int x, int y, int number, int digits, char pad_ch
             buffer[i] = pad_char;
         }
     }
-    
+
     /* Add negative sign if needed */
     if (negative && pad_char == ' ') {
         /* Find first non-space and replace with minus */
@@ -295,7 +295,7 @@ void render_number_padded_char(int x, int y, int number, int digits, char pad_ch
             }
         }
     }
-    
+
     buffer[digits] = '\0';
     render_put_string(x, y, buffer);
 }
@@ -304,9 +304,9 @@ int render_is_valid_pos(int x, int y) {
     return (x >= 0 && x < SCREEN_WIDTH && y >= 0 && y < SCREEN_HEIGHT);
 }
 
-const ScreenCell* render_get_cell(int x, int y) {
+const ScreenCell *render_get_cell(int x, int y) {
     if (!render_is_valid_pos(x, y)) {
-        return 0;  /* NULL */
+        return 0; /* NULL */
     }
     return &g_back_buffer.cells[y][x];
 }
