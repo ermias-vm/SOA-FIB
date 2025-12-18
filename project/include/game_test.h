@@ -1,12 +1,13 @@
 /**
  * @file game_test.h
- * @brief Test suite for game subsystems (M5.4-M5.7).
+ * @brief Test suite for game subsystems (M5.4-M5.8).
  *
  * Milestones:
  *   M5.4 - Entity System (player, enemies, movement)
  *   M5.5 - Input System (keyboard events, direction mapping)
  *   M5.6 - Render Buffer (double buffering, screen output)
  *   M5.7 - UI System (HUD, menus, overlays)
+ *   M5.8 - Game Logic (player logic, enemy AI, collisions, scoring)
  */
 
 #ifndef __GAME_TEST_H__
@@ -15,6 +16,7 @@
 #include <game_config.h>
 #include <game_entities.h>
 #include <game_input.h>
+#include <game_logic.h>
 #include <game_render.h>
 #include <game_types.h>
 #include <game_ui.h>
@@ -30,6 +32,7 @@
 #define RUN_INPUT_TESTS     1   /**< M5.5: Input system tests */
 #define RUN_RENDER_TESTS    1   /**< M5.6: Render buffer tests */
 #define RUN_UI_TESTS        1   /**< M5.7: UI system tests */
+#define RUN_LOGIC_TESTS     1   /**< M5.8: Game logic tests */
 // clang-format on
 
 /* ============================================================================
@@ -111,6 +114,26 @@ void test_ui_draw_victory_screen(int *passed);
 void test_ui_flash_effects(int *passed);
 void test_ui_clear_game_area(int *passed);
 void ui_system_tests(void);
+
+/* ============================================================================
+ *                      M5.8 - GAME LOGIC TEST FUNCTIONS
+ * ============================================================================ */
+
+void test_logic_init(int *passed);
+void test_logic_player_init(int *passed);
+void test_logic_enemy_init(int *passed);
+void test_logic_rock_init(int *passed);
+void test_logic_player_move(int *passed);
+void test_logic_player_pump(int *passed);
+void test_logic_enemy_ai(int *passed);
+void test_logic_enemy_inflate_deflate(int *passed);
+void test_logic_rock_fall(int *passed);
+void test_logic_collision_detection(int *passed);
+void test_logic_pump_hit(int *passed);
+void test_logic_scoring(int *passed);
+void test_logic_game_state(int *passed);
+void test_logic_fygar_fire(int *passed);
+void game_logic_tests(void);
 
 /* ============================================================================
  *                          MAIN ENTRY POINT

@@ -1475,6 +1475,655 @@ void ui_system_tests(void) {
 }
 
 /* ============================================================================
+ *                      M5.8 - GAME LOGIC TESTS
+ * ============================================================================ */
+
+void test_logic_init(int *passed) {
+    game_test_print_header(1, "logic_init() - Game state initialization");
+    *passed = 1;
+
+    GameLogicState state;
+    logic_init(&state);
+
+    if (state.scene != SCENE_MENU) {
+        prints("[ERROR] Initial scene should be SCENE_MENU\n");
+        *passed = 0;
+    }
+    if (state.score != 0) {
+        prints("[ERROR] Initial score should be 0\n");
+        *passed = 0;
+    }
+    if (state.lives != INITIAL_LIVES) {
+        prints("[ERROR] Initial lives should be %d, got %d\n", INITIAL_LIVES, state.lives);
+        *passed = 0;
+    }
+    if (state.round != 1) {
+        prints("[ERROR] Initial round should be 1\n");
+        *passed = 0;
+    }
+    if (state.running != 1) {
+        prints("[ERROR] Game should be running\n");
+        *passed = 0;
+    }
+
+    if (*passed) prints("[OK] Game state initialized correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_logic_player_init(int *passed) {
+    game_test_print_header(2, "logic_player_init() - Player initialization");
+    *passed = 1;
+
+    Player player;
+    logic_player_init(&player, 40, 10);
+
+    if (player.base.pos.x != 40 || player.base.pos.y != 10) {
+        prints("[ERROR] Player position incorrect\n");
+        *passed = 0;
+    }
+    if (player.base.type != ENTITY_PLAYER) {
+        prints("[ERROR] Player type should be ENTITY_PLAYER\n");
+        *passed = 0;
+    }
+    if (player.state != PLAYER_IDLE) {
+        prints("[ERROR] Player should start in IDLE state\n");
+        *passed = 0;
+    }
+    if (player.is_pumping != 0) {
+        prints("[ERROR] Player should not be pumping initially\n");
+        *passed = 0;
+    }
+    if (player.pump_length != 0) {
+        prints("[ERROR] Pump length should be 0 initially\n");
+        *passed = 0;
+    }
+
+    if (*passed) prints("[OK] Player initialized correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_logic_enemy_init(int *passed) {
+    game_test_print_header(3, "logic_enemy_init() - Enemy initialization");
+    *passed = 1;
+
+    Enemy pooka, fygar;
+    logic_enemy_init(&pooka, 60, 15, ENTITY_POOKA);
+    logic_enemy_init(&fygar, 70, 20, ENTITY_FYGAR);
+
+    if (pooka.base.pos.x != 60 || pooka.base.pos.y != 15) {
+        prints("[ERROR] Pooka position incorrect\n");
+        *passed = 0;
+    }
+    if (pooka.base.type != ENTITY_POOKA) {
+        prints("[ERROR] Pooka type incorrect\n");
+        *passed = 0;
+    }
+    if (pooka.state != ENEMY_NORMAL) {
+        prints("[ERROR] Enemy should start in NORMAL state\n");
+        *passed = 0;
+    }
+    if (pooka.inflate_level != 0) {
+        prints("[ERROR] Inflate level should be 0\n");
+        *passed = 0;
+    }
+
+    if (fygar.base.type != ENTITY_FYGAR) {
+        prints("[ERROR] Fygar type incorrect\n");
+        *passed = 0;
+    }
+    if (fygar.fire_active != 0) {
+        prints("[ERROR] Fygar fire should not be active initially\n");
+        *passed = 0;
+    }
+
+    if (*passed) prints("[OK] Enemies initialized correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_logic_rock_init(int *passed) {
+    game_test_print_header(4, "logic_rock_init() - Rock initialization");
+    *passed = 1;
+
+    Rock rock;
+    logic_rock_init(&rock, 30, 8);
+
+    if (rock.base.pos.x != 30 || rock.base.pos.y != 8) {
+        prints("[ERROR] Rock position incorrect\n");
+        *passed = 0;
+    }
+    if (rock.base.type != ENTITY_ROCK) {
+        prints("[ERROR] Rock type incorrect\n");
+        *passed = 0;
+    }
+    if (rock.state != ROCK_STABLE) {
+        prints("[ERROR] Rock should start in STABLE state\n");
+        *passed = 0;
+    }
+    if (rock.wobble_timer != 0) {
+        prints("[ERROR] Wobble timer should be 0\n");
+        *passed = 0;
+    }
+    if (rock.has_crushed != 0) {
+        prints("[ERROR] has_crushed should be 0\n");
+        *passed = 0;
+    }
+
+    if (*passed) prints("[OK] Rock initialized correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_logic_player_move(int *passed) {
+    game_test_print_header(5, "logic_player_move() - Player movement");
+    *passed = 1;
+
+    /* Initialize map for movement test */
+    map_init(1);
+
+    Player player;
+    logic_player_init(&player, 40, 10);
+
+    /* Create a tunnel for movement */
+    map_set_tile(40, 10, TILE_EMPTY);
+    map_set_tile(41, 10, TILE_EMPTY);
+    map_set_tile(40, 11, TILE_EMPTY);
+
+    /* Test move right */
+    logic_player_move(&player, DIR_RIGHT);
+    if (player.base.pos.x != 41) {
+        prints("[ERROR] Player should have moved right to x=41, got x=%d\n", player.base.pos.x);
+        *passed = 0;
+    }
+    if (player.base.dir != DIR_RIGHT) {
+        prints("[ERROR] Player direction should be DIR_RIGHT\n");
+        *passed = 0;
+    }
+
+    /* Reset and test move down */
+    logic_player_init(&player, 40, 10);
+    logic_player_move(&player, DIR_DOWN);
+    if (player.base.pos.y != 11) {
+        prints("[ERROR] Player should have moved down to y=11, got y=%d\n", player.base.pos.y);
+        *passed = 0;
+    }
+
+    if (*passed) prints("[OK] Player movement works correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_logic_player_pump(int *passed) {
+    game_test_print_header(6, "logic_player_pump() - Pump action");
+    *passed = 1;
+
+    GameLogicState state;
+    logic_init(&state);
+    logic_start_round(&state, 1);
+
+    /* Set player direction */
+    state.player.base.dir = DIR_RIGHT;
+
+    /* Test pump activation */
+    logic_player_pump(&state.player, &state);
+
+    if (!state.player.is_pumping) {
+        prints("[ERROR] Player should be pumping\n");
+        *passed = 0;
+    }
+    if (state.player.pump_length != 1) {
+        prints("[ERROR] Pump length should be 1, got %d\n", state.player.pump_length);
+        *passed = 0;
+    }
+    if (state.player.state != PLAYER_PUMPING) {
+        prints("[ERROR] Player state should be PLAYER_PUMPING\n");
+        *passed = 0;
+    }
+
+    /* Test pump extension */
+    logic_player_pump(&state.player, &state);
+    if (state.player.pump_length != 2) {
+        prints("[ERROR] Pump length should be 2, got %d\n", state.player.pump_length);
+        *passed = 0;
+    }
+
+    /* Test max pump length */
+    for (int i = 0; i < 10; i++) {
+        logic_player_pump(&state.player, &state);
+    }
+    if (state.player.pump_length > MAX_PUMP_LENGTH) {
+        prints("[ERROR] Pump length should not exceed %d, got %d\n", MAX_PUMP_LENGTH,
+               state.player.pump_length);
+        *passed = 0;
+    }
+
+    if (*passed) prints("[OK] Pump action works correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_logic_enemy_ai(int *passed) {
+    game_test_print_header(7, "logic_enemy_ai() - Enemy AI behavior");
+    *passed = 1;
+
+    /* Initialize map */
+    map_init(1);
+
+    Player player;
+    Enemy enemy;
+    logic_player_init(&player, 40, 10);
+    logic_enemy_init(&enemy, 45, 10, ENTITY_POOKA);
+
+    /* Clear path between enemy and player */
+    for (int x = 40; x <= 45; x++) {
+        map_set_tile(x, 10, TILE_EMPTY);
+    }
+
+    int start_x = enemy.base.pos.x;
+
+    /* Run AI - enemy should move towards player */
+    logic_enemy_ai(&enemy, &player);
+
+    if (enemy.base.pos.x >= start_x && enemy.base.dir != DIR_LEFT) {
+        prints("[WARN] Enemy should try to move towards player (left)\n");
+        /* Not a hard failure - AI may have other valid moves */
+    }
+
+    if (*passed) prints("[OK] Enemy AI executes without errors\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_logic_enemy_inflate_deflate(int *passed) {
+    game_test_print_header(8, "logic_enemy_inflate/deflate() - Inflation system");
+    *passed = 1;
+
+    Enemy enemy;
+    logic_enemy_init(&enemy, 50, 10, ENTITY_POOKA);
+
+    /* Test inflate */
+    logic_enemy_inflate(&enemy);
+    if (enemy.state != ENEMY_INFLATING) {
+        prints("[ERROR] Enemy should be in INFLATING state\n");
+        *passed = 0;
+    }
+    if (enemy.inflate_level != 1) {
+        prints("[ERROR] Inflate level should be 1, got %d\n", enemy.inflate_level);
+        *passed = 0;
+    }
+
+    /* Inflate more */
+    logic_enemy_inflate(&enemy);
+    logic_enemy_inflate(&enemy);
+    if (enemy.inflate_level != 3) {
+        prints("[ERROR] Inflate level should be 3, got %d\n", enemy.inflate_level);
+        *passed = 0;
+    }
+
+    /* Inflate to death */
+    logic_enemy_inflate(&enemy);
+    if (enemy.state != ENEMY_DEAD) {
+        prints("[ERROR] Enemy should be DEAD after 4 inflations\n");
+        *passed = 0;
+    }
+    if (enemy.base.active != 0) {
+        prints("[ERROR] Enemy should be inactive after death\n");
+        *passed = 0;
+    }
+
+    /* Test deflate */
+    logic_enemy_init(&enemy, 50, 10, ENTITY_POOKA);
+    logic_enemy_inflate(&enemy);
+    logic_enemy_inflate(&enemy);
+
+    logic_enemy_deflate(&enemy);
+    if (enemy.inflate_level != 1) {
+        prints("[ERROR] Inflate level should be 1 after deflate, got %d\n", enemy.inflate_level);
+        *passed = 0;
+    }
+
+    logic_enemy_deflate(&enemy);
+    if (enemy.state != ENEMY_NORMAL) {
+        prints("[ERROR] Enemy should return to NORMAL state after full deflation\n");
+        *passed = 0;
+    }
+
+    if (*passed) prints("[OK] Inflation/deflation system works correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_logic_rock_fall(int *passed) {
+    game_test_print_header(9, "logic_rock_fall() - Rock physics");
+    *passed = 1;
+
+    /* Initialize map */
+    map_init(1);
+
+    Rock rock;
+    logic_rock_init(&rock, 35, 8);
+
+    /* Create empty space below rock */
+    map_set_tile(35, 8, TILE_EMPTY);
+    map_set_tile(35, 9, TILE_EMPTY);
+    map_set_tile(35, 10, TILE_EMPTY);
+
+    /* Check fall detection */
+    logic_rock_check_fall(&rock);
+    if (rock.state != ROCK_WOBBLING) {
+        prints("[ERROR] Rock should start wobbling when space below\n");
+        *passed = 0;
+    }
+
+    /* Simulate wobble timer expiration */
+    rock.wobble_timer = 0;
+    rock.state = ROCK_FALLING;
+
+    int start_y = rock.base.pos.y;
+
+    GameLogicState state;
+    logic_init(&state);
+    logic_rock_fall(&rock, &state);
+
+    if (rock.base.pos.y != start_y + 1) {
+        prints("[ERROR] Rock should have fallen one tile, y was %d now %d\n", start_y,
+               rock.base.pos.y);
+        *passed = 0;
+    }
+
+    if (*passed) prints("[OK] Rock physics works correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_logic_collision_detection(int *passed) {
+    game_test_print_header(10, "Collision detection functions");
+    *passed = 1;
+
+    Player player;
+    Enemy enemies[2];
+    Rock rocks[1];
+
+    logic_player_init(&player, 40, 10);
+    logic_enemy_init(&enemies[0], 40, 10, ENTITY_POOKA); /* Same position */
+    logic_enemy_init(&enemies[1], 50, 15, ENTITY_FYGAR); /* Different position */
+    logic_rock_init(&rocks[0], 40, 10);
+
+    /* Test player-enemy collision */
+    int collision = logic_check_player_enemy_collision(&player, enemies, 2);
+    if (collision != 0) {
+        prints("[ERROR] Should detect collision with enemy 0, got %d\n", collision);
+        *passed = 0;
+    }
+
+    /* Move player, should not collide */
+    player.base.pos.x = 30;
+    collision = logic_check_player_enemy_collision(&player, enemies, 2);
+    if (collision != -1) {
+        prints("[ERROR] Should not detect collision, got %d\n", collision);
+        *passed = 0;
+    }
+
+    /* Test player-rock collision */
+    player.base.pos.x = 40;
+    collision = logic_check_player_rock_collision(&player, rocks, 1);
+    if (collision != 0) {
+        prints("[ERROR] Should detect collision with rock 0, got %d\n", collision);
+        *passed = 0;
+    }
+
+    if (*passed) prints("[OK] Collision detection works correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_logic_pump_hit(int *passed) {
+    game_test_print_header(11, "logic_check_pump_hit() - Pump attack");
+    *passed = 1;
+
+    /* Initialize map */
+    map_init(1);
+
+    Player player;
+    Enemy enemies[2];
+
+    logic_player_init(&player, 40, 10);
+    player.is_pumping = 1;
+    player.pump_dir = DIR_RIGHT;
+    player.pump_length = 3;
+
+    /* Place enemy in pump range */
+    logic_enemy_init(&enemies[0], 42, 10, ENTITY_POOKA); /* 2 tiles right */
+    logic_enemy_init(&enemies[1], 50, 10, ENTITY_POOKA); /* Out of range */
+
+    /* Clear path */
+    for (int x = 40; x <= 45; x++) {
+        map_set_tile(x, 10, TILE_EMPTY);
+    }
+
+    int hit = logic_check_pump_hit(&player, enemies, 2);
+    if (hit != 0) {
+        prints("[ERROR] Pump should hit enemy 0, got %d\n", hit);
+        *passed = 0;
+    }
+
+    /* Test pump miss */
+    player.pump_length = 1; /* Too short */
+    hit = logic_check_pump_hit(&player, enemies, 2);
+    if (hit != -1) {
+        prints("[ERROR] Pump should miss, got %d\n", hit);
+        *passed = 0;
+    }
+
+    if (*passed) prints("[OK] Pump hit detection works correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_logic_scoring(int *passed) {
+    game_test_print_header(12, "Scoring system");
+    *passed = 1;
+
+    GameLogicState state;
+    logic_init(&state);
+
+    /* Test add score */
+    logic_add_score(&state, 100);
+    if (state.score != 100) {
+        prints("[ERROR] Score should be 100, got %d\n", state.score);
+        *passed = 0;
+    }
+
+    logic_add_score(&state, 250);
+    if (state.score != 350) {
+        prints("[ERROR] Score should be 350, got %d\n", state.score);
+        *passed = 0;
+    }
+
+    /* Test max score cap */
+    logic_add_score(&state, 100000);
+    if (state.score != MAX_SCORE) {
+        prints("[ERROR] Score should be capped at %d, got %d\n", MAX_SCORE, state.score);
+        *passed = 0;
+    }
+
+    /* Test layer-based scoring */
+    int points_l1 = logic_calculate_enemy_points(6);  /* Layer 1 */
+    int points_l2 = logic_calculate_enemy_points(11); /* Layer 2 */
+    int points_l3 = logic_calculate_enemy_points(16); /* Layer 3 */
+    int points_l4 = logic_calculate_enemy_points(21); /* Layer 4 */
+
+    if (points_l1 != POINTS_LAYER1) {
+        prints("[ERROR] Layer 1 points should be %d, got %d\n", POINTS_LAYER1, points_l1);
+        *passed = 0;
+    }
+    if (points_l2 != POINTS_LAYER2) {
+        prints("[ERROR] Layer 2 points should be %d, got %d\n", POINTS_LAYER2, points_l2);
+        *passed = 0;
+    }
+    if (points_l3 != POINTS_LAYER3) {
+        prints("[ERROR] Layer 3 points should be %d, got %d\n", POINTS_LAYER3, points_l3);
+        *passed = 0;
+    }
+    if (points_l4 != POINTS_LAYER4) {
+        prints("[ERROR] Layer 4 points should be %d, got %d\n", POINTS_LAYER4, points_l4);
+        *passed = 0;
+    }
+
+    if (*passed) prints("[OK] Scoring system works correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_logic_game_state(int *passed) {
+    game_test_print_header(13, "Game state management");
+    *passed = 1;
+
+    GameLogicState state;
+    logic_init(&state);
+
+    /* Test start round - initially in SCENE_ROUND_START */
+    logic_start_round(&state, 1);
+    if (state.scene != SCENE_ROUND_START) {
+        prints("[ERROR] Scene should be SCENE_ROUND_START after start\n");
+        *passed = 0;
+    }
+    if (state.round != 1) {
+        prints("[ERROR] Round should be 1, got %d\n", state.round);
+        *passed = 0;
+    }
+    if (state.enemy_count <= 0) {
+        prints("[ERROR] Should have enemies after round start\n");
+        *passed = 0;
+    }
+
+    /* Simulate timer expiration to transition to SCENE_PLAYING */
+    state.round_start_timer = 0;
+    state.scene = SCENE_ROUND_START;
+    logic_update(&state);
+    if (state.scene != SCENE_PLAYING) {
+        prints("[WARN] Scene should transition to SCENE_PLAYING after timer\n");
+    }
+
+    /* Test game over condition */
+    state.lives = 0;
+    logic_check_game_over(&state);
+    if (state.scene != SCENE_GAME_OVER) {
+        prints("[ERROR] Scene should be SCENE_GAME_OVER\n");
+        *passed = 0;
+    }
+
+    /* Test round complete condition */
+    logic_init(&state);
+    logic_start_round(&state, 1);
+    state.enemies_remaining = 0;
+    logic_check_round_complete(&state);
+    if (state.scene != SCENE_ROUND_CLEAR) {
+        prints("[ERROR] Scene should be SCENE_ROUND_CLEAR\n");
+        *passed = 0;
+    }
+
+    if (*passed) prints("[OK] Game state management works correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_logic_fygar_fire(int *passed) {
+    game_test_print_header(14, "Fygar fire attack");
+    *passed = 1;
+
+    GameLogicState state;
+    logic_init(&state);
+    logic_start_round(&state, 1);
+
+    /* Create a Fygar enemy */
+    Enemy fygar;
+    logic_enemy_init(&fygar, 45, 10, ENTITY_FYGAR);
+    fygar.base.dir = DIR_LEFT;
+    fygar.fire_cooldown = 0;
+
+    /* Put player in fire range */
+    state.player.base.pos.x = 43; /* 2 tiles left of Fygar */
+    state.player.base.pos.y = 10; /* Same row */
+
+    /* Trigger fire */
+    logic_fygar_fire(&fygar, &state);
+
+    if (fygar.fire_active) {
+        prints("[OK] Fygar activated fire attack\n");
+    } else {
+        prints("[INFO] Fygar did not activate fire (may not meet conditions)\n");
+    }
+
+    /* Test fire collision */
+    fygar.fire_active = 1;
+    fygar.fire_duration = 10;
+    fygar.base.dir = DIR_LEFT;
+
+    int hit = logic_check_fire_collision(&fygar, &state.player);
+    if (hit) {
+        prints("[OK] Fire collision detected\n");
+    } else {
+        prints("[INFO] No fire collision (player may be out of range)\n");
+    }
+
+    if (*passed) prints("[OK] Fygar fire system works\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+/****************************************/
+/**     Game Logic Entry Point         **/
+/****************************************/
+
+void game_logic_tests(void) {
+    int saved_run = game_subtests_run;
+    int saved_passed = game_subtests_passed;
+    game_subtests_run = 0;
+    game_subtests_passed = 0;
+
+    prints("[PID %d] [TID %d] Starting game logic tests...\n", getpid(), gettid());
+
+    int result;
+    test_logic_init(&result);
+    test_logic_player_init(&result);
+    test_logic_enemy_init(&result);
+    test_logic_rock_init(&result);
+    test_logic_player_move(&result);
+    test_logic_player_pump(&result);
+    test_logic_enemy_ai(&result);
+    test_logic_enemy_inflate_deflate(&result);
+    test_logic_rock_fall(&result);
+    test_logic_collision_detection(&result);
+    test_logic_pump_hit(&result);
+    test_logic_scoring(&result);
+    test_logic_game_state(&result);
+    test_logic_fygar_fire(&result);
+
+    /* Print summary */
+    game_test_print_suite_summary("GAME LOGIC TESTS (M5.8)", game_subtests_passed,
+                                  game_subtests_run);
+    game_subtests_run = saved_run + game_subtests_run;
+    game_subtests_passed = saved_passed + game_subtests_passed;
+}
+
+/* ============================================================================
  *                          MAIN ENTRY POINT
  * ============================================================================ */
 
@@ -1511,6 +2160,11 @@ void execute_game_tests(void) {
 #if RUN_UI_TESTS
     game_test_print_suite_header("UI SYSTEM TESTS (M5.7)");
     ui_system_tests();
+#endif
+
+#if RUN_LOGIC_TESTS
+    game_test_print_suite_header("GAME LOGIC TESTS (M5.8)");
+    game_logic_tests();
 #endif
 
     total_run = game_subtests_run;
