@@ -388,6 +388,7 @@ int ui_strlen(const char *str) {
 
 void ui_number_to_string(int number, char *buffer, int digits, char pad_char) {
     int i;
+    int has_digit = 0;
 
     /* Handle negative numbers */
     int negative = (number < 0);
@@ -397,9 +398,10 @@ void ui_number_to_string(int number, char *buffer, int digits, char pad_char) {
 
     /* Fill buffer from right to left */
     for (i = digits - 1; i >= 0; i--) {
-        if (number > 0) {
+        if (number > 0 || !has_digit) {
             buffer[i] = '0' + (number % 10);
             number /= 10;
+            has_digit = 1;
         } else {
             buffer[i] = pad_char;
         }
