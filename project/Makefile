@@ -72,6 +72,7 @@ USROBJ = \
 	game_ui.o \
 	game_logic.o \
 	game_data.o \
+	game.o \
 
 
 ################################################################################
@@ -161,6 +162,8 @@ game_test.o: game_test.c $(INCLUDEDIR)/game_test.h $(INCLUDEDIR)/game_render.h $
 game_ui.o: game_ui.c $(INCLUDEDIR)/game_ui.h $(INCLUDEDIR)/game_render.h $(INCLUDEDIR)/game_types.h $(INCLUDEDIR)/libc.h
 
 game_data.o: game_data.c $(INCLUDEDIR)/game_data.h $(INCLUDEDIR)/game_config.h $(INCLUDEDIR)/game_logic.h $(INCLUDEDIR)/game_map.h $(INCLUDEDIR)/game_types.h
+
+game.o: game.c $(INCLUDEDIR)/game.h $(INCLUDEDIR)/game_data.h $(INCLUDEDIR)/game_input.h $(INCLUDEDIR)/game_logic.h $(INCLUDEDIR)/game_map.h $(INCLUDEDIR)/game_render.h $(INCLUDEDIR)/game_ui.h $(INCLUDEDIR)/libc.h
 
 
 system: system.o system.lds $(SYSOBJ)

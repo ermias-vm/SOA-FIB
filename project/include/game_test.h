@@ -1,6 +1,6 @@
 /**
  * @file game_test.h
- * @brief Test suite for game subsystems (M5.4-M5.10).
+ * @brief Test suite for game subsystems (M5.4-M5.11).
  *
  * Milestones:
  *   M5.4 - Entity System (player, enemies, movement)
@@ -10,6 +10,7 @@
  *   M5.8 - Game Logic (player logic, enemy AI, collisions, scoring)
  *   M5.9 - Game Render (game rendering functions)
  *   M5.10 - Game Data (level definitions, spawn, tunnels)
+ *   M5.11 - Game Main and Integration (main loop, threads, scene management)
  */
 
 #ifndef __GAME_TEST_H__
@@ -38,6 +39,7 @@
 #define RUN_LOGIC_TESTS     1   /**< M5.8: Game logic tests */
 #define RUN_RENDER_GAME_TESTS 1 /**< M5.9: Game rendering tests */
 #define RUN_DATA_TESTS      1   /**< M5.10: Game data/level tests */
+#define RUN_INTEGRATION_TESTS 1 /**< M5.11: Integration tests (main loop, threads) */
 // clang-format on
 
 /* ============================================================================
@@ -167,6 +169,17 @@ void test_data_spawn_rocks(int *passed);
 void test_data_create_tunnels(int *passed);
 void test_data_load_level(int *passed);
 void game_data_tests(void);
+
+/* ============================================================================
+ *                      M5.11 - INTEGRATION TEST FUNCTIONS
+ * ============================================================================ */
+
+void test_game_init(int *passed);
+void test_game_state_transitions(int *passed);
+void test_game_new_level(int *passed);
+void test_game_reset(int *passed);
+void test_game_cleanup(int *passed);
+void game_integration_tests(void);
 
 /* ============================================================================
  *                          MAIN ENTRY POINT
