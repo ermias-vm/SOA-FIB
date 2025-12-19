@@ -132,14 +132,28 @@ void render_thread_func(void *arg);
 void game_reset(void);
 
 /**
+ * @brief Get pointer to the global game state.
+ *
+ * @return Pointer to the GameState structure (volatile).
+ */
+GameState *game_get_state(void);
+
+/**
+ * @brief Check if the game is currently running.
+ *
+ * @return Non-zero if game is running, 0 otherwise.
+ */
+int game_is_running(void);
+
+/**
  * @brief Initialize a new level.
  *
- * Sets up the map, places enemies and gems for the specified level.
+ * Sets up the map, places enemies and gems for the current level (g_game.level).
  * Resets player and enemy positions. Called when advancing levels.
  *
- * @param level Level number to initialize (1-based)
+ * @return 0 on success, -1 on error (invalid level)
  */
-void game_new_level(int level);
+int game_new_level(void);
 
 /**
  * @brief Restart current level after player death.

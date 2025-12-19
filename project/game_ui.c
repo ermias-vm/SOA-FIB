@@ -171,27 +171,27 @@ void ui_draw_menu_screen(void) {
 
     /* Title */
     ui_draw_centered_text(5, "========================", title_color);
-    ui_draw_centered_text(6, "       DIG DUG          ", title_color);
-    ui_draw_centered_text(7, "    ZeOS Edition        ", title_color);
+    ui_draw_centered_text(6, "         DIG DUG        ", title_color);
+    ui_draw_centered_text(7, "      ZeOS Edition      ", title_color);
     ui_draw_centered_text(8, "========================", title_color);
 
     /* Instructions */
-    ui_draw_centered_text(11, "CONTROLES:", text_color);
-    ui_draw_centered_text(13, "W/A/S/D o Flechas - Mover", text_color);
-    ui_draw_centered_text(14, "ESPACIO - Inflar enemigos", text_color);
-    ui_draw_centered_text(15, "P - Pausar juego", text_color);
-    ui_draw_centered_text(16, "Q - Salir del juego", text_color);
+    ui_draw_centered_text(11, "CONTROLS:", text_color);
+    ui_draw_centered_text(13, "W/A/S/D or Arrows - Move", text_color);
+    ui_draw_centered_text(14, "SPACE - Inflate enemies", text_color);
+    ui_draw_centered_text(15, "P - Pause game", text_color);
+    ui_draw_centered_text(16, "Q - Quit game", text_color);
 
     /* Objective */
-    ui_draw_centered_text(18, "OBJETIVO:", text_color);
-    ui_draw_centered_text(19, "Elimina todos los enemigos", text_color);
-    ui_draw_centered_text(20, "Mas profundo = Mas puntos", text_color);
+    ui_draw_centered_text(18, "OBJECTIVE:", text_color);
+    ui_draw_centered_text(19, "Eliminate all enemies", text_color);
+    ui_draw_centered_text(20, "Deeper = More points", text_color);
 
     /* Start prompt */
-    ui_draw_centered_text(23, "Pulsa ESPACIO para comenzar", highlight_color);
+    ui_draw_centered_text(23, "Press SPACE to start", highlight_color);
 
     /* Credits */
-    ui_draw_centered_text(1, "SOA Project 2024-2025",
+    ui_draw_centered_text(1, "SOA Project 2025-2026",
                           render_make_color(COLOR_DARK_GRAY, COLOR_BLACK));
 }
 
@@ -213,10 +213,10 @@ void ui_draw_pause_screen(void) {
     ui_draw_border(box_x, box_y, box_w, box_h, box_color);
 
     /* Pause text */
-    ui_draw_centered_text(box_y + 2, "PAUSA", title_color);
+    ui_draw_centered_text(box_y + 2, "PAUSED", title_color);
 
     /* Instructions below box */
-    ui_draw_centered_text(box_y + box_h + 1, "Pulsa P para continuar", text_color);
+    ui_draw_centered_text(box_y + box_h + 1, "Press P to continue", text_color);
 }
 
 void ui_draw_game_over_screen(int final_score) {
@@ -233,15 +233,15 @@ void ui_draw_game_over_screen(int final_score) {
     ui_draw_centered_text(9, "========================", title_color);
 
     /* Final score */
-    ui_draw_centered_text(12, "PUNTUACION FINAL:", text_color);
+    ui_draw_centered_text(12, "FINAL SCORE:", text_color);
 
     char score_str[6];
     ui_number_to_string(final_score, score_str, 5, '0');
     ui_draw_centered_text(14, score_str, score_color);
 
     /* Options */
-    ui_draw_centered_text(18, "Pulsa ESPACIO para reiniciar", text_color);
-    ui_draw_centered_text(19, "Pulsa Q para salir", text_color);
+    ui_draw_centered_text(18, "Press SPACE to restart", text_color);
+    ui_draw_centered_text(19, "Press Q to quit", text_color);
 }
 
 void ui_draw_level_clear_screen(int round, int score) {
@@ -263,7 +263,7 @@ void ui_draw_level_clear_screen(int round, int score) {
     ui_draw_centered_text(box_y + 1, "ROUND CLEAR!", title_color);
 
     /* Round completed */
-    char round_text[20] = "Ronda ";
+    char round_text[20] = "Round ";
     char round_num[3];
     ui_number_to_string(round, round_num, 2, ' ');
 
@@ -277,21 +277,18 @@ void ui_draw_level_clear_screen(int round, int score) {
     }
     round_text[i++] = ' ';
     round_text[i++] = 'C';
-    round_text[i++] = 'o';
-    round_text[i++] = 'm';
-    round_text[i++] = 'p';
     round_text[i++] = 'l';
     round_text[i++] = 'e';
-    round_text[i++] = 't';
     round_text[i++] = 'a';
+    round_text[i++] = 'r';
+    round_text[i++] = 'e';
     round_text[i++] = 'd';
-    round_text[i++] = 'a';
     round_text[i] = '\0';
 
     ui_draw_centered_text(box_y + 3, round_text, title_color);
 
     /* Next round message */
-    ui_draw_centered_text(box_y + box_h + 1, "Preparando siguiente ronda...", text_color);
+    ui_draw_centered_text(box_y + box_h + 1, "Preparing next round...", text_color);
 }
 
 void ui_draw_victory_screen(int final_score) {
@@ -304,21 +301,21 @@ void ui_draw_victory_screen(int final_score) {
 
     /* Victory title */
     ui_draw_centered_text(6, "========================", title_color);
-    ui_draw_centered_text(7, "      VICTORIA!         ", title_color);
-    ui_draw_centered_text(8, "  Todos los niveles     ", title_color);
-    ui_draw_centered_text(9, "     completados!       ", title_color);
+    ui_draw_centered_text(7, "        VICTORY!        ", title_color);
+    ui_draw_centered_text(8, "      All levels        ", title_color);
+    ui_draw_centered_text(9, "      completed!        ", title_color);
     ui_draw_centered_text(10, "========================", title_color);
 
     /* Final score */
-    ui_draw_centered_text(13, "PUNTUACION TOTAL:", text_color);
+    ui_draw_centered_text(13, "TOTAL SCORE:", text_color);
 
     char score_str[6];
     ui_number_to_string(final_score, score_str, 5, '0');
     ui_draw_centered_text(15, score_str, score_color);
 
     /* Congratulations */
-    ui_draw_centered_text(18, "¡Felicidades!", title_color);
-    ui_draw_centered_text(20, "Pulsa Q para salir", text_color);
+    ui_draw_centered_text(18, "Congratulations!", title_color);
+    ui_draw_centered_text(20, "Press Q to quit", text_color);
 }
 
 /* ============================================================================

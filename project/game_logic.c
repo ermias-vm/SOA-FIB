@@ -42,6 +42,7 @@ void logic_player_init(Player *player, int x, int y) {
     player->base.speed_limit = PLAYER_SPEED;
 
     player->state = PLAYER_IDLE;
+    player->facing_dir = DIR_RIGHT; /* Start facing right */
     player->is_pumping = 0;
     player->pump_length = 0;
     player->pump_dir = DIR_NONE;
@@ -236,9 +237,9 @@ void logic_update_player(GameLogicState *state) {
         return;
     }
 
-    /* Get input */
-    Direction dir = input_get_direction();
-    int action = input_is_action_pressed();
+    /* Get direction from player entity (set by game.c) */
+    Direction dir = player->base.dir;
+    int action = player->is_pumping;
 
     /* Process movement */
     if (dir != DIR_NONE) {
@@ -247,6 +248,8 @@ void logic_update_player(GameLogicState *state) {
             logic_player_move(player, dir);
             player->base.speed_counter = PLAYER_MOVE_DELAY;
         }
+        /* Clear direction after processing */
+        player->base.dir = DIR_NONE;
     }
 
     /* Decrement speed counter */
@@ -303,8 +306,8 @@ void logic_player_move(Player *player, Direction dir) {
         return;
     }
 
-    /* Update facing direction */
-    player->base.dir = dir;
+    /* Update facing direction (for rendering) */
+    player->facing_dir = dir;
 
     /* Check bounds */
     if (!map_is_valid_position(new_x, new_y)) {

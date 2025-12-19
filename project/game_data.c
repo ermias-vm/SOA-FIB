@@ -25,34 +25,30 @@ static const LevelData g_levels[NUM_LEVELS_DEFINED] = {
     {
         .round_number = 1,
         .player_start_x = 10,
-        .player_start_y = 5,
+        .player_start_y = 3, /* Start in sky layer (row 3) */
 
         .enemies =
             {
-                {60, 5, ENTITY_POOKA},
-                {40, 11, ENTITY_POOKA},
-                {65, 16, ENTITY_FYGAR},
+                {60, 8, ENTITY_POOKA}, /* Only 1 enemy for round 1 */
             },
-        .enemy_count = 3,
+        .enemy_count = 1,
 
         .rocks =
             {
-                {30, 6, ENTITY_ROCK},
-                {50, 12, ENTITY_ROCK},
+                {30, 10, ENTITY_ROCK},
             },
-        .rock_count = 2,
+        .rock_count = 1,
 
         .tunnels =
             {
-                {5, 5, 25, 5},   /* Horizontal tunnel top */
-                {10, 5, 10, 15}, /* Vertical tunnel left */
-                {55, 5, 70, 5},  /* Horizontal tunnel right */
-                {60, 5, 60, 12}, /* Vertical tunnel right */
+                {5, 3, 25, 3},   /* Horizontal tunnel in sky for player start */
+                {10, 3, 10, 12}, /* Vertical tunnel from sky down */
+                {55, 8, 70, 8},  /* Horizontal tunnel where enemy is */
             },
-        .tunnel_count = 4,
+        .tunnel_count = 3,
 
-        .enemy_speed = 6,
-        .ghost_threshold = 300,
+        .enemy_speed = 8, /* Slower for first round */
+        .ghost_threshold = 400,
     },
 
     /* ===== ROUND 2 ===== */

@@ -115,11 +115,12 @@ typedef struct {
  * Use player.base for generic entity operations.
  */
 typedef struct {
-    Entity base;        /* Base entity data */
-    PlayerState state;  /* Player-specific state */
-    int is_pumping;     /* 1 = currently firing pump */
-    int pump_length;    /* Current pump extension (0-4 cells) */
-    Direction pump_dir; /* Direction pump is facing */
+    Entity base;          /* Base entity data */
+    PlayerState state;    /* Player-specific state */
+    Direction facing_dir; /* Direction player is facing (for rendering) */
+    int is_pumping;       /* 1 = currently firing pump */
+    int pump_length;      /* Current pump extension (0-4 cells) */
+    Direction pump_dir;   /* Direction pump is facing */
 } Player;
 
 /**
@@ -230,16 +231,6 @@ typedef struct {
  * @brief Check if a row is a status bar.
  */
 #define IS_STATUS_ROW(row) ((row) == ROW_STATUS_TOP || (row) == ROW_STATUS_BOTTOM)
-
-/**
- * @brief Get color for a specific layer.
- */
-#define GET_LAYER_COLOR(layer)                                                                     \
-    (((layer) == 1)   ? COLOR_LAYER_1                                                              \
-     : ((layer) == 2) ? COLOR_LAYER_2                                                              \
-     : ((layer) == 3) ? COLOR_LAYER_3                                                              \
-     : ((layer) == 4) ? COLOR_LAYER_4                                                              \
-                      : COLOR_TUNNEL)
 
 /**
  * @brief Screen position calculation (byte offset in video memory).

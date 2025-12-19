@@ -72,6 +72,7 @@ USROBJ = \
 	game_ui.o \
 	game_logic.o \
 	game_data.o \
+	game.o \
 
 
 ################################################################################
@@ -162,6 +163,8 @@ game_ui.o: game_ui.c $(INCLUDEDIR)/game_ui.h $(INCLUDEDIR)/game_render.h $(INCLU
 
 game_data.o: game_data.c $(INCLUDEDIR)/game_data.h $(INCLUDEDIR)/game_config.h $(INCLUDEDIR)/game_logic.h $(INCLUDEDIR)/game_map.h $(INCLUDEDIR)/game_types.h
 
+game.o: game.c $(INCLUDEDIR)/game.h $(INCLUDEDIR)/game_data.h $(INCLUDEDIR)/game_input.h $(INCLUDEDIR)/game_logic.h $(INCLUDEDIR)/game_map.h $(INCLUDEDIR)/game_render.h $(INCLUDEDIR)/game_ui.h $(INCLUDEDIR)/libc.h
+
 
 system: system.o system.lds $(SYSOBJ)
 	$(LD) $(LDFLAGS) -T system.lds -o $@ $< $(SYSOBJ) $(LIBZEOS)
@@ -180,14 +183,14 @@ meminfo:
 	SYS_SIZE=$$(wc -c < system.out) && \
 	USER_SIZE=$$(wc -c < user.out) && \
 	DATA_END_ADDR=$$(objdump -h user 2>/dev/null | grep '\.bss' | awk '{printf "%d", ("0x" $$4) + ("0x" $$3)}') && \
-	CODE_START=$$(( $$L_USER_START + $$NUM_PAG_DATA * $$PAGE_SIZE )) && \
-	DATA_USED=$$(( $$DATA_END_ADDR - $$L_USER_START )) && \
+	CODE_START_ADDR=$$(objdump -h user 2>/dev/null | grep '\.text' | head -1 | awk '{printf "%d", "0x" $$4}') && \
+	CODE_END_ADDR=$$(objdump -h user 2>/dev/null | grep '\.text' | head -1 | awk '{printf "%d", ("0x" $$4) + ("0x" $$3)}') && \
+	DATA_USED=$$(( $$CODE_START_ADDR - $$L_USER_START )) && \
+	CODE_SIZE=$$(( $$CODE_END_ADDR - $$CODE_START_ADDR )) && \
 	KERNEL_PAGES_NEEDED=$$(( ($$SYS_SIZE + $$PAGE_SIZE - 1) / $$PAGE_SIZE )) && \
 	KERNEL_END=$$(( $$KERNEL_START + $$SYS_SIZE )) && \
 	DATA_PAGES_NEEDED=$$(( ($$DATA_USED + $$PAGE_SIZE - 1) / $$PAGE_SIZE )) && \
-	CODE_SIZE=$$(( $$USER_SIZE - $$NUM_PAG_DATA * $$PAGE_SIZE )) && \
 	CODE_PAGES_NEEDED=$$(( ($$CODE_SIZE + $$PAGE_SIZE - 1) / $$PAGE_SIZE )) && \
-	CODE_END=$$(( $$CODE_START + $$CODE_SIZE )) && \
 	echo "" && \
 	echo "╔════════════════════════════════════════════════════════════════════════╗" && \
 	echo "║                     MEMORY PAGE REQUIREMENTS                           ║" && \
@@ -200,10 +203,10 @@ meminfo:
 	echo "║    Pages needed: $$KERNEL_PAGES_NEEDED | Allocated: $$NUM_PAG_KERNEL (NUM_PAG_KERNEL)" && \
 	echo "╠════════════════════════════════════════════════════════════════════════╣" && \
 	echo "║  USER (user.out) - Total: $$USER_SIZE bytes" && \
-	echo "║  ┌─ DATA section (0x$$(printf '%x' $$L_USER_START) - 0x$$(printf '%x' $$CODE_START))" && \
+	echo "║  ┌─ DATA section (0x$$(printf '%x' $$L_USER_START) - 0x$$(printf '%x' $$CODE_START_ADDR))" && \
 	echo "║  │    Used: $$DATA_USED bytes" && \
 	echo "║  │    Pages needed: $$DATA_PAGES_NEEDED | Allocated: $$NUM_PAG_DATA (NUM_PAG_DATA)" && \
-	echo "║  └─ CODE section (0x$$(printf '%x' $$CODE_START) - 0x$$(printf '%x' $$CODE_END))" && \
+	echo "║  └─ CODE section (0x$$(printf '%x' $$CODE_START_ADDR) - 0x$$(printf '%x' $$CODE_END_ADDR))" && \
 	echo "║       Size: $$CODE_SIZE bytes" && \
 	echo "║       Pages needed: $$CODE_PAGES_NEEDED | Allocated: $$NUM_PAG_CODE (NUM_PAG_CODE)" && \
 	echo "╠════════════════════════════════════════════════════════════════════════╣" && \

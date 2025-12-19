@@ -2820,6 +2820,271 @@ void game_data_tests(void) {
 }
 
 /* ============================================================================
+ *                      M5.11 - INTEGRATION TESTS
+ * ============================================================================ */
+
+/**
+ * @brief Test game_init() function.
+ * Verifies that all subsystems are properly initialized.
+ */
+void test_game_init(int *passed) {
+    game_test_print_header(1, "game_init() - Full initialization");
+    *passed = 1;
+
+    /* Call game_init to initialize all systems */
+    game_init();
+
+    /* Verify initial game state */
+    GameState *state = game_get_state();
+    if (state == 0) {
+        prints("[ERROR] game_get_state() returned NULL\n");
+        *passed = 0;
+        game_test_print_result(*passed);
+        game_subtests_run++;
+        if (*passed) game_subtests_passed++;
+        return;
+    }
+
+    /* Check initial scene is MENU */
+    if (state->scene != SCENE_MENU) {
+        prints("[ERROR] Initial scene should be SCENE_MENU, got %d\n", state->scene);
+        *passed = 0;
+    }
+
+    /* Check initial values */
+    if (state->score != 0) {
+        prints("[ERROR] Initial score should be 0, got %d\n", state->score);
+        *passed = 0;
+    }
+    if (state->level != 1) {
+        prints("[ERROR] Initial level should be 1, got %d\n", state->level);
+        *passed = 0;
+    }
+    if (state->lives != INITIAL_LIVES) {
+        prints("[ERROR] Initial lives should be %d, got %d\n", INITIAL_LIVES, state->lives);
+        *passed = 0;
+    }
+
+    if (*passed) prints("[OK] game_init() initializes all systems correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+/**
+ * @brief Test scene state transitions.
+ * Verifies that the game can transition between scenes properly.
+ */
+void test_game_state_transitions(int *passed) {
+    game_test_print_header(2, "Scene state transitions");
+    *passed = 1;
+
+    GameState *state = game_get_state();
+    if (state == 0) {
+        prints("[ERROR] game_get_state() returned NULL\n");
+        *passed = 0;
+        game_test_print_result(*passed);
+        game_subtests_run++;
+        if (*passed) game_subtests_passed++;
+        return;
+    }
+
+    /* Test MENU -> ROUND_START transition */
+    state->scene = SCENE_MENU;
+    state->scene = SCENE_ROUND_START;
+    if (state->scene != SCENE_ROUND_START) {
+        prints("[ERROR] Failed to transition to SCENE_ROUND_START\n");
+        *passed = 0;
+    }
+
+    /* Test ROUND_START -> PLAYING transition */
+    state->scene = SCENE_PLAYING;
+    if (state->scene != SCENE_PLAYING) {
+        prints("[ERROR] Failed to transition to SCENE_PLAYING\n");
+        *passed = 0;
+    }
+
+    /* Test PLAYING -> PAUSED transition */
+    state->scene = SCENE_PAUSED;
+    if (state->scene != SCENE_PAUSED) {
+        prints("[ERROR] Failed to transition to SCENE_PAUSED\n");
+        *passed = 0;
+    }
+
+    /* Test PLAYING -> ROUND_CLEAR transition */
+    state->scene = SCENE_PLAYING;
+    state->scene = SCENE_ROUND_CLEAR;
+    if (state->scene != SCENE_ROUND_CLEAR) {
+        prints("[ERROR] Failed to transition to SCENE_ROUND_CLEAR\n");
+        *passed = 0;
+    }
+
+    /* Test PLAYING -> GAME_OVER transition */
+    state->scene = SCENE_PLAYING;
+    state->scene = SCENE_GAME_OVER;
+    if (state->scene != SCENE_GAME_OVER) {
+        prints("[ERROR] Failed to transition to SCENE_GAME_OVER\n");
+        *passed = 0;
+    }
+
+    /* Reset to MENU */
+    state->scene = SCENE_MENU;
+
+    if (*passed) prints("[OK] All scene transitions work correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+/**
+ * @brief Test game_new_level() function.
+ * Verifies that new levels are loaded correctly.
+ */
+void test_game_new_level(int *passed) {
+    game_test_print_header(3, "game_new_level() - Level loading");
+    *passed = 1;
+
+    GameState *state = game_get_state();
+    if (state == 0) {
+        prints("[ERROR] game_get_state() returned NULL\n");
+        *passed = 0;
+        game_test_print_result(*passed);
+        game_subtests_run++;
+        if (*passed) game_subtests_passed++;
+        return;
+    }
+
+    /* Set level to 1 */
+    state->level = 1;
+
+    /* Call game_new_level */
+    int result = game_new_level();
+    if (result < 0) {
+        prints("[ERROR] game_new_level() returned error for level 1\n");
+        *passed = 0;
+    }
+
+    /* Verify scene changed to ROUND_START */
+    if (state->scene != SCENE_ROUND_START) {
+        prints("[ERROR] Scene should be SCENE_ROUND_START after new level\n");
+        *passed = 0;
+    }
+
+    /* Verify enemies were set (level 1 has enemies) */
+    if (state->enemy_count <= 0) {
+        prints("[ERROR] enemy_count should be > 0 after new level\n");
+        *passed = 0;
+    }
+
+    if (*passed) prints("[OK] game_new_level() loads levels correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+/**
+ * @brief Test game_reset() function.
+ * Verifies that game state is properly reset.
+ */
+void test_game_reset(int *passed) {
+    game_test_print_header(4, "game_reset() - State reset");
+    *passed = 1;
+
+    GameState *state = game_get_state();
+    if (state == 0) {
+        prints("[ERROR] game_get_state() returned NULL\n");
+        *passed = 0;
+        game_test_print_result(*passed);
+        game_subtests_run++;
+        if (*passed) game_subtests_passed++;
+        return;
+    }
+
+    /* Modify state */
+    state->score = 1000;
+    state->level = 3;
+    state->lives = 1;
+    state->scene = SCENE_GAME_OVER;
+
+    /* Reset */
+    game_reset();
+
+    /* Verify reset values */
+    if (state->score != 0) {
+        prints("[ERROR] Score should be 0 after reset, got %d\n", state->score);
+        *passed = 0;
+    }
+    if (state->level != 1) {
+        prints("[ERROR] Level should be 1 after reset, got %d\n", state->level);
+        *passed = 0;
+    }
+    if (state->lives != INITIAL_LIVES) {
+        prints("[ERROR] Lives should be %d after reset, got %d\n", INITIAL_LIVES, state->lives);
+        *passed = 0;
+    }
+    if (state->scene != SCENE_MENU) {
+        prints("[ERROR] Scene should be SCENE_MENU after reset\n");
+        *passed = 0;
+    }
+
+    if (*passed) prints("[OK] game_reset() resets state correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+/**
+ * @brief Test game_cleanup() function.
+ * Verifies that resources are properly cleaned up.
+ */
+void test_game_cleanup(int *passed) {
+    game_test_print_header(5, "game_cleanup() - Resource cleanup");
+    *passed = 1;
+
+    /* Call cleanup */
+    game_cleanup();
+
+    /* Verify game is no longer running */
+    if (game_is_running()) {
+        prints("[ERROR] Game should not be running after cleanup\n");
+        *passed = 0;
+    }
+
+    /* Reinitialize for subsequent tests */
+    game_init();
+
+    if (*passed) prints("[OK] game_cleanup() releases resources correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+/**
+ * @brief Run all integration tests (M5.11).
+ */
+void game_integration_tests(void) {
+    int saved_run = game_subtests_run;
+    int saved_passed = game_subtests_passed;
+    game_subtests_run = 0;
+    game_subtests_passed = 0;
+
+    prints("[PID %d] [TID %d] Starting integration tests...\n", getpid(), gettid());
+
+    int result;
+    test_game_init(&result);
+    test_game_state_transitions(&result);
+    test_game_new_level(&result);
+    test_game_reset(&result);
+    test_game_cleanup(&result);
+
+    /* Print summary */
+    game_test_print_suite_summary("INTEGRATION TESTS (M5.11)", game_subtests_passed,
+                                  game_subtests_run);
+    game_subtests_run = saved_run + game_subtests_run;
+    game_subtests_passed = saved_passed + game_subtests_passed;
+}
+
+/* ============================================================================
  *                          MAIN ENTRY POINT
  * ============================================================================ */
 
@@ -2871,6 +3136,11 @@ void execute_game_tests(void) {
 #if RUN_DATA_TESTS
     game_test_print_suite_header("GAME DATA TESTS (M5.10)");
     game_data_tests();
+#endif
+
+#if RUN_INTEGRATION_TESTS
+    game_test_print_suite_header("INTEGRATION TESTS (M5.11)");
+    game_integration_tests();
 #endif
 
     total_run = game_subtests_run;

@@ -15,8 +15,8 @@
 // clang-format off
 #define ZEOS_TESTS      0   /**< Run ZeOS base syscall tests (fork, exit, write...) */
 #define PROJECT_TESTS   0   /**< Run project milestone tests (threads, keyboard...) */
-#define GAME_TESTS      1   /**< Run game subsystem tests (render buffer, entity system, input system...)*/
-#define EXECUTE_GAME    0   /**< Execute the actual game (Dig Dug) */
+#define GAME_TESTS      0   /**< Run game subsystem tests (render buffer, entity system, input system...)*/
+#define EXECUTE_GAME    1   /**< Execute the actual game (Dig Dug) */
 // clang-format on
 
 __attribute__((__section__(".text.main"))) int main(void) {
