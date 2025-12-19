@@ -88,11 +88,19 @@ Direction input_get_direction(void);
 
 /**
  * @brief Check if action button was pressed and clear the flag.
- * @return 1 if action button (space) was pressed, 0 otherwise
+ * @return 1 if action button (enter) was pressed, 0 otherwise
  *
  * This function "consumes" the action input.
  */
 int input_is_action_pressed(void);
+
+/**
+ * @brief Check if attack button was pressed and clear the flag.
+ * @return 1 if attack button (space) was pressed, 0 otherwise
+ *
+ * This function "consumes" the attack input.
+ */
+int input_is_attack_pressed(void);
 
 /**
  * @brief Check if pause button was pressed and clear the flag.

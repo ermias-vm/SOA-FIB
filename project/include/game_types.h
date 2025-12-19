@@ -56,11 +56,12 @@ typedef enum {
  * @brief Player states.
  */
 typedef enum {
-    PLAYER_IDLE,    /* Not moving */
-    PLAYER_MOVING,  /* Walking/moving */
-    PLAYER_DIGGING, /* Excavating dirt */
-    PLAYER_PUMPING, /* Using pump to inflate enemy */
-    PLAYER_DEAD     /* Dead (hit by enemy/fire) */
+    PLAYER_IDLE,      /* Not moving */
+    PLAYER_MOVING,    /* Walking/moving */
+    PLAYER_DIGGING,   /* Excavating dirt */
+    PLAYER_PUMPING,   /* Using pump to inflate enemy */
+    PLAYER_ATTACKING, /* Attacking with harpoon */
+    PLAYER_DEAD       /* Dead (hit by enemy/fire) */
 } PlayerState;
 
 /**
@@ -70,6 +71,7 @@ typedef enum {
     ENEMY_NORMAL,    /* Moving normally in tunnels */
     ENEMY_GHOST,     /* Passing through dirt (ghost mode) */
     ENEMY_INFLATING, /* Being inflated by pump */
+    ENEMY_PARALYZED, /* Paralyzed by player attack (will die after 2 sec) */
     ENEMY_DEAD       /* Eliminated */
 } EnemyState;
 
@@ -121,6 +123,8 @@ typedef struct {
     int is_pumping;       /* 1 = currently firing pump */
     int pump_length;      /* Current pump extension (0-4 cells) */
     Direction pump_dir;   /* Direction pump is facing */
+    int is_attacking;     /* 1 = currently attacking */
+    int attack_timer;     /* Frames remaining for attack display */
 } Player;
 
 /**
@@ -129,13 +133,14 @@ typedef struct {
  * fire_* fields only used when base.type == ENTITY_FYGAR.
  */
 typedef struct {
-    Entity base;       /* Base entity data */
-    EnemyState state;  /* Enemy-specific state */
-    int inflate_level; /* Inflation level 0-4 (4 = explodes) */
-    int ghost_timer;   /* Ticks until ghost mode activates */
-    int fire_cooldown; /* Fygar: ticks until can fire again */
-    int fire_active;   /* Fygar: 1 = currently breathing fire */
-    int fire_duration; /* Fygar: remaining fire ticks */
+    Entity base;         /* Base entity data */
+    EnemyState state;    /* Enemy-specific state */
+    int inflate_level;   /* Inflation level 0-4 (4 = explodes) */
+    int ghost_timer;     /* Ticks until ghost mode activates */
+    int fire_cooldown;   /* Fygar: ticks until can fire again */
+    int fire_active;     /* Fygar: 1 = currently breathing fire */
+    int fire_duration;   /* Fygar: remaining fire ticks */
+    int paralyzed_timer; /* Timer for paralyzed state (dies when reaches 0) */
 } Enemy;
 
 /**
@@ -156,7 +161,8 @@ typedef struct {
 typedef struct {
     Direction direction; /* Current movement direction (consumed each frame) */
     Direction held_dir;  /* Direction currently being held (for continuous movement) */
-    int action_pressed;  /* Action button pressed (space/enter) */
+    int action_pressed;  /* Action button pressed (enter) */
+    int attack_pressed;  /* Attack button pressed (space) */
     int pause_pressed;   /* Pause button pressed (P/ESC) */
     int quit_pressed;    /* Quit button pressed (Q) */
     int any_key_pressed; /* Any key pressed flag */

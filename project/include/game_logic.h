@@ -147,6 +147,20 @@ void logic_player_move(Player *player, Direction dir);
 void logic_player_pump(Player *player, GameLogicState *state);
 
 /**
+ * @brief Perform player attack.
+ *
+ * Attacks in the direction the player is facing.
+ * Vertical (up/down): 2 blocks with '|'
+ * Horizontal (left/right): 3 blocks with '-'
+ * Enemies hit become paralyzed and die after 2 seconds.
+ *
+ * @param player Pointer to Player structure
+ * @param state Pointer to GameLogicState structure
+ * @return 1 if attack was performed, 0 otherwise
+ */
+int logic_player_attack(Player *player, GameLogicState *state);
+
+/**
  * @brief Handle player death.
  * @param state Pointer to GameLogicState structure
  */

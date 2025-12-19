@@ -96,11 +96,15 @@ void ui_draw_fps(int fps) {
 }
 
 void ui_draw_lives(int lives) {
+    Color label_color = render_make_color(COLOR_WHITE, COLOR_BLACK);
     Color heart_color = render_make_color(COLOR_LIGHT_RED, COLOR_BLACK);
+
+    /* Draw "LIVES: " label */
+    render_put_string_colored(HUD_LIVES_X, STATUS_BOTTOM_ROW, "LIVES: ", label_color);
 
     /* Draw hearts for each life (max 5) */
     for (int i = 0; i < lives && i < 5; i++) {
-        render_set_cell(HUD_LIVES_X + i, STATUS_BOTTOM_ROW, CHAR_HEART, heart_color);
+        render_set_cell(HUD_LIVES_X + 7 + i, STATUS_BOTTOM_ROW, CHAR_HEART, heart_color);
     }
 }
 
@@ -136,18 +140,18 @@ void ui_draw_score(int score) {
 void ui_draw_round(int round) {
     Color round_color = render_make_color(COLOR_CYAN, COLOR_BLACK);
 
-    char round_text[10] = "ROUND ";
+    /* Build "ROUND:  X" string with two spaces between : and number */
+    char round_text[12] = "ROUND:  ";
     char round_digits[3];
     ui_number_to_string(round, round_digits, 2, ' ');
 
-    /* Concatenate "ROUND " + number */
-    int i = 6;
+    /* Append the number (skip leading spaces for single digit) */
+    int i = 8; /* After "ROUND:  " */
     int j = 0;
-    while (round_digits[j] && i < 9) {
-        if (round_digits[j] != ' ' || i > 6) { /* Skip leading spaces except first */
-            round_text[i++] = round_digits[j];
-        }
-        j++;
+    /* Skip leading space for single digit numbers */
+    if (round_digits[0] == ' ') j = 1;
+    while (round_digits[j] && i < 11) {
+        round_text[i++] = round_digits[j++];
     }
     round_text[i] = '\0';
 

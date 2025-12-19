@@ -99,6 +99,10 @@ void input_keyboard_handler(char key, int pressed) {
 
     switch (key) {
     case KEY_SPACE:
+        g_input.attack_pressed = 1;
+        g_input.action_pressed = 1; /* Also trigger action for menus */
+        break;
+
     case KEY_ENTER:
         g_input.action_pressed = 1;
         break;
@@ -131,6 +135,12 @@ int input_is_action_pressed(void) {
     return pressed;
 }
 
+int input_is_attack_pressed(void) {
+    int pressed = g_input.attack_pressed;
+    g_input.attack_pressed = 0; /* Consume the input */
+    return pressed;
+}
+
 int input_is_pause_pressed(void) {
     int pressed = g_input.pause_pressed;
     g_input.pause_pressed = 0; /* Consume the input */
@@ -159,6 +169,7 @@ void input_clear(void) {
     g_input.direction = DIR_NONE;
     g_input.held_dir = DIR_NONE;
     g_input.action_pressed = 0;
+    g_input.attack_pressed = 0;
     g_input.pause_pressed = 0;
     g_input.any_key_pressed = 0;
     g_input.move_processed = 0;
@@ -173,6 +184,7 @@ void input_reset(void) {
     g_input.direction = DIR_NONE;
     g_input.held_dir = DIR_NONE;
     g_input.action_pressed = 0;
+    g_input.attack_pressed = 0;
     g_input.pause_pressed = 0;
     g_input.quit_pressed = 0;
     g_input.last_key = 0;

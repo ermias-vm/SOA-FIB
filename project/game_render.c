@@ -387,10 +387,18 @@ void render_map(void) {
                 break;
 
             case TILE_WALL:
-                /* Wall - special character */
-                display_char = '#';
-                cell_color.fg = COLOR_DARK_GRAY;
-                cell_color.bg = COLOR_BLACK;
+                /* Wall - different style for sky vs ground */
+                if (y >= ROW_SKY_START && y <= ROW_SKY_END) {
+                    /* Sky layer walls - cyan border */
+                    display_char = '|';
+                    cell_color.fg = COLOR_CYAN;
+                    cell_color.bg = COLOR_BLACK;
+                } else {
+                    /* Ground walls - darker */
+                    display_char = '#';
+                    cell_color.fg = COLOR_DARK_GRAY;
+                    cell_color.bg = COLOR_BLACK;
+                }
                 break;
 
             case TILE_GEM:
@@ -448,16 +456,33 @@ void render_player(Player *player) {
     player_color.fg = COLOR_YELLOW; /* Player is always yellow */
     player_color.bg = COLOR_BLACK;  /* Black background */
 
-    char display_char = CHAR_PLAYER;
+    /* Select character based on facing direction */
+    char display_char;
+    switch (player->facing_dir) {
+    case DIR_UP:
+        display_char = CHAR_PLAYER_UP;
+        break;
+    case DIR_DOWN:
+        display_char = CHAR_PLAYER_DOWN;
+        break;
+    case DIR_LEFT:
+        display_char = CHAR_PLAYER_LEFT;
+        break;
+    case DIR_RIGHT:
+    default:
+        display_char = CHAR_PLAYER_RIGHT;
+        break;
+    }
 
     /* Modify appearance based on state */
     switch (player->state) {
     case PLAYER_DIGGING:
-        display_char = CHAR_PLAYER;
+        /* Keep directional char */
         break;
 
     case PLAYER_PUMPING:
-        /* Indicate pumping with brighter color */
+    case PLAYER_ATTACKING:
+        /* Indicate attacking with brighter color */
         player_color.fg = COLOR_WHITE;
         break;
 
@@ -466,6 +491,69 @@ void render_player(Player *player) {
     }
 
     render_entity(&player->base, display_char, player_color);
+
+    /* Render attack if player is attacking */
+    if (player->is_attacking && player->attack_timer > 0) {
+        render_player_attack(player);
+    }
+}
+
+void render_player_attack(Player *player) {
+    if (!player) return;
+
+    Color attack_color;
+    attack_color.fg = COLOR_WHITE;
+    attack_color.bg = COLOR_BLACK;
+
+    int px = player->base.pos.x;
+    int py = player->base.pos.y;
+    int range;
+    int dx = 0, dy = 0;
+    char attack_char;
+
+    /* Determine attack direction and range */
+    switch (player->facing_dir) {
+    case DIR_UP:
+        range = ATTACK_RANGE_V;
+        dy = -1;
+        attack_char = CHAR_ATTACK_V;
+        break;
+    case DIR_DOWN:
+        range = ATTACK_RANGE_V;
+        dy = 1;
+        attack_char = CHAR_ATTACK_V;
+        break;
+    case DIR_LEFT:
+        range = ATTACK_RANGE_H;
+        dx = -1;
+        attack_char = CHAR_ATTACK_H;
+        break;
+    case DIR_RIGHT:
+        range = ATTACK_RANGE_H;
+        dx = 1;
+        attack_char = CHAR_ATTACK_H;
+        break;
+    default:
+        return;
+    }
+
+    /* Render attack characters in range */
+    for (int i = 1; i <= range; i++) {
+        int ax = px + dx * i;
+        int ay = py + dy * i;
+
+        /* Check bounds */
+        if (ax < 0 || ax >= SCREEN_WIDTH || ay < 0 || ay >= SCREEN_HEIGHT) {
+            break;
+        }
+
+        /* Check if solid block stops attack */
+        if (map_is_solid(ax, ay)) {
+            break;
+        }
+
+        render_set_cell(ax, ay, attack_char, attack_color);
+    }
 }
 
 void render_enemies(Enemy *enemies, int count) {
@@ -518,6 +606,15 @@ void render_enemies(Enemy *enemies, int count) {
         case ENEMY_GHOST:
             /* Semi-transparent (use darker color) */
             enemy_color.fg = COLOR_DARK_GRAY;
+            break;
+
+        case ENEMY_PARALYZED:
+            /* Paralyzed enemies blink (alternate color) */
+            if (enemy->paralyzed_timer % 10 < 5) {
+                enemy_color.fg = COLOR_LIGHT_CYAN;
+            } else {
+                enemy_color.fg = COLOR_BLUE;
+            }
             break;
 
         default:

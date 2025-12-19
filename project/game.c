@@ -277,6 +277,7 @@ static void process_playing_state(void) {
     /* Get player input direction */
     Direction dir = input_get_direction();
     int pumping = input_is_action_pressed();
+    int attacking = input_is_attack_pressed();
 
     /* Debug print for input */
     debug_print_input(dir, g_logic_state.player.base.pos.x, g_logic_state.player.base.pos.y);
@@ -286,6 +287,11 @@ static void process_playing_state(void) {
         g_logic_state.player.base.dir = dir;
     }
     g_logic_state.player.is_pumping = pumping;
+
+    /* Trigger attack if space was pressed */
+    if (attacking) {
+        logic_player_attack(&g_logic_state.player, &g_logic_state);
+    }
 
     /* Run game logic update */
     logic_update(&g_logic_state);

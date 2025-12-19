@@ -132,16 +132,30 @@
  *                           GAME CHARACTERS (ASCII)
  * ============================================================================ */
 
-#define CHAR_PLAYER '@' /* Dig Dug character */
-#define CHAR_POOKA 'O'  /* Pooka enemy (round) */
-#define CHAR_FYGAR 'F'  /* Fygar enemy (dragon) */
-#define CHAR_ROCK 'R'   /* Rock obstacle */
-#define CHAR_DIRT '#'   /* Solid dirt block */
-#define CHAR_EMPTY ' '  /* Empty tunnel */
-#define CHAR_FIRE '*'   /* Fygar fire */
-#define CHAR_PUMP '-'   /* Pump attack */
-#define CHAR_LIFE 'V'   /* Life symbol (V for vida/life) */
-#define CHAR_SKY ' '    /* Sky (empty) */
+/* Player directional characters */
+#define CHAR_PLAYER_UP 'P'    /* Player facing up */
+#define CHAR_PLAYER_DOWN 'P'  /* Player facing down */
+#define CHAR_PLAYER_LEFT 'P'  /* Player facing left */
+#define CHAR_PLAYER_RIGHT 'P' /* Player facing right */
+#define CHAR_PLAYER 'P'       /* Default player (facing right) */
+
+/* Attack characters */
+#define CHAR_ATTACK_V '|' /* Vertical attack */
+#define CHAR_ATTACK_H '-' /* Horizontal attack */
+
+/* Attack range */
+#define ATTACK_RANGE_V 2 /* Vertical attack range (2 blocks) */
+#define ATTACK_RANGE_H 3 /* Horizontal attack range (3 blocks) */
+
+#define CHAR_POOKA 'O' /* Pooka enemy (round) */
+#define CHAR_FYGAR 'F' /* Fygar enemy (dragon) */
+#define CHAR_ROCK 'R'  /* Rock obstacle */
+#define CHAR_DIRT '#'  /* Solid dirt block */
+#define CHAR_EMPTY ' ' /* Empty tunnel */
+#define CHAR_FIRE '*'  /* Fygar fire */
+#define CHAR_PUMP '-'  /* Pump attack */
+#define CHAR_LIFE 'V'  /* Life symbol (V for vida/life) */
+#define CHAR_SKY ' '   /* Sky (empty) */
 
 /* Inflating enemy characters (stages) */
 #define CHAR_INFLATE_1 'o' /* Slightly inflated */
