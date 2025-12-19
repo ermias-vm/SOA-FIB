@@ -1,6 +1,6 @@
 /**
  * @file game_test.h
- * @brief Test suite for game subsystems (M5.4-M5.8).
+ * @brief Test suite for game subsystems (M5.4-M5.10).
  *
  * Milestones:
  *   M5.4 - Entity System (player, enemies, movement)
@@ -8,12 +8,15 @@
  *   M5.6 - Render Buffer (double buffering, screen output)
  *   M5.7 - UI System (HUD, menus, overlays)
  *   M5.8 - Game Logic (player logic, enemy AI, collisions, scoring)
+ *   M5.9 - Game Render (game rendering functions)
+ *   M5.10 - Game Data (level definitions, spawn, tunnels)
  */
 
 #ifndef __GAME_TEST_H__
 #define __GAME_TEST_H__
 
 #include <game_config.h>
+#include <game_data.h>
 #include <game_entities.h>
 #include <game_input.h>
 #include <game_logic.h>
@@ -34,6 +37,7 @@
 #define RUN_UI_TESTS        1   /**< M5.7: UI system tests */
 #define RUN_LOGIC_TESTS     1   /**< M5.8: Game logic tests */
 #define RUN_RENDER_GAME_TESTS 1 /**< M5.9: Game rendering tests */
+#define RUN_DATA_TESTS      1   /**< M5.10: Game data/level tests */
 // clang-format on
 
 /* ============================================================================
@@ -150,6 +154,19 @@ void test_render_explosion_effect(int *passed);
 void test_render_fire_effect(int *passed);
 void test_render_game_complete(int *passed);
 void game_render_tests(void);
+
+/* ============================================================================
+ *                      M5.10 - GAME DATA TEST FUNCTIONS
+ * ============================================================================ */
+
+void test_data_get_level(int *passed);
+void test_data_get_num_levels(int *passed);
+void test_data_level_validity(int *passed);
+void test_data_spawn_enemies(int *passed);
+void test_data_spawn_rocks(int *passed);
+void test_data_create_tunnels(int *passed);
+void test_data_load_level(int *passed);
+void game_data_tests(void);
 
 /* ============================================================================
  *                          MAIN ENTRY POINT
