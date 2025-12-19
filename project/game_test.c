@@ -9,9 +9,11 @@
  * - M5.7: UI System (HUD, menus, overlays)
  * - M5.8: Game Logic (player logic, enemy AI, collisions, scoring)
  * - M5.9: Game Render (complete game rendering)
+ * - M5.10: Game Data (level definitions, spawn, tunnels)
  */
 
 #include <game.h>
+#include <game_data.h>
 #include <game_map.h>
 #include <game_test.h>
 #include <game_ui.h>
@@ -2520,6 +2522,304 @@ void game_render_tests(void) {
 }
 
 /* ============================================================================
+ *                      M5.10 - GAME DATA TESTS
+ * ============================================================================ */
+
+/**
+ * Test 1: data_get_level function
+ */
+void test_data_get_level(int *passed) {
+    int result = 1;
+    game_test_print_header(1, "data_get_level");
+
+    /* Test valid levels */
+    const LevelData *level1 = data_get_level(1);
+    if (!level1 || level1->round_number != 1) {
+        result = 0;
+    }
+
+    const LevelData *level5 = data_get_level(5);
+    if (!level5 || level5->round_number != 5) {
+        result = 0;
+    }
+
+    /* Test invalid level (should return first level) */
+    const LevelData *level_invalid = data_get_level(0);
+    if (!level_invalid) {
+        result = 0;
+    }
+
+    /* Test beyond defined levels (should return last level) */
+    const LevelData *level_beyond = data_get_level(10);
+    if (!level_beyond) {
+        result = 0;
+    }
+
+    *passed = result;
+    game_test_print_result(result);
+    game_subtests_run++;
+    if (result) game_subtests_passed++;
+}
+
+/**
+ * Test 2: data_get_num_levels function
+ */
+void test_data_get_num_levels(int *passed) {
+    int result = 1;
+    game_test_print_header(2, "data_get_num_levels");
+
+    int num_levels = data_get_num_levels();
+    if (num_levels < 1 || num_levels > MAX_LEVELS) {
+        result = 0;
+    }
+
+    *passed = result;
+    game_test_print_result(result);
+    game_subtests_run++;
+    if (result) game_subtests_passed++;
+}
+
+/**
+ * Test 3: Level data validity
+ */
+void test_data_level_validity(int *passed) {
+    int result = 1;
+    game_test_print_header(3, "Level data validity");
+
+    int num_levels = data_get_num_levels();
+
+    for (int i = 1; i <= num_levels; i++) {
+        const LevelData *level = data_get_level(i);
+        if (!level) {
+            result = 0;
+            break;
+        }
+
+        /* Check enemy count within bounds */
+        if (level->enemy_count < 0 || level->enemy_count > MAX_ENEMIES) {
+            result = 0;
+            break;
+        }
+
+        /* Check rock count within bounds */
+        if (level->rock_count < 0 || level->rock_count > MAX_ROCKS) {
+            result = 0;
+            break;
+        }
+
+        /* Check tunnel count within bounds */
+        if (level->tunnel_count < 0 || level->tunnel_count > MAX_TUNNELS) {
+            result = 0;
+            break;
+        }
+
+        /* Check player start position within game area */
+        if (level->player_start_x < 0 || level->player_start_x >= SCREEN_WIDTH ||
+            level->player_start_y < ROW_SKY_START || level->player_start_y > ROW_GROUND_END) {
+            result = 0;
+            break;
+        }
+    }
+
+    *passed = result;
+    game_test_print_result(result);
+    game_subtests_run++;
+    if (result) game_subtests_passed++;
+}
+
+/**
+ * Test 4: data_spawn_enemies function
+ */
+void test_data_spawn_enemies(int *passed) {
+    int result = 1;
+    game_test_print_header(4, "data_spawn_enemies");
+
+    GameLogicState state;
+
+    /* Initialize state */
+    for (int i = 0; i < MAX_ENEMIES; i++) {
+        state.enemies[i].base.active = 0;
+    }
+
+    const LevelData *level = data_get_level(1);
+    if (!level) {
+        result = 0;
+    } else {
+        data_spawn_enemies(&state, level);
+
+        /* Check enemies were spawned */
+        int active_count = 0;
+        for (int i = 0; i < MAX_ENEMIES; i++) {
+            if (state.enemies[i].base.active) {
+                active_count++;
+            }
+        }
+
+        if (active_count != level->enemy_count) {
+            result = 0;
+        }
+    }
+
+    *passed = result;
+    game_test_print_result(result);
+    game_subtests_run++;
+    if (result) game_subtests_passed++;
+}
+
+/**
+ * Test 5: data_spawn_rocks function
+ */
+void test_data_spawn_rocks(int *passed) {
+    int result = 1;
+    game_test_print_header(5, "data_spawn_rocks");
+
+    GameLogicState state;
+
+    /* Initialize state */
+    for (int i = 0; i < MAX_ROCKS; i++) {
+        state.rocks[i].base.active = 0;
+    }
+
+    const LevelData *level = data_get_level(1);
+    if (!level) {
+        result = 0;
+    } else {
+        data_spawn_rocks(&state, level);
+
+        /* Check rocks were spawned */
+        int active_count = 0;
+        for (int i = 0; i < MAX_ROCKS; i++) {
+            if (state.rocks[i].base.active) {
+                active_count++;
+            }
+        }
+
+        if (active_count != level->rock_count) {
+            result = 0;
+        }
+    }
+
+    *passed = result;
+    game_test_print_result(result);
+    game_subtests_run++;
+    if (result) game_subtests_passed++;
+}
+
+/**
+ * Test 6: data_create_tunnels function
+ */
+void test_data_create_tunnels(int *passed) {
+    int result = 1;
+    game_test_print_header(6, "data_create_tunnels");
+
+    /* Initialize map */
+    map_init(1);
+
+    const LevelData *level = data_get_level(1);
+    if (!level) {
+        result = 0;
+    } else {
+        /* Create tunnels */
+        data_create_tunnels(level);
+
+        /* Check first tunnel's endpoints are walkable (dug) */
+        if (level->tunnel_count > 0) {
+            const TunnelDef *tunnel = &level->tunnels[0];
+            if (!map_is_walkable(tunnel->x1, tunnel->y1) ||
+                !map_is_walkable(tunnel->x2, tunnel->y2)) {
+                result = 0;
+            }
+        }
+    }
+
+    *passed = result;
+    game_test_print_result(result);
+    game_subtests_run++;
+    if (result) game_subtests_passed++;
+}
+
+/**
+ * Test 7: data_load_level function
+ */
+void test_data_load_level(int *passed) {
+    int result = 1;
+    game_test_print_header(7, "data_load_level");
+
+    GameLogicState state;
+
+    /* Clear state */
+    for (int i = 0; i < MAX_ENEMIES; i++) {
+        state.enemies[i].base.active = 0;
+    }
+    for (int i = 0; i < MAX_ROCKS; i++) {
+        state.rocks[i].base.active = 0;
+    }
+
+    /* Load level 1 */
+    data_load_level(1, &state);
+
+    /* Verify state was populated */
+    const LevelData *level = data_get_level(1);
+    if (!level) {
+        result = 0;
+    } else {
+        /* Check player position */
+        if (state.player.base.pos.x != level->player_start_x ||
+            state.player.base.pos.y != level->player_start_y) {
+            result = 0;
+        }
+
+        /* Check enemy count */
+        if (state.enemy_count != level->enemy_count) {
+            result = 0;
+        }
+
+        /* Check rock count */
+        if (state.rock_count != level->rock_count) {
+            result = 0;
+        }
+
+        /* Check round */
+        if (state.round != 1) {
+            result = 0;
+        }
+    }
+
+    *passed = result;
+    game_test_print_result(result);
+    game_subtests_run++;
+    if (result) game_subtests_passed++;
+}
+
+/****************************************/
+/**     Game Data Entry Point          **/
+/****************************************/
+
+void game_data_tests(void) {
+    int saved_run = game_subtests_run;
+    int saved_passed = game_subtests_passed;
+    game_subtests_run = 0;
+    game_subtests_passed = 0;
+
+    prints("[PID %d] [TID %d] Starting game data tests...\n", getpid(), gettid());
+
+    int result;
+    test_data_get_level(&result);
+    test_data_get_num_levels(&result);
+    test_data_level_validity(&result);
+    test_data_spawn_enemies(&result);
+    test_data_spawn_rocks(&result);
+    test_data_create_tunnels(&result);
+    test_data_load_level(&result);
+
+    /* Print summary */
+    game_test_print_suite_summary("GAME DATA TESTS (M5.10)", game_subtests_passed,
+                                  game_subtests_run);
+    game_subtests_run = saved_run + game_subtests_run;
+    game_subtests_passed = saved_passed + game_subtests_passed;
+}
+
+/* ============================================================================
  *                          MAIN ENTRY POINT
  * ============================================================================ */
 
@@ -2566,6 +2866,11 @@ void execute_game_tests(void) {
 #if RUN_RENDER_GAME_TESTS
     game_test_print_suite_header("GAME RENDER TESTS (M5.9)");
     game_render_tests();
+#endif
+
+#if RUN_DATA_TESTS
+    game_test_print_suite_header("GAME DATA TESTS (M5.10)");
+    game_data_tests();
 #endif
 
     total_run = game_subtests_run;
