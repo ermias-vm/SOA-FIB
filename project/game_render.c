@@ -153,36 +153,29 @@ void render_set_default_color(Color color) {
 
 Color render_get_layer_color(int y) {
     Color color;
-    color.fg = COLOR_WHITE;
+    color.bg = COLOR_BLACK; /* Background always black */
 
     if (y == STATUS_TOP_ROW || y == STATUS_BOTTOM_ROW) {
         /* Status bars: white text on black */
         color.fg = COLOR_WHITE;
-        color.bg = COLOR_STATUS_BG;
     } else if (y >= SKY_START_ROW && y <= SKY_END_ROW) {
-        /* Sky area: light blue background */
-        color.fg = COLOR_WHITE;
-        color.bg = COLOR_SKY_BG;
+        /* Sky area: light cyan for walls/dirt */
+        color.fg = COLOR_CYAN;
     } else if (y >= LAYER1_START && y <= LAYER1_END) {
-        /* Layer 1: brown background (200 pts) */
-        color.fg = COLOR_WHITE;
-        color.bg = COLOR_LAYER1_BG;
+        /* Layer 1: brown walls (200 pts) */
+        color.fg = COLOR_BROWN;
     } else if (y >= LAYER2_START && y <= LAYER2_END) {
-        /* Layer 2: red background (300 pts) */
-        color.fg = COLOR_WHITE;
-        color.bg = COLOR_LAYER2_BG;
+        /* Layer 2: red walls (300 pts) */
+        color.fg = COLOR_RED;
     } else if (y >= LAYER3_START && y <= LAYER3_END) {
-        /* Layer 3: magenta background (400 pts) */
-        color.fg = COLOR_WHITE;
-        color.bg = COLOR_LAYER3_BG;
+        /* Layer 3: magenta walls (400 pts) */
+        color.fg = COLOR_MAGENTA;
     } else if (y >= LAYER4_START && y <= LAYER4_END) {
-        /* Layer 4: dark gray background (500 pts) */
-        color.fg = COLOR_WHITE;
-        color.bg = COLOR_LAYER4_BG;
+        /* Layer 4: dark gray walls (500 pts) */
+        color.fg = COLOR_DARK_GRAY;
     } else {
-        /* Default: black background */
+        /* Default: white */
         color.fg = COLOR_WHITE;
-        color.bg = COLOR_BLACK;
     }
 
     return color;
@@ -363,44 +356,53 @@ void render_map(void) {
             continue;
         }
 
-        Color layer_color = render_get_layer_color(y);
+        Color wall_color = render_get_layer_color(y);
+        Color empty_color;
+        empty_color.fg = COLOR_WHITE;
+        empty_color.bg = COLOR_BLACK;
 
         for (int x = 0; x < SCREEN_WIDTH; x++) {
             TileType tile = map_get_tile(x, y);
             char display_char;
-            Color cell_color = layer_color;
+            Color cell_color;
 
             switch (tile) {
             case TILE_DIRT:
-                /* Solid dirt - use block character */
+                /* Solid dirt - colored walls */
                 display_char = CHAR_DIRT;
+                cell_color = wall_color;
                 break;
 
             case TILE_EMPTY:
-                /* Tunnel - empty space with layer background color */
+                /* Tunnel - empty space, black background */
                 display_char = ' ';
+                cell_color = empty_color;
                 break;
 
             case TILE_SKY:
-                /* Sky - space with light blue background */
+                /* Sky - space with cyan foreground (if any char) */
                 display_char = ' ';
-                cell_color.bg = COLOR_SKY_BG;
+                cell_color.fg = COLOR_CYAN;
+                cell_color.bg = COLOR_BLACK;
                 break;
 
             case TILE_WALL:
                 /* Wall - special character */
                 display_char = '#';
                 cell_color.fg = COLOR_DARK_GRAY;
+                cell_color.bg = COLOR_BLACK;
                 break;
 
             case TILE_GEM:
                 /* Collectible gem */
                 display_char = '*';
                 cell_color.fg = COLOR_YELLOW;
+                cell_color.bg = COLOR_BLACK;
                 break;
 
             default:
                 display_char = ' ';
+                cell_color = empty_color;
                 break;
             }
 
@@ -443,8 +445,8 @@ void render_player(Player *player) {
     }
 
     Color player_color;
-    player_color.fg = COLOR_WHITE;
-    player_color.bg = render_get_layer_color(player->base.pos.y).bg;
+    player_color.fg = COLOR_YELLOW; /* Player is always yellow */
+    player_color.bg = COLOR_BLACK;  /* Black background */
 
     char display_char = CHAR_PLAYER;
 
@@ -455,8 +457,8 @@ void render_player(Player *player) {
         break;
 
     case PLAYER_PUMPING:
-        /* Indicate pumping with different color */
-        player_color.fg = COLOR_YELLOW;
+        /* Indicate pumping with brighter color */
+        player_color.fg = COLOR_WHITE;
         break;
 
     default:
@@ -477,7 +479,7 @@ void render_enemies(Enemy *enemies, int count) {
         }
 
         Color enemy_color;
-        enemy_color.bg = render_get_layer_color(enemy->base.pos.y).bg;
+        enemy_color.bg = COLOR_BLACK; /* Black background */
 
         char display_char;
 

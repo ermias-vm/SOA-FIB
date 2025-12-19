@@ -83,10 +83,10 @@ void input_keyboard_handler(char key, int pressed) {
         break;
 
     case KEY_P:
-    case KEY_ESC:
         g_input.pause_pressed = 1;
         break;
 
+    case KEY_ESC:
     case KEY_Q:
         g_input.quit_pressed = 1;
         break;

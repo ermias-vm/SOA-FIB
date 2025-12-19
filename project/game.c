@@ -6,6 +6,7 @@
  * Contains the main game loop, thread functions, and scene management.
  */
 
+#include <debug.h>
 #include <game.h>
 #include <game_data.h>
 #include <game_input.h>
@@ -14,6 +15,7 @@
 #include <game_render.h>
 #include <game_ui.h>
 #include <libc.h>
+#include <times.h>
 
 /* ============================================================================
  *                          GLOBAL VARIABLES
@@ -28,15 +30,13 @@ volatile int g_running = 0;
 static GameLogicState g_logic_state;
 
 /* ============================================================================
- *                            TIMING CONSTANTS
+ *                            GAME CONSTANTS
  * ============================================================================ */
 
-#define TICKS_PER_FRAME_LOGIC 2  /* ~50 logic updates per second at 100Hz */
-#define TICKS_PER_FRAME_RENDER 3 /* ~33 FPS rendering */
 #define INITIAL_LIVES 3
-#define GAME_OVER_DELAY 200 /* Ticks to show game over screen */
-/* NOTE: LEVEL_CLEAR_DELAY is defined in game_logic.h */
-/* NOTE: ROUND_START_DELAY is defined in game_config.h */
+#define GAME_OVER_DELAY TIME_LONG        /* From times.h */
+#define MY_ROUND_START_DELAY TIME_SHORT  /* From times.h */
+#define MY_LEVEL_CLEAR_DELAY TIME_MEDIUM /* From times.h */
 
 /* ============================================================================
  *                          FORWARD DECLARATIONS
@@ -48,6 +48,67 @@ static void process_paused_state(void);
 static void process_level_clear_state(void);
 static void process_game_over_state(void);
 static void sync_logic_to_game_state(void);
+
+/* ============================================================================
+ *                          DEBUG FUNCTIONS
+ * ============================================================================ */
+
+#if DEBUG_GAME_ENABLED
+
+static void debug_print_state_change(const char *new_state) {
+#if DEBUG_GAME_STATE
+    prints("[DEBUG] State -> %s\n", new_state);
+#else
+    (void)new_state;
+#endif
+}
+
+static void debug_print_input(Direction dir, int x, int y) {
+#if DEBUG_GAME_INPUT
+    if (dir != DIR_NONE) {
+        const char *dir_name = "NONE";
+        switch (dir) {
+        case DIR_UP:
+            dir_name = "UP";
+            break;
+        case DIR_DOWN:
+            dir_name = "DOWN";
+            break;
+        case DIR_LEFT:
+            dir_name = "LEFT";
+            break;
+        case DIR_RIGHT:
+            dir_name = "RIGHT";
+            break;
+        default:
+            break;
+        }
+        prints("[DEBUG] Input: %s | Pos: (%d, %d)\n", dir_name, x, y);
+    }
+#else
+    (void)dir;
+    (void)x;
+    (void)y;
+#endif
+}
+
+static void debug_print_player(int x, int y, int state) {
+#if DEBUG_GAME_PLAYER
+    prints("[DEBUG] Player: pos=(%d,%d) state=%d\n", x, y, state);
+#else
+    (void)x;
+    (void)y;
+    (void)state;
+#endif
+}
+
+#else /* DEBUG_GAME_ENABLED == 0 */
+
+#define debug_print_state_change(s) ((void)0)
+#define debug_print_input(d, x, y) ((void)0)
+#define debug_print_player(x, y, s) ((void)0)
+
+#endif /* DEBUG_GAME_ENABLED */
 
 /* ============================================================================
  *                          INITIALIZATION
@@ -129,7 +190,7 @@ int game_new_level(void) {
     /* Set scene to ROUND_START with delay timer */
     g_game.scene = SCENE_ROUND_START;
     g_logic_state.scene = SCENE_ROUND_START;
-    g_logic_state.round_start_timer = ROUND_START_DELAY;
+    g_logic_state.round_start_timer = MY_ROUND_START_DELAY;
 
     return 0;
 }
@@ -170,6 +231,7 @@ static void process_menu_state(void) {
 static void process_playing_state(void) {
     /* Check for pause */
     if (input_is_pause_pressed()) {
+        debug_print_state_change("PAUSED");
         g_game.scene = SCENE_PAUSED;
         g_logic_state.scene = SCENE_PAUSED;
         return;
@@ -178,6 +240,9 @@ static void process_playing_state(void) {
     /* Get player input direction */
     Direction dir = input_get_direction();
     int pumping = input_is_action_pressed();
+
+    /* Debug print for input */
+    debug_print_input(dir, g_logic_state.player.base.pos.x, g_logic_state.player.base.pos.y);
 
     /* Update player input in logic state */
     if (dir != DIR_NONE) {
@@ -195,7 +260,7 @@ static void process_playing_state(void) {
     if (g_logic_state.enemies_remaining <= 0) {
         g_game.scene = SCENE_ROUND_CLEAR;
         g_logic_state.scene = SCENE_ROUND_CLEAR;
-        g_logic_state.round_start_timer = LEVEL_CLEAR_DELAY;
+        g_logic_state.round_start_timer = MY_LEVEL_CLEAR_DELAY;
     }
 
     /* Check for game over */
@@ -251,18 +316,8 @@ static void process_game_over_state(void) {
 void logic_thread_func(void *arg) {
     (void)arg; /* Unused */
 
-    int last_tick = gettime();
-
     while (g_running) {
-        int current_tick = gettime();
-
-        /* Frame rate control for logic */
-        if (current_tick - last_tick < TICKS_PER_FRAME_LOGIC) {
-            continue;
-        }
-        last_tick = current_tick;
-
-        /* Update input state */
+        /* Update input state - no frame rate limiting */
         input_update();
 
         /* Check for quit (ESC key) */
@@ -317,21 +372,8 @@ void logic_thread_func(void *arg) {
 void render_thread_func(void *arg) {
     (void)arg; /* Unused */
 
-    int last_tick = gettime();
-
     while (g_running) {
-        int current_tick = gettime();
-
-        /* Frame rate control for rendering */
-        if (current_tick - last_tick < TICKS_PER_FRAME_RENDER) {
-            continue;
-        }
-        last_tick = current_tick;
-
-        /* Wait for logic to signal frame ready (optional sync) */
-        /* For now, render continuously */
-
-        /* Clear buffer */
+        /* Clear buffer - no frame rate limiting, runs as fast as possible */
         render_clear();
 
         /* Render based on current scene */
