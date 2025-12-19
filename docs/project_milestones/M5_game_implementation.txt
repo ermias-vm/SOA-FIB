@@ -1,0 +1,269 @@
+================================================================================
+                  MILESTONE 5: GAME IMPLEMENTATION (DIG DUG)
+================================================================================
+
+1. DESCRIPCION DEL JUEGO
+-------------------------
+
+Clon de Dig Dug implementado en ZeOS. El jugador excava tuneles subterraneos
+para eliminar enemigos inflándolos con una bomba o aplastándolos con rocas.
+
+Objetivo: Eliminar todos los enemigos de cada ronda para avanzar al siguiente
+nivel. El juego termina si pierdes todas las vidas o completas todas las rondas.
+
+2. ENEMIGOS
+-----------
+
+Pooka:
+  - Enemigo básico sin habilidades especiales
+  - Se mueve por túneles y ocasionalmente entra en modo fantasma (atraviesa tierra)
+  - Velocidad: POOKA_BASE_SPEED ticks por movimiento
+
+Fygar:
+  - Enemigo avanzado que escupe fuego horizontalmente
+  - Fuego cubre 3 celdas y mata al jugador instantáneamente
+  - Cooldown de fuego: FYGAR_FIRE_COOLDOWN ticks
+  - Velocidad: FYGAR_BASE_SPEED ticks por movimiento
+
+Comportamiento común:
+  - Ambos enemigos tienen IA que persigue al jugador
+  - Pueden ser inflados con la bomba (4 niveles → explotan)
+  - Eliminables por rocas cayendo sobre ellos
+
+3. ROCAS
+--------
+
+Física:
+  - Rocas estables si hay tierra o suelo debajo
+  - Wobble (bamboleo) si se excava debajo: ROCK_WOBBLE_DURATION ticks
+  - Caen verticalmente aplastando jugador/enemigos en su camino
+  - Desaparecen al llegar al suelo (fila ROW_GROUND_END)
+
+4. SISTEMA DE RONDAS
+--------------------
+
+Progresión:
+  - Cada ronda incrementa número y dificultad de enemigos
+  - Ronda 1: 4 enemigos (2 Pookas, 2 Fygars)
+  - Incremento: +1 Pooka y +1 Fygar por ronda (max: MAX_ENEMIES)
+  - Victoria tras completar MAX_ROUNDS rondas
+
+Estado de nivel:
+  - SCENE_ROUND_START: pantalla intermedia antes de comenzar
+  - SCENE_PLAYING: jugando activamente
+  - SCENE_ROUND_CLEAR: nivel completado, muestra estadísticas
+
+5. VIDAS Y PUNTUACION
+---------------------
+
+Vidas:
+  - INITIAL_LIVES = 3 vidas al inicio
+  - Se pierde vida si: enemigo toca al jugador, fuego de Fygar alcanza jugador
+  - Game over cuando vidas = 0
+
+Puntuación:
+  - Eliminar Pooka: SCORE_POOKA puntos
+  - Eliminar Fygar: SCORE_FYGAR puntos
+  - Aplastamiento con roca: SCORE_ROCK_CRUSH puntos
+  - Bonus items recolectados (X): SCORE_BONUS puntos (100 pts)
+
+6. CONTROLES
+------------
+
+Movimiento:
+  - Flechas direccionales (↑↓←→) o WASD: mover jugador
+  - Movimiento excava tierra automáticamente
+
+Acciones:
+  - ESPACIO: inflar enemigos con la bomba
+    * Mantener presionado incrementa longitud (max: MAX_PUMP_LENGTH = 4 celdas)
+    * Inflar enemigo 4 veces lo elimina
+  - ESC: pausar juego / salir de menús
+
+Menús:
+  - ↑↓: navegar opciones de menú
+  - ESPACIO o ENTER: seleccionar opción
+  - ESC: retroceder/salir
+
+7. PANTALLA Y VISUALS
+---------------------
+
+Diseño (80x25 caracteres):
+  - Fila 0: barra superior (TIME + FPS)
+  - Filas 1-2: cielo (área azul, no caminable)
+  - Filas 3-23: área subterránea (4 capas de 5 filas)
+  - Fila 24: barra inferior (LIVES + SCORE + ROUND)
+
+Capas subterráneas:
+  - Capa 1: filas 3-7 (superficie)
+  - Capa 2: filas 8-12
+  - Capa 3: filas 13-17
+  - Capa 4: filas 18-22 (más profunda, solo 4 filas útiles)
+
+Caracteres visuales:
+  - Jugador: 'P' (cian)
+  - Pooka: 'O' (amarillo)
+  - Fygar: 'F' (rojo)
+  - Rocas: 'R' (gris)
+  - Tierra: '░' (marrón oscuro)
+  - Túnel: espacio vacío (negro)
+  - Fuego Fygar: '~' (rojo brillante)
+
+8. MAPA Y GENERACION
+--------------------
+
+Generación procedural:
+  - Mapa único generado por ronda con semilla determinista
+  - Túneles verticales predefinidos en ciertas columnas
+  - Posicionamiento aleatorio de rocas (ROCK_COUNT_MIN a ROCK_COUNT_MAX)
+  - Spawn de enemigos en posiciones aleatorias (tierra o túneles existentes)
+  - Gemas opcionales distribuidas en capa profunda
+
+Restricciones:
+  - Jugador siempre spawn en posición inicial fija (cerca de superficie)
+  - Enemigos nunca spawn demasiado cerca del jugador
+  - Rocas colocadas aleatoriamente en las 4 capas
+
+================================================================================
+                        IMPLEMENTACION - ARQUITECTURA
+================================================================================
+
+El juego está modularizado en múltiples componentes para separar
+responsabilidades. Todos los archivos game_*.c/.h implementan distintas
+funcionalidades del juego.
+
+9. MODULOS PRINCIPALES
+----------------------
+
+game.c / game.h
+  - Entry point principal del juego (GameMain)
+  - Game loop: procesa input → actualiza lógica → renderiza
+  - Gestión de threads: thread principal + thread de renderizado
+  - Sincronización de frames a 60 FPS con WaitForTick
+  - Máquina de estados: MENU → PLAYING → PAUSED → ROUND_CLEAR → GAME_OVER
+
+game_types.h
+  - Definición de tipos y estructuras compartidas
+  - Enums: Direction, GameScene, EntityType, PlayerState, EnemyState, RockState
+  - Structs: Position, Entity, Player, Enemy, Rock, GameState, GameLogicState
+  - Tipos base para todo el motor del juego
+
+game_config.h
+  - Constantes de configuración centralizadas
+  - Dimensiones de pantalla, capas, áreas
+  - Velocidades de entidades (PLAYER_SPEED, POOKA_BASE_SPEED, etc.)
+  - Timings (ROCK_WOBBLE_DURATION, FYGAR_FIRE_COOLDOWN)
+  - Valores de puntuación (SCORE_POOKA, SCORE_FYGAR, etc.)
+  - Colores y caracteres visuales
+
+10. MODULO DE LOGICA
+--------------------
+
+game_logic.c / game_logic.h
+  - Motor de lógica del juego (1150+ líneas)
+  - Inicialización de entidades: logic_player_init, logic_enemy_init, logic_rock_init
+  - Actualización de estado: logic_update (actualiza player, enemies, rocks)
+  - Movimiento y colisiones: logic_player_move, logic_check_collision
+  - Sistema de bombeo: logic_player_attack (inflar enemigos)
+  - IA de enemigos: logic_enemy_ai (pathfinding simple hacia jugador)
+  - Física de rocas: logic_rock_update (wobble → falling → landed)
+  - Sistema de puntuación y gestión de vidas
+  - Detección de victoria/derrota por ronda
+
+11. MODULO DE RENDERIZADO
+-------------------------
+
+game_render.c / game_render.h
+  - Gestión de doble buffer para evitar parpadeos
+  - render_frame: dibuja todo el frame (mapa + entidades + UI)
+  - render_map: renderiza tiles del mapa (túneles, tierra, cielo)
+  - render_entities: dibuja jugador, enemigos, rocas
+  - render_player_attack: muestra bomba de aire/harpoon visual
+  - render_ui_bars: barras superior (TIME/FPS) e inferior (LIVES/SCORE/ROUND)
+  - render_menu, render_game_over, render_credits: pantallas especiales
+  - Optimización: solo renderiza cambios detectados
+
+12. MODULO DE MAPA
+------------------
+
+game_map.c / game_map.h
+  - Representación del mapa: array 2D de TileType (80x25)
+  - map_init: genera mapa nuevo para cada ronda
+  - map_generate: crea túneles verticales y coloca tierra
+  - map_place_rocks: posiciona rocas aleatoriamente
+  - map_get_tile / map_set_tile: acceso seguro a tiles
+  - map_is_walkable: verifica si posición es transitable
+  - map_excavate: convierte TILE_DIRT en TILE_EMPTY (excavar túnel)
+
+13. MODULO DE ENTIDADES
+-----------------------
+
+game_entities.c / game_entities.h
+  - Gestión de arrays de entidades (player, enemies[MAX_ENEMIES], rocks[MAX_ROCKS])
+  - entities_init: inicializa todas las entidades para nueva ronda
+  - entities_spawn_player: coloca jugador en posición inicial
+  - entities_spawn_enemies: genera enemigos según ronda actual
+  - entities_spawn_rocks: coloca rocas en posiciones aleatorias
+  - entities_update: actualiza todas las entidades activas
+  - entities_get_enemy_at, entities_get_rock_at: consultas espaciales
+
+14. MODULO DE INPUT
+-------------------
+
+game_input.c / game_input.h
+  - Sistema de entrada basado en KeyboardEvent (M2)
+  - input_keyboard_handler: callback de teclado registrado con KeyboardEvent
+  - Gestión de estado: g_input (volatile InputState)
+  - Detección de teclas: flechas, WASD, SPACE, ESC, ENTER
+  - Modos de input: movimiento direccional, ataque sostenido, navegación menú
+  - input_reset: limpia estado entre frames/escenas
+
+15. MODULO DE UI
+----------------
+
+game_ui.c / game_ui.h
+  - Renderizado de interfaces de usuario
+  - ui_draw_status_bars: barras superior e inferior con estadísticas
+  - ui_draw_menu: menú principal con opciones
+  - ui_draw_pause_menu: menú de pausa
+  - ui_draw_game_over: pantalla de game over con puntuación final
+  - ui_draw_victory: pantalla de victoria tras completar todas las rondas
+  - ui_draw_round_start: pantalla intermedia "ROUND X - READY!"
+  - ui_draw_credits: pantalla de créditos
+
+16. MODULO DE DATOS
+-------------------
+
+game_data.c / game_data.h
+  - Datos de configuración y recursos del juego
+  - Tablas de spawn: posiciones iniciales para enemigos/rocas
+  - Configuración de rounds: número de enemigos por ronda
+  - Texto de menús y mensajes
+  - Assets de caracteres para animaciones (opcional)
+
+
+================================================================================
+                          INTEGRACION CON ZEOS
+================================================================================
+
+El juego se integra con el sistema operativo ZeOS usando las syscalls
+implementadas en milestones anteriores:
+
+- M1 (Threads): GameMain crea thread de renderizado con ThreadCreate
+- M2 (Keyboard): KeyboardEvent registra input_keyboard_handler
+- M3 (Screen): ScreenWrite dibuja frames en doble buffer (user-space)
+- M4 (Time): WaitForTick sincroniza game loop a 60 FPS
+
+Flujo de ejecución:
+  1. user.c llama GameMain()
+  2. GameMain inicializa todos los módulos del juego
+  3. Crea thread de renderizado (game_render_thread)
+  4. Loop principal en thread main:
+     - WaitForTick (espera tick de reloj)
+     - input_update (procesa input acumulado)
+     - logic_update (actualiza estado del juego)
+     - Señaliza frame listo para renderizado
+  5. Thread de renderizado espera señal y dibuja frame completo
+  6. Ciclo se repite hasta salir del juego
+
+================================================================================
