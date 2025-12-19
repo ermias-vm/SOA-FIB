@@ -152,6 +152,14 @@ void input_clear_quit(void);
  */
 void input_reset(void);
 
+/**
+ * @brief Reset the move_processed flag for a new frame.
+ *
+ * Call this at the start of each game logic frame to allow
+ * a new movement to be processed.
+ */
+void input_new_frame(void);
+
 /* ============================================================================
  *                            UTILITY FUNCTIONS
  * ============================================================================ */

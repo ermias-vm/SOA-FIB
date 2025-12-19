@@ -20,4 +20,16 @@
  */
 int sys_write_console(char *buffer, int size);
 
+/**
+ * @brief Write data to debug terminal only (Bochs port 0xe9).
+ *
+ * This function writes output only to the Bochs debug terminal without
+ * affecting the game screen. Used for debug messages that shouldn't
+ * appear on the VGA screen.
+ * @param buffer Character buffer to write.
+ * @param size Number of bytes to write.
+ * @return Number of bytes written.
+ */
+int sys_write_debug(char *buffer, int size);
+
 #endif /* __DEVICES_H__ */

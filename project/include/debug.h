@@ -27,15 +27,15 @@
  *                         GAME DEBUG FLAGS
  * ============================================================================ */
 // clang-format off
-#define DEBUG_GAME_ENABLED          0   /** Master switch: Enable/disable ALL game debug output */
+#define DEBUG_GAME_ENABLED          1   /** Master switch: Enable/disable ALL game debug output */
 
-#define DEBUG_GAME_INPUT            0   /** Debug player input (direction, action pressed) */
-#define DEBUG_GAME_PLAYER           0   /** Debug player state and position */
-#define DEBUG_GAME_ENEMIES          0   /** Debug enemy AI and movement */
-#define DEBUG_GAME_COLLISION        0   /** Debug collision detection */
-#define DEBUG_GAME_STATE            0   /** Debug game state/scene transitions */
-#define DEBUG_GAME_RENDER           0   /** Debug rendering (frame timing, buffer swaps) */
-#define DEBUG_GAME_MAP              0   /** Debug map generation and tiles */
+#define DEBUG_GAME_INPUT            1   /** Debug player input (direction, action pressed) */
+#define DEBUG_GAME_PLAYER           1   /** Debug player state and position */
+#define DEBUG_GAME_ENEMIES          1   /** Debug enemy AI and movement */
+#define DEBUG_GAME_COLLISION        1   /** Debug collision detection */
+#define DEBUG_GAME_STATE            1   /** Debug game state/scene transitions */
+#define DEBUG_GAME_RENDER           1   /** Debug rendering (frame timing, buffer swaps) */
+#define DEBUG_GAME_MAP              1   /** Debug map generation and tiles */
 // clang-format on
 
 #endif /* __DEBUG_H__ */

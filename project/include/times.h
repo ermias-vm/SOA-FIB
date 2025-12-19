@@ -71,14 +71,14 @@
  * @param ms Milliseconds to convert.
  * @return Equivalent ticks after adjustment.
  */
-#define MS_TO_TICKS(ms) ((int)((ms)*TIME_ADJUSTMENT))
+#define MS_TO_TICKS(ms) ((int)((ms) * TIME_ADJUSTMENT))
 
 /**
  * @brief Convert seconds to ticks.
  * @param s Seconds to convert.
  * @return Equivalent ticks after adjustment.
  */
-#define SECONDS_TO_TICKS(s) ((s)*TICKS_PER_SECOND)
+#define SECONDS_TO_TICKS(s) ((s) * TICKS_PER_SECOND)
 
 /*============================================================================*
  *                    STANDARD TIME INTERVALS                                 *
@@ -141,6 +141,27 @@
  * Updated every ONE_SECOND ticks, so the value is frames per second.
  */
 #define FPS_UPDATE_INTERVAL ONE_SECOND
+
+/*============================================================================*
+ *                    GAME FPS LIMITING                                       *
+ *============================================================================*/
+
+/**
+ * @brief Target frames per second for the game.
+ */
+#define TARGET_FPS 60
+
+/**
+ * @brief Ticks per frame at target FPS.
+ *
+ * This is the minimum number of ticks that should pass between frames.
+ */
+#define TICKS_PER_FRAME (TICKS_PER_SECOND / TARGET_FPS)
+
+/**
+ * @brief Minimum ticks per frame (fallback if TICKS_PER_FRAME is 0).
+ */
+#define MIN_TICKS_PER_FRAME 1
 
 /*============================================================================*
  *                    SYSTEM TIMES                                            *

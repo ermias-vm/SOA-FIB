@@ -39,8 +39,11 @@ void input_cleanup(void) {
  * ============================================================================ */
 
 void input_update(void) {
-    /* In interrupt-driven mode with KeyboardEvent, this function does nothing */
-    /* All input processing is handled by input_keyboard_handler */
+    /* At the start of each frame, prepare direction from held key */
+    /* Only set direction if a movement key is being held and not yet processed */
+    if (g_input.held_dir != DIR_NONE && !g_input.move_processed) {
+        g_input.direction = g_input.held_dir;
+    }
 }
 
 void input_keyboard_handler(char key, int pressed) {
@@ -50,33 +53,51 @@ void input_keyboard_handler(char key, int pressed) {
         g_input.any_key_pressed = 1;
     }
 
-    /* Only process key press events, not releases */
+    /* Determine if this is a movement key */
+    Direction key_dir = DIR_NONE;
+    switch (key) {
+    case KEY_W:
+    case KEY_ARROW_UP:
+        key_dir = DIR_UP;
+        break;
+    case KEY_S:
+    case KEY_ARROW_DOWN:
+        key_dir = DIR_DOWN;
+        break;
+    case KEY_A:
+    case KEY_ARROW_LEFT:
+        key_dir = DIR_LEFT;
+        break;
+    case KEY_D:
+    case KEY_ARROW_RIGHT:
+        key_dir = DIR_RIGHT;
+        break;
+    default:
+        break;
+    }
+
+    /* Handle movement key press/release */
+    if (key_dir != DIR_NONE) {
+        if (pressed) {
+            /* Key pressed: update both held direction and immediate direction */
+            g_input.held_dir = key_dir;
+            g_input.direction = key_dir;
+            g_input.move_processed = 0; /* Allow movement on this press */
+        } else {
+            /* Key released: clear held direction if it matches */
+            if (g_input.held_dir == key_dir) {
+                g_input.held_dir = DIR_NONE;
+            }
+        }
+        return;
+    }
+
+    /* Handle non-movement keys (only on press) */
     if (!pressed) {
         return;
     }
 
-    /* Process movement keys */
     switch (key) {
-    case KEY_W:
-    case KEY_ARROW_UP:
-        g_input.direction = DIR_UP;
-        break;
-
-    case KEY_S:
-    case KEY_ARROW_DOWN:
-        g_input.direction = DIR_DOWN;
-        break;
-
-    case KEY_A:
-    case KEY_ARROW_LEFT:
-        g_input.direction = DIR_LEFT;
-        break;
-
-    case KEY_D:
-    case KEY_ARROW_RIGHT:
-        g_input.direction = DIR_RIGHT;
-        break;
-
     case KEY_SPACE:
     case KEY_ENTER:
         g_input.action_pressed = 1;
@@ -100,6 +121,7 @@ void input_keyboard_handler(char key, int pressed) {
 Direction input_get_direction(void) {
     Direction dir = g_input.direction;
     g_input.direction = DIR_NONE; /* Consume the input */
+    g_input.move_processed = 1;   /* Mark that we processed a move this frame */
     return dir;
 }
 
@@ -135,9 +157,11 @@ char input_get_last_key(void) {
 
 void input_clear(void) {
     g_input.direction = DIR_NONE;
+    g_input.held_dir = DIR_NONE;
     g_input.action_pressed = 0;
     g_input.pause_pressed = 0;
     g_input.any_key_pressed = 0;
+    g_input.move_processed = 0;
     /* Don't clear quit_pressed or last_key */
 }
 
@@ -147,11 +171,23 @@ void input_clear_quit(void) {
 
 void input_reset(void) {
     g_input.direction = DIR_NONE;
+    g_input.held_dir = DIR_NONE;
     g_input.action_pressed = 0;
     g_input.pause_pressed = 0;
     g_input.quit_pressed = 0;
     g_input.last_key = 0;
     g_input.any_key_pressed = 0;
+    g_input.move_processed = 0;
+}
+
+void input_new_frame(void) {
+    /* Reset move_processed to allow one new move this frame */
+    g_input.move_processed = 0;
+
+    /* If a key is being held, prepare the direction for this frame */
+    if (g_input.held_dir != DIR_NONE) {
+        g_input.direction = g_input.held_dir;
+    }
 }
 
 /* ============================================================================

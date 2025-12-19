@@ -30,7 +30,7 @@ int ret_from_fork(void) {
 }
 
 int check_fd(int fd, int permissions) {
-    if (fd != FD_CONSOLE && fd != FD_SCREEN) return -EBADF;
+    if (fd != FD_CONSOLE && fd != FD_DEBUG && fd != FD_SCREEN) return -EBADF;
     if (permissions != O_WRONLY) return -EACCES;
     return 0;
 }

@@ -38,6 +38,10 @@ static GameLogicState g_logic_state;
 #define MY_ROUND_START_DELAY TIME_SHORT  /* From times.h */
 #define MY_LEVEL_CLEAR_DELAY TIME_MEDIUM /* From times.h */
 
+/* Frame timing for 60 FPS limiting */
+static int g_last_frame_time = 0;
+static int g_frame_ticks = 0;
+
 /* ============================================================================
  *                          FORWARD DECLARATIONS
  * ============================================================================ */
@@ -57,7 +61,7 @@ static void sync_logic_to_game_state(void);
 
 static void debug_print_state_change(const char *new_state) {
 #if DEBUG_GAME_STATE
-    prints("[DEBUG] State -> %s\n", new_state);
+    printd("[DEBUG] State -> %s\n", new_state);
 #else
     (void)new_state;
 #endif
@@ -83,7 +87,7 @@ static void debug_print_input(Direction dir, int x, int y) {
         default:
             break;
         }
-        prints("[DEBUG] Input: %s | Pos: (%d, %d)\n", dir_name, x, y);
+        printd("[DEBUG] Input: %s | Pos: (%d, %d)\n", dir_name, x, y);
     }
 #else
     (void)dir;
@@ -94,7 +98,7 @@ static void debug_print_input(Direction dir, int x, int y) {
 
 static void debug_print_player(int x, int y, int state) {
 #if DEBUG_GAME_PLAYER
-    prints("[DEBUG] Player: pos=(%d,%d) state=%d\n", x, y, state);
+    printd("[DEBUG] Player: pos=(%d,%d) state=%d\n", x, y, state);
 #else
     (void)x;
     (void)y;
@@ -109,6 +113,35 @@ static void debug_print_player(int x, int y, int state) {
 #define debug_print_player(x, y, s) ((void)0)
 
 #endif /* DEBUG_GAME_ENABLED */
+
+/* ============================================================================
+ *                          FRAME RATE CONTROL
+ * ============================================================================ */
+
+/**
+ * @brief Wait until enough time has passed for the next frame (60 FPS limit).
+ *
+ * This function ensures consistent frame timing by waiting until at least
+ * TICKS_PER_FRAME ticks have passed since the last frame.
+ */
+static void wait_for_next_frame(void) {
+    int ticks_per_frame = TICKS_PER_FRAME;
+    if (ticks_per_frame < MIN_TICKS_PER_FRAME) {
+        ticks_per_frame = MIN_TICKS_PER_FRAME;
+    }
+
+    int current_time = gettime();
+    int elapsed = current_time - g_last_frame_time;
+
+    /* If not enough time has passed, busy-wait */
+    while (elapsed < ticks_per_frame) {
+        current_time = gettime();
+        elapsed = current_time - g_last_frame_time;
+    }
+
+    g_frame_ticks = elapsed;
+    g_last_frame_time = current_time;
+}
 
 /* ============================================================================
  *                          INITIALIZATION
@@ -136,7 +169,11 @@ void game_init(void) {
     g_running = 1;
     g_frame_ready = 0;
 
-    /* 6. Clear screen */
+    /* 6. Initialize frame timing */
+    g_last_frame_time = gettime();
+    g_frame_ticks = 0;
+
+    /* 7. Clear screen */
     render_clear();
     render_present();
 }
@@ -317,7 +354,13 @@ void logic_thread_func(void *arg) {
     (void)arg; /* Unused */
 
     while (g_running) {
-        /* Update input state - no frame rate limiting */
+        /* Wait for next frame (60 FPS limit) */
+        wait_for_next_frame();
+
+        /* Start new input frame (reset move_processed, prepare held direction) */
+        input_new_frame();
+
+        /* Update input state */
         input_update();
 
         /* Check for quit (ESC key) */
@@ -373,7 +416,14 @@ void render_thread_func(void *arg) {
     (void)arg; /* Unused */
 
     while (g_running) {
-        /* Clear buffer - no frame rate limiting, runs as fast as possible */
+        /* Wait for frame ready signal from logic thread */
+        while (!g_frame_ready && g_running) {
+            /* Busy wait - could yield here */
+        }
+
+        if (!g_running) break;
+
+        /* Clear buffer */
         render_clear();
 
         /* Render based on current scene */
@@ -440,31 +490,31 @@ void game_run(void) {
 }
 
 void game_main(void) {
-    prints("[GAME] Initializing game systems...\n");
+    printd("[GAME] Initializing game systems...\n");
 
     /* Initialize all game systems */
     game_init();
 
-    prints("[GAME] Creating render thread...\n");
+    printd("[GAME] Creating render thread...\n");
 
     /* Create render thread */
     int tid = ThreadCreate(render_thread_func, NULL);
     if (tid < 0) {
-        prints("[GAME] ERROR: Failed to create render thread!\n");
+        printd("[GAME] ERROR: Failed to create render thread!\n");
         game_cleanup();
         return;
     }
 
-    prints("[GAME] Render thread created (TID=%d)\n", tid);
-    prints("[GAME] Starting game loop...\n");
+    printd("[GAME] Render thread created (TID=%d)\n", tid);
+    printd("[GAME] Starting game loop...\n");
 
     /* Run the main game loop (logic in main thread) */
     game_run();
 
-    prints("[GAME] Game loop ended. Cleaning up...\n");
+    printd("[GAME] Game loop ended. Cleaning up...\n");
 
     /* Cleanup */
     game_cleanup();
 
-    prints("[GAME] Game exited successfully.\n");
+    printd("[GAME] Game exited successfully.\n");
 }

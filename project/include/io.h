@@ -46,6 +46,7 @@
 #define VIDEO_MEMORY_BASE 0xb8000 /** Base address of VGA text mode video memory */
 
 #define FD_CONSOLE 1 /**< File descriptor for console output (stdout) */
+#define FD_DEBUG 2   /**< File descriptor for debug output (terminal only, not game screen) */
 #define FD_SCREEN 10 /**< File descriptor for direct screen buffer access */
 
 #define O_RDONLY 0 /**< Permission flag for read operations */

@@ -265,6 +265,27 @@ int sys_write(int fd, char *buffer, int size) {
         return sys_write_screen(buffer, size);
     }
 
+    /* Debug output to terminal only (fd = 2) - doesn't affect game screen */
+    if (fd == FD_DEBUG) {
+        int bytes_left = size;
+        int written_bytes;
+
+        while (bytes_left > SYS_BUFFER_SIZE) {
+            copy_from_user(buffer, buffer_k, SYS_BUFFER_SIZE);
+            written_bytes = sys_write_debug(buffer_k, SYS_BUFFER_SIZE);
+            bytes_left -= written_bytes;
+            buffer += written_bytes;
+        }
+
+        if (bytes_left > 0) {
+            copy_from_user(buffer, buffer_k, bytes_left);
+            written_bytes = sys_write_debug(buffer_k, bytes_left);
+            bytes_left -= written_bytes;
+        }
+
+        return size - bytes_left;
+    }
+
     /* Console output (fd = 1) */
     int bytes_left = size;
     int written_bytes;

@@ -154,12 +154,14 @@ typedef struct {
  * NOTE: This is the ONLY definition - do NOT redefine in other headers!
  */
 typedef struct {
-    Direction direction; /* Current movement direction */
+    Direction direction; /* Current movement direction (consumed each frame) */
+    Direction held_dir;  /* Direction currently being held (for continuous movement) */
     int action_pressed;  /* Action button pressed (space/enter) */
     int pause_pressed;   /* Pause button pressed (P/ESC) */
     int quit_pressed;    /* Quit button pressed (Q) */
     int any_key_pressed; /* Any key pressed flag */
     char last_key;       /* Last raw key pressed */
+    int move_processed;  /* Flag to ensure only one move per frame */
 } InputState;
 
 /**
@@ -235,7 +237,7 @@ typedef struct {
 /**
  * @brief Screen position calculation (byte offset in video memory).
  */
-#define SCREEN_POS(x, y) (((y)*SCREEN_WIDTH + (x)) * 2)
+#define SCREEN_POS(x, y) (((y) * SCREEN_WIDTH + (x)) * 2)
 
 /**
  * @brief Check if position is within screen bounds.
