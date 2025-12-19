@@ -172,14 +172,20 @@
  *============================================================================*/
 
 /**
- * @brief Time an enemy stays paralyzed before dying (2 seconds).
+ * @brief Time an enemy stays paralyzed before dying (1 second).
  */
-#define ENEMY_PARALYSIS_TIME SECONDS_TO_TICKS(2)
+#define ENEMY_PARALYSIS_TIME SECONDS_TO_TICKS(1)
 
 /**
  * @brief Attack display duration in frames.
  */
 #define ATTACK_DISPLAY_FRAMES 10
+
+/**
+ * @brief Delay before transitioning to next round (1 second at 60 FPS).
+ * NOTE: This decrements once per frame, not per tick!
+ */
+#define ROUND_CLEAR_DELAY TARGET_FPS /* 60 frames = 1 second */
 
 /*============================================================================*
  *                    SYSTEM TIMES                                            *

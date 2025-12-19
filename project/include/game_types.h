@@ -26,7 +26,9 @@ typedef enum {
     SCENE_PAUSED,      /* Game paused */
     SCENE_GAME_OVER,   /* Game over screen */
     SCENE_ROUND_CLEAR, /* Round completed */
-    SCENE_ROUND_START  /* Starting new round */
+    SCENE_ROUND_START, /* Starting new round */
+    SCENE_VICTORY,     /* Victory screen (all rounds completed) */
+    SCENE_CREDITS      /* Credits screen */
 } GameScene;
 
 /**
@@ -35,9 +37,11 @@ typedef enum {
 typedef enum {
     TILE_EMPTY, /* Excavated tunnel */
     TILE_DIRT,  /* Solid dirt (unexcavated) */
-    TILE_SKY,   /* Sky area (rows 1-3) */
+    TILE_SKY,   /* Sky area (rows 1-2) */
     TILE_WALL,  /* Solid wall (not walkable) */
-    TILE_GEM    /* Gem (collectible) */
+    TILE_GEM,   /* Gem (collectible) */
+    TILE_BONUS, /* Bonus item (100 points, 'X') */
+    TILE_BORDER /* Bottom border (gray # characters) */
 } TileType;
 
 /**
@@ -140,7 +144,8 @@ typedef struct {
     int fire_cooldown;   /* Fygar: ticks until can fire again */
     int fire_active;     /* Fygar: 1 = currently breathing fire */
     int fire_duration;   /* Fygar: remaining fire ticks */
-    int paralyzed_timer; /* Timer for paralyzed state (dies when reaches 0) */
+    int paralyzed_timer; /* Timer for blink animation */
+    int blink_count;     /* Number of blinks remaining (dies at 0) */
 } Enemy;
 
 /**
@@ -162,7 +167,8 @@ typedef struct {
     Direction direction; /* Current movement direction (consumed each frame) */
     Direction held_dir;  /* Direction currently being held (for continuous movement) */
     int action_pressed;  /* Action button pressed (enter) */
-    int attack_pressed;  /* Attack button pressed (space) */
+    int attack_pressed;  /* Attack button pressed once (space) */
+    int attack_held;     /* Attack button currently held down */
     int pause_pressed;   /* Pause button pressed (P/ESC) */
     int quit_pressed;    /* Quit button pressed (Q) */
     int any_key_pressed; /* Any key pressed flag */

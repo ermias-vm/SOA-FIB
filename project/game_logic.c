@@ -250,6 +250,15 @@ void logic_update_player(GameLogicState *state) {
         if (player->base.speed_counter <= 0) {
             logic_player_move(player, dir);
             player->base.speed_counter = PLAYER_MOVE_DELAY;
+
+            /* Check for bonus collection after moving (100 points) */
+            if (map_get_tile(player->base.pos.x, player->base.pos.y) == TILE_BONUS) {
+                map_set_tile(player->base.pos.x, player->base.pos.y, TILE_EMPTY);
+                state->score += 100;
+                if (state->score > MAX_SCORE) {
+                    state->score = MAX_SCORE;
+                }
+            }
         }
         /* Clear direction after processing */
         player->base.dir = DIR_NONE;
@@ -330,7 +339,7 @@ void logic_player_move(Player *player, Direction dir) {
         return;
     }
 
-    /* Prevent going into sky area (rows 0-2, player can only be at row 3 minimum) */
+    /* Prevent going above the sky area (player can only be at row ROW_SKY_END minimum) */
     if (new_y < ROW_SKY_END) {
         return;
     }
@@ -355,6 +364,7 @@ void logic_player_move(Player *player, Direction dir) {
         map_remove_gem(new_x, new_y);
         /* Could add gem score here */
     }
+    /* Bonus collection is handled in logic_update_player with state access */
 }
 
 /**
@@ -472,9 +482,10 @@ int logic_player_attack(Player *player, GameLogicState *state) {
             if (enemy->state == ENEMY_PARALYZED) continue; /* Already paralyzed */
 
             if (enemy->base.pos.x == check_x && enemy->base.pos.y == check_y) {
-                /* Hit! Paralyze the enemy */
+                /* Hit! Paralyze the enemy - 10 blinks then dies */
                 enemy->state = ENEMY_PARALYZED;
-                enemy->paralyzed_timer = ENEMY_PARALYSIS_TIME;
+                enemy->blink_count = 10;    /* 10 blinks before death */
+                enemy->paralyzed_timer = 5; /* Ticks per blink cycle */
             }
         }
     }
@@ -536,17 +547,24 @@ void logic_update_enemies(GameLogicState *state) {
             continue;
         }
 
-        /* Handle paralyzed enemies - countdown and then kill */
+        /* Handle paralyzed enemies - blink 10 times then die */
         if (enemy->state == ENEMY_PARALYZED) {
             if (enemy->paralyzed_timer > 0) {
                 enemy->paralyzed_timer--;
             } else {
-                /* Paralysis expired - enemy dies and gives score */
-                enemy->state = ENEMY_DEAD;
-                enemy->base.active = 0;
-                state->enemies_remaining--;
-                /* Add base score (200 points) */
-                state->score += 200;
+                /* Reset timer and decrement blink count */
+                enemy->blink_count--;
+                if (enemy->blink_count <= 0) {
+                    /* All blinks done - enemy dies and gives score */
+                    enemy->state = ENEMY_DEAD;
+                    enemy->base.active = 0;
+                    state->enemies_remaining--;
+                    /* Add base score (200 points) */
+                    state->score += 200;
+                } else {
+                    /* Reset timer for next blink (5 ticks per blink cycle) */
+                    enemy->paralyzed_timer = 5;
+                }
             }
             continue;
         }

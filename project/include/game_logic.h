@@ -26,7 +26,7 @@
 #define ENEMY_MOVE_DELAY 4
 #define GHOST_MODE_THRESHOLD 60 /* Ticks before enemy goes ghost */
 #define RESPAWN_DELAY 60        /* Ticks before player respawns */
-#define LEVEL_CLEAR_DELAY 90    /* Ticks before next level */
+#define LEVEL_CLEAR_DELAY 60    /* Frames before next level (1 sec at 60 FPS) */
 /* Note: ROUND_START_DELAY is already defined in game_config.h */
 
 /* Rock mechanics */

@@ -39,11 +39,8 @@ void input_cleanup(void) {
  * ============================================================================ */
 
 void input_update(void) {
-    /* At the start of each frame, prepare direction from held key */
-    /* Only set direction if a movement key is being held and not yet processed */
-    if (g_input.held_dir != DIR_NONE && !g_input.move_processed) {
-        g_input.direction = g_input.held_dir;
-    }
+    /* Movement is now one-shot per key press, not continuous */
+    /* Direction is set directly in keyboard_handler and consumed by game logic */
 }
 
 void input_keyboard_handler(char key, int pressed) {
@@ -92,17 +89,24 @@ void input_keyboard_handler(char key, int pressed) {
         return;
     }
 
+    /* Handle space key (attack) specially - it's held, not just pressed */
+    if (key == KEY_SPACE) {
+        if (pressed) {
+            g_input.attack_held = 1;
+            g_input.attack_pressed = 1;
+            g_input.action_pressed = 1; /* Also trigger action for menus */
+        } else {
+            g_input.attack_held = 0;
+        }
+        return;
+    }
+
     /* Handle non-movement keys (only on press) */
     if (!pressed) {
         return;
     }
 
     switch (key) {
-    case KEY_SPACE:
-        g_input.attack_pressed = 1;
-        g_input.action_pressed = 1; /* Also trigger action for menus */
-        break;
-
     case KEY_ENTER:
         g_input.action_pressed = 1;
         break;
@@ -141,6 +145,10 @@ int input_is_attack_pressed(void) {
     return pressed;
 }
 
+int input_is_attack_held(void) {
+    return g_input.attack_held; /* Don't consume - held state */
+}
+
 int input_is_pause_pressed(void) {
     int pressed = g_input.pause_pressed;
     g_input.pause_pressed = 0; /* Consume the input */
@@ -170,6 +178,7 @@ void input_clear(void) {
     g_input.held_dir = DIR_NONE;
     g_input.action_pressed = 0;
     g_input.attack_pressed = 0;
+    g_input.attack_held = 0;
     g_input.pause_pressed = 0;
     g_input.any_key_pressed = 0;
     g_input.move_processed = 0;
@@ -185,6 +194,7 @@ void input_reset(void) {
     g_input.held_dir = DIR_NONE;
     g_input.action_pressed = 0;
     g_input.attack_pressed = 0;
+    g_input.attack_held = 0;
     g_input.pause_pressed = 0;
     g_input.quit_pressed = 0;
     g_input.last_key = 0;

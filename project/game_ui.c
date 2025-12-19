@@ -299,27 +299,56 @@ void ui_draw_victory_screen(int final_score) {
     Color title_color = render_make_color(COLOR_LIGHT_GREEN, COLOR_BLACK);
     Color text_color = render_make_color(COLOR_WHITE, COLOR_BLACK);
     Color score_color = render_make_color(COLOR_YELLOW, COLOR_BLACK);
+    Color subtitle_color = render_make_color(COLOR_CYAN, COLOR_BLACK);
 
     /* Clear screen */
     render_clear();
 
     /* Victory title */
-    ui_draw_centered_text(6, "========================", title_color);
-    ui_draw_centered_text(7, "        VICTORY!        ", title_color);
-    ui_draw_centered_text(8, "      All levels        ", title_color);
-    ui_draw_centered_text(9, "      completed!        ", title_color);
-    ui_draw_centered_text(10, "========================", title_color);
+    ui_draw_centered_text(5, "========================", title_color);
+    ui_draw_centered_text(6, "       YOU WIN!         ", title_color);
+    ui_draw_centered_text(7, "========================", title_color);
+
+    /* Subtitle */
+    ui_draw_centered_text(9, "Finally, Baka Baka is defeated", subtitle_color);
 
     /* Final score */
-    ui_draw_centered_text(13, "TOTAL SCORE:", text_color);
+    ui_draw_centered_text(12, "TOTAL SCORE:", text_color);
 
     char score_str[6];
     ui_number_to_string(final_score, score_str, 5, '0');
-    ui_draw_centered_text(15, score_str, score_color);
+    ui_draw_centered_text(14, score_str, score_color);
 
-    /* Congratulations */
-    ui_draw_centered_text(18, "Congratulations!", title_color);
-    ui_draw_centered_text(20, "Press Q to quit", text_color);
+    /* Options */
+    ui_draw_centered_text(18, "Press SPACE to play again", text_color);
+    ui_draw_centered_text(19, "Press C for credits", text_color);
+    ui_draw_centered_text(20, "Press ESC for main menu", text_color);
+}
+
+void ui_draw_credits_screen(void) {
+    Color title_color = render_make_color(COLOR_LIGHT_CYAN, COLOR_BLACK);
+    Color text_color = render_make_color(COLOR_WHITE, COLOR_BLACK);
+    Color name_color = render_make_color(COLOR_YELLOW, COLOR_BLACK);
+
+    /* Clear screen */
+    render_clear();
+
+    /* Credits title */
+    ui_draw_centered_text(5, "========================", title_color);
+    ui_draw_centered_text(6, "        CREDITS         ", title_color);
+    ui_draw_centered_text(7, "========================", title_color);
+
+    /* Developers */
+    ui_draw_centered_text(10, "Developed by:", text_color);
+    ui_draw_centered_text(12, "ERMIAS VALLS", name_color);
+    ui_draw_centered_text(14, "MARC DE RIALP", name_color);
+
+    /* Course info */
+    ui_draw_centered_text(17, "SOA - FIB UPC", text_color);
+    ui_draw_centered_text(18, "2024-2025", text_color);
+
+    /* Return option */
+    ui_draw_centered_text(21, "Press ESC to return", text_color);
 }
 
 /* ============================================================================

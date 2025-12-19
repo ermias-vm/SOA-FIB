@@ -21,15 +21,15 @@
 
 /* Static level data array */
 static const LevelData g_levels[NUM_LEVELS_DEFINED] = {
-    /* ===== ROUND 1 ===== */
+    /* ===== ROUND 1: 1 enemy (1 Pooka) ===== */
     {
         .round_number = 1,
         .player_start_x = 10,
-        .player_start_y = 3, /* Start in sky layer (row 3) */
+        .player_start_y = 2, /* Start in sky layer (row 2) */
 
         .enemies =
             {
-                {60, 8, ENTITY_POOKA}, /* Only 1 enemy for round 1 */
+                {60, 8, ENTITY_POOKA}, /* 1 Pooka */
             },
         .enemy_count = 1,
 
@@ -41,9 +41,9 @@ static const LevelData g_levels[NUM_LEVELS_DEFINED] = {
 
         .tunnels =
             {
-                {5, 3, 25, 3},   /* Horizontal tunnel in sky for player start */
-                {10, 3, 10, 12}, /* Vertical tunnel from sky down */
-                {55, 8, 70, 8},  /* Horizontal tunnel where enemy is */
+                {5, 2, 15, 2},  /* Horizontal tunnel in sky for player start */
+                {58, 7, 62, 7}, /* Horizontal tunnel for enemy (5 cells) */
+                {60, 7, 60, 9}, /* Vertical tunnel for enemy (3 cells) */
             },
         .tunnel_count = 3,
 
@@ -51,168 +51,158 @@ static const LevelData g_levels[NUM_LEVELS_DEFINED] = {
         .ghost_threshold = 400,
     },
 
-    /* ===== ROUND 2 ===== */
+    /* ===== ROUND 2: 2 enemies (1 Pooka, 1 Fygar) ===== */
     {
         .round_number = 2,
         .player_start_x = 10,
-        .player_start_y = 5,
+        .player_start_y = 2,
 
         .enemies =
             {
-                {60, 5, ENTITY_POOKA},
-                {30, 11, ENTITY_POOKA},
-                {50, 16, ENTITY_FYGAR},
-                {70, 20, ENTITY_POOKA},
+                {60, 6, ENTITY_POOKA},  /* 1 Pooka */
+                {30, 14, ENTITY_FYGAR}, /* 1 Fygar */
             },
-        .enemy_count = 4,
+        .enemy_count = 2,
 
         .rocks =
             {
                 {25, 7, ENTITY_ROCK},
                 {45, 13, ENTITY_ROCK},
-                {65, 18, ENTITY_ROCK},
             },
-        .rock_count = 3,
+        .rock_count = 2,
 
         .tunnels =
             {
-                {5, 5, 30, 5},
-                {10, 5, 10, 20},
-                {55, 5, 75, 5},
-                {60, 5, 60, 15},
-                {30, 11, 50, 11},
-                {40, 16, 70, 16},
+                {5, 2, 15, 2},    /* Player sky tunnel */
+                {58, 5, 62, 5},   /* Pooka horizontal (5 cells) */
+                {60, 5, 60, 7},   /* Pooka vertical (3 cells) */
+                {28, 13, 32, 13}, /* Fygar horizontal (5 cells) */
+                {30, 13, 30, 15}, /* Fygar vertical (3 cells) */
             },
-        .tunnel_count = 6,
+        .tunnel_count = 5,
+
+        .enemy_speed = 6,
+        .ghost_threshold = 300,
+    },
+
+    /* ===== ROUND 3: 3 enemies (2 Pooka, 1 Fygar) ===== */
+    {
+        .round_number = 3,
+        .player_start_x = 10,
+        .player_start_y = 2,
+
+        .enemies =
+            {
+                {50, 6, ENTITY_POOKA},  /* Pooka 1 */
+                {70, 12, ENTITY_POOKA}, /* Pooka 2 */
+                {35, 18, ENTITY_FYGAR}, /* Fygar */
+            },
+        .enemy_count = 3,
+
+        .rocks =
+            {
+                {20, 8, ENTITY_ROCK},
+                {55, 15, ENTITY_ROCK},
+            },
+        .rock_count = 2,
+
+        .tunnels =
+            {
+                {5, 2, 20, 2},    /* Player sky */
+                {48, 5, 52, 5},   /* Pooka 1 horizontal */
+                {50, 5, 50, 7},   /* Pooka 1 vertical */
+                {68, 11, 72, 11}, /* Pooka 2 horizontal */
+                {70, 11, 70, 13}, /* Pooka 2 vertical */
+                {33, 17, 37, 17}, /* Fygar horizontal */
+                {35, 17, 35, 19}, /* Fygar vertical */
+            },
+        .tunnel_count = 7,
 
         .enemy_speed = 5,
         .ghost_threshold = 250,
     },
 
-    /* ===== ROUND 3 ===== */
+    /* ===== ROUND 4: 4 enemies (2 Pooka, 2 Fygar) ===== */
     {
-        .round_number = 3,
-        .player_start_x = 10,
-        .player_start_y = 5,
+        .round_number = 4,
+        .player_start_x = 40,
+        .player_start_y = 2,
 
         .enemies =
             {
-                {50, 5, ENTITY_POOKA},
-                {25, 10, ENTITY_FYGAR},
-                {60, 14, ENTITY_POOKA},
-                {35, 19, ENTITY_FYGAR},
-                {70, 21, ENTITY_POOKA},
+                {15, 8, ENTITY_POOKA},  /* Pooka 1 */
+                {65, 8, ENTITY_POOKA},  /* Pooka 2 */
+                {25, 16, ENTITY_FYGAR}, /* Fygar 1 */
+                {55, 16, ENTITY_FYGAR}, /* Fygar 2 */
+            },
+        .enemy_count = 4,
+
+        .rocks =
+            {
+                {20, 10, ENTITY_ROCK},
+                {60, 10, ENTITY_ROCK},
+                {40, 18, ENTITY_ROCK},
+            },
+        .rock_count = 3,
+
+        .tunnels =
+            {
+                {35, 2, 45, 2},   /* Player sky */
+                {13, 7, 17, 7},   /* Pooka 1 horizontal */
+                {15, 7, 15, 9},   /* Pooka 1 vertical */
+                {63, 7, 67, 7},   /* Pooka 2 horizontal */
+                {65, 7, 65, 9},   /* Pooka 2 vertical */
+                {23, 15, 27, 15}, /* Fygar 1 horizontal */
+                {25, 15, 25, 17}, /* Fygar 1 vertical */
+                {53, 15, 57, 15}, /* Fygar 2 horizontal */
+                {55, 15, 55, 17}, /* Fygar 2 vertical */
+            },
+        .tunnel_count = 9,
+
+        .enemy_speed = 4,
+        .ghost_threshold = 200,
+    },
+
+    /* ===== ROUND 5: 5 enemies (3 Pooka, 2 Fygar) ===== */
+    {
+        .round_number = 5,
+        .player_start_x = 40,
+        .player_start_y = 2,
+
+        .enemies =
+            {
+                {10, 8, ENTITY_POOKA},  /* Pooka 1 */
+                {70, 8, ENTITY_POOKA},  /* Pooka 2 */
+                {40, 14, ENTITY_POOKA}, /* Pooka 3 */
+                {20, 20, ENTITY_FYGAR}, /* Fygar 1 */
+                {60, 20, ENTITY_FYGAR}, /* Fygar 2 */
             },
         .enemy_count = 5,
 
         .rocks =
             {
-                {20, 8, ENTITY_ROCK},
-                {40, 12, ENTITY_ROCK},
-                {55, 17, ENTITY_ROCK},
-                {30, 22, ENTITY_ROCK},
-            },
-        .rock_count = 4,
-
-        .tunnels =
-            {
-                {5, 5, 20, 5},
-                {45, 5, 70, 5},
-                {10, 5, 10, 22},
-                {50, 5, 50, 10},
-                {20, 10, 35, 10},
-                {55, 14, 75, 14},
-                {30, 19, 45, 19},
-            },
-        .tunnel_count = 7,
-
-        .enemy_speed = 5,
-        .ghost_threshold = 200,
-    },
-
-    /* ===== ROUND 4 ===== */
-    {
-        .round_number = 4,
-        .player_start_x = 40,
-        .player_start_y = 5,
-
-        .enemies =
-            {
-                {10, 8, ENTITY_POOKA},
-                {70, 8, ENTITY_POOKA},
-                {20, 15, ENTITY_FYGAR},
-                {60, 15, ENTITY_FYGAR},
-                {40, 20, ENTITY_POOKA},
-                {30, 22, ENTITY_POOKA},
-            },
-        .enemy_count = 6,
-
-        .rocks =
-            {
-                {15, 10, ENTITY_ROCK},
-                {65, 10, ENTITY_ROCK},
+                {25, 10, ENTITY_ROCK},
+                {55, 10, ENTITY_ROCK},
                 {35, 17, ENTITY_ROCK},
-                {55, 21, ENTITY_ROCK},
+                {45, 17, ENTITY_ROCK},
             },
         .rock_count = 4,
 
         .tunnels =
             {
-                {35, 5, 45, 5},
-                {40, 5, 40, 10},
-                {5, 8, 25, 8},
-                {55, 8, 75, 8},
-                {10, 8, 10, 20},
-                {70, 8, 70, 20},
-                {15, 15, 30, 15},
-                {50, 15, 65, 15},
-                {25, 20, 55, 20},
+                {35, 2, 45, 2},   /* Player sky */
+                {8, 7, 12, 7},    /* Pooka 1 horizontal */
+                {10, 7, 10, 9},   /* Pooka 1 vertical */
+                {68, 7, 72, 7},   /* Pooka 2 horizontal */
+                {70, 7, 70, 9},   /* Pooka 2 vertical */
+                {38, 13, 42, 13}, /* Pooka 3 horizontal */
+                {40, 13, 40, 15}, /* Pooka 3 vertical */
+                {18, 19, 22, 19}, /* Fygar 1 horizontal */
+                {20, 19, 20, 21}, /* Fygar 1 vertical */
+                {58, 19, 62, 19}, /* Fygar 2 horizontal */
+                {60, 19, 60, 21}, /* Fygar 2 vertical */
             },
-        .tunnel_count = 9,
-
-        .enemy_speed = 4,
-        .ghost_threshold = 180,
-    },
-
-    /* ===== ROUND 5 ===== */
-    {
-        .round_number = 5,
-        .player_start_x = 40,
-        .player_start_y = 3,
-
-        .enemies =
-            {
-                {10, 10, ENTITY_FYGAR},
-                {70, 10, ENTITY_FYGAR},
-                {20, 16, ENTITY_POOKA},
-                {60, 16, ENTITY_POOKA},
-                {30, 21, ENTITY_FYGAR},
-                {50, 21, ENTITY_FYGAR},
-            },
-        .enemy_count = 6,
-
-        .rocks =
-            {
-                {25, 8, ENTITY_ROCK},
-                {55, 8, ENTITY_ROCK},
-                {15, 14, ENTITY_ROCK},
-                {65, 14, ENTITY_ROCK},
-            },
-        .rock_count = 4,
-
-        .tunnels =
-            {
-                {35, 3, 45, 3},
-                {40, 3, 40, 8},
-                {5, 10, 30, 10},
-                {50, 10, 75, 10},
-                {10, 10, 10, 22},
-                {70, 10, 70, 22},
-                {15, 16, 35, 16},
-                {45, 16, 65, 16},
-                {20, 21, 60, 21},
-            },
-        .tunnel_count = 9,
+        .tunnel_count = 11,
 
         .enemy_speed = 4,
         .ghost_threshold = 150,
@@ -325,6 +315,67 @@ void data_spawn_rocks(GameLogicState *state, const LevelData *level) {
     }
 }
 
+/**
+ * @brief Place bonus items on the map (3 per level).
+ *
+ * Bonuses are placed at fixed positions based on round number.
+ * They give 100 points when collected.
+ */
+static void data_place_bonuses(int round) {
+    /* Fixed bonus positions for each level - spread across the map */
+    /* Bonus 1: left side, Bonus 2: center, Bonus 3: right side */
+    int bonus_positions[3][2];
+
+    switch (round) {
+    case 1:
+        bonus_positions[0][0] = 20;
+        bonus_positions[0][1] = 10;
+        bonus_positions[1][0] = 40;
+        bonus_positions[1][1] = 15;
+        bonus_positions[2][0] = 65;
+        bonus_positions[2][1] = 12;
+        break;
+    case 2:
+        bonus_positions[0][0] = 15;
+        bonus_positions[0][1] = 8;
+        bonus_positions[1][0] = 45;
+        bonus_positions[1][1] = 11;
+        bonus_positions[2][0] = 70;
+        bonus_positions[2][1] = 16;
+        break;
+    case 3:
+        bonus_positions[0][0] = 25;
+        bonus_positions[0][1] = 9;
+        bonus_positions[1][0] = 40;
+        bonus_positions[1][1] = 14;
+        bonus_positions[2][0] = 60;
+        bonus_positions[2][1] = 19;
+        break;
+    case 4:
+        bonus_positions[0][0] = 20;
+        bonus_positions[0][1] = 11;
+        bonus_positions[1][0] = 45;
+        bonus_positions[1][1] = 13;
+        bonus_positions[2][0] = 55;
+        bonus_positions[2][1] = 18;
+        break;
+    case 5:
+    default:
+        bonus_positions[0][0] = 25;
+        bonus_positions[0][1] = 10;
+        bonus_positions[1][0] = 50;
+        bonus_positions[1][1] = 16;
+        bonus_positions[2][0] = 65;
+        bonus_positions[2][1] = 18;
+        break;
+    }
+
+    /* Place the 3 bonuses */
+    for (int i = 0; i < 3; i++) {
+        map_set_tile(bonus_positions[i][0], bonus_positions[i][1], TILE_BONUS);
+    }
+}
+
 /* ============================================================================
  *                          LEVEL LOADING
  * ============================================================================ */
@@ -350,13 +401,16 @@ void data_load_level(int round, GameLogicState *state) {
     /* 5. Spawn rocks */
     data_spawn_rocks(state, level);
 
-    /* 6. Update state counters */
+    /* 6. Place bonus items (3 per level, 100 points each) */
+    data_place_bonuses(round);
+
+    /* 7. Update state counters */
     state->enemy_count = level->enemy_count;
     state->enemies_remaining = level->enemy_count;
     state->rock_count = level->rock_count;
     state->round = round;
 
-    /* 7. Apply difficulty modifiers for rounds beyond defined levels */
+    /* 8. Apply difficulty modifiers for rounds beyond defined levels */
     if (round > NUM_LEVELS_DEFINED) {
         int difficulty_bonus = round - NUM_LEVELS_DEFINED;
 

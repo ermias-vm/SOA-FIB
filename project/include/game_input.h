@@ -103,6 +103,14 @@ int input_is_action_pressed(void);
 int input_is_attack_pressed(void);
 
 /**
+ * @brief Check if attack button is currently being held.
+ * @return 1 if attack button (space) is held, 0 otherwise
+ *
+ * This function does NOT consume the input - returns held state.
+ */
+int input_is_attack_held(void);
+
+/**
  * @brief Check if pause button was pressed and clear the flag.
  * @return 1 if pause button (P or ESC) was pressed, 0 otherwise
  *

@@ -51,6 +51,8 @@ static void process_playing_state(void);
 static void process_paused_state(void);
 static void process_level_clear_state(void);
 static void process_game_over_state(void);
+static void process_victory_state(void);
+static void process_credits_state(void);
 static void sync_logic_to_game_state(void);
 
 /* ============================================================================
@@ -261,6 +263,8 @@ static void process_menu_state(void) {
         game_reset();
         g_game.level = 1;
         game_new_level();
+        /* Clear any residual attack input from menu selection */
+        input_clear();
         /* Scene is set to SCENE_ROUND_START in game_new_level() */
     }
 }
@@ -277,7 +281,8 @@ static void process_playing_state(void) {
     /* Get player input direction */
     Direction dir = input_get_direction();
     int pumping = input_is_action_pressed();
-    int attacking = input_is_attack_pressed();
+    int attack_just_pressed = input_is_attack_pressed(); /* Consume first press */
+    int attack_held = input_is_attack_held();            /* Check if still held */
 
     /* Debug print for input */
     debug_print_input(dir, g_logic_state.player.base.pos.x, g_logic_state.player.base.pos.y);
@@ -288,9 +293,13 @@ static void process_playing_state(void) {
     }
     g_logic_state.player.is_pumping = pumping;
 
-    /* Trigger attack if space was pressed */
-    if (attacking) {
+    /* Attack: trigger on first press, maintain while held */
+    if (attack_just_pressed) {
+        /* Start a new attack */
         logic_player_attack(&g_logic_state.player, &g_logic_state);
+    } else if (attack_held && g_logic_state.player.is_attacking) {
+        /* Maintain attack while space is held */
+        g_logic_state.player.attack_timer = ATTACK_DISPLAY_FRAMES;
     }
 
     /* Run game logic update */
@@ -303,7 +312,7 @@ static void process_playing_state(void) {
     if (g_logic_state.enemies_remaining <= 0) {
         g_game.scene = SCENE_ROUND_CLEAR;
         g_logic_state.scene = SCENE_ROUND_CLEAR;
-        g_logic_state.round_start_timer = MY_LEVEL_CLEAR_DELAY;
+        g_logic_state.round_start_timer = ROUND_CLEAR_DELAY;
     }
 
     /* Check for game over */
@@ -330,9 +339,9 @@ static void process_level_clear_state(void) {
         g_logic_state.round++;
 
         if (g_game.level > MAX_ROUNDS) {
-            /* Victory - return to menu with high score */
-            g_game.scene = SCENE_MENU;
-            g_logic_state.scene = SCENE_MENU;
+            /* Victory - go to victory screen */
+            g_game.scene = SCENE_VICTORY;
+            g_logic_state.scene = SCENE_VICTORY;
         } else {
             game_new_level();
         }
@@ -349,6 +358,37 @@ static void process_game_over_state(void) {
             g_game.level = 1;
             game_new_level();
         }
+    }
+}
+
+static void process_victory_state(void) {
+    /* Handle victory screen inputs */
+    if (input_is_action_pressed()) {
+        /* SPACE - play again */
+        game_reset();
+        g_game.level = 1;
+        game_new_level();
+    } else if (input_is_quit_pressed()) {
+        /* ESC - return to menu */
+        input_clear_quit();
+        g_game.scene = SCENE_MENU;
+        g_logic_state.scene = SCENE_MENU;
+    } else {
+        /* Check for 'C' key for credits */
+        char last_key = input_get_last_key();
+        if (last_key == 'c' || last_key == 'C') {
+            g_game.scene = SCENE_CREDITS;
+            g_logic_state.scene = SCENE_CREDITS;
+        }
+    }
+}
+
+static void process_credits_state(void) {
+    /* Return to victory screen or menu on ESC */
+    if (input_is_quit_pressed()) {
+        input_clear_quit();
+        g_game.scene = SCENE_VICTORY;
+        g_logic_state.scene = SCENE_VICTORY;
     }
 }
 
@@ -369,10 +409,13 @@ void logic_thread_func(void *arg) {
         /* Update input state */
         input_update();
 
-        /* Check for quit (ESC key) */
+        /* Check for quit (ESC key) - only in menu or playing scenes */
         if (input_is_quit_pressed()) {
-            g_running = 0;
-            break;
+            if (g_game.scene == SCENE_MENU) {
+                g_running = 0;
+                break;
+            }
+            /* Other scenes handle ESC themselves */
         }
 
         /* Process based on current scene */
@@ -403,7 +446,17 @@ void logic_thread_func(void *arg) {
             if (g_logic_state.round_start_timer <= 0) {
                 g_game.scene = SCENE_PLAYING;
                 g_logic_state.scene = SCENE_PLAYING;
+                /* Clear input to prevent accidental attack on round start */
+                input_clear();
             }
+            break;
+
+        case SCENE_VICTORY:
+            process_victory_state();
+            break;
+
+        case SCENE_CREDITS:
+            process_credits_state();
             break;
 
         default:
@@ -419,7 +472,7 @@ void logic_thread_func(void *arg) {
 }
 
 void render_thread_func(void *arg) {
-    (void)arg; /* Unused */
+    (void)arg;
 
     while (g_running) {
         /* Wait for frame ready signal from logic thread */
@@ -469,6 +522,14 @@ void render_thread_func(void *arg) {
         case SCENE_ROUND_START:
             /* Show round starting message */
             ui_draw_level_clear_screen((int)g_game.level, (int)g_game.score);
+            break;
+
+        case SCENE_VICTORY:
+            ui_draw_victory_screen((int)g_game.score);
+            break;
+
+        case SCENE_CREDITS:
+            ui_draw_credits_screen();
             break;
 
         default:
