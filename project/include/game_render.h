@@ -363,4 +363,94 @@ void render_present_buffer(void);
  */
 void render_cell_to_vga(char *vga_buffer, const ScreenCell *cell, int offset);
 
+/* ============================================================================
+ *                     GAME RENDERING (M5.9)
+ * ============================================================================ */
+
+/* Include game_logic.h for GameLogicState, Player, Enemy, Rock types */
+#include <game_logic.h>
+
+/**
+ * @brief Render complete game frame.
+ * @param state Pointer to GameLogicState structure
+ */
+void render_game(GameLogicState *state);
+
+/**
+ * @brief Render the game map (terrain, tunnels, sky).
+ */
+void render_map(void);
+
+/**
+ * @brief Render all entities (player, enemies, rocks).
+ * @param state Pointer to GameLogicState structure
+ */
+void render_entities(GameLogicState *state);
+
+/**
+ * @brief Render the player.
+ * @param player Pointer to Player structure
+ */
+void render_player(Player *player);
+
+/**
+ * @brief Render all enemies.
+ * @param enemies Array of Enemy structures
+ * @param count Number of enemies
+ */
+void render_enemies(Enemy *enemies, int count);
+
+/**
+ * @brief Render all rocks.
+ * @param rocks Array of Rock structures
+ * @param count Number of rocks
+ */
+void render_rocks(Rock *rocks, int count);
+
+/**
+ * @brief Render the pump attack line.
+ * @param player Pointer to Player structure
+ */
+void render_pump(Player *player);
+
+/**
+ * @brief Render a single entity at its position.
+ * @param entity Pointer to Entity structure
+ * @param display_char Character to display
+ * @param color Color for the entity
+ */
+void render_entity(Entity *entity, char display_char, Color color);
+
+/**
+ * @brief Render a character at specified position.
+ * @param x X coordinate
+ * @param y Y coordinate
+ * @param display_char Character to display
+ * @param color Color for the character
+ */
+void render_entity_at(int x, int y, char display_char, Color color);
+
+/**
+ * @brief Render explosion effect at position.
+ * @param x X coordinate
+ * @param y Y coordinate
+ */
+void render_explosion(int x, int y);
+
+/**
+ * @brief Render Fygar fire breath.
+ * @param x Starting X coordinate
+ * @param y Y coordinate
+ * @param dir Direction of fire
+ * @param length Length of fire
+ */
+void render_fire(int x, int y, int dir, int length);
+
+/**
+ * @brief Render dig particles effect.
+ * @param x X coordinate
+ * @param y Y coordinate
+ */
+void render_dig_particles(int x, int y);
+
 #endif /* __GAME_RENDER_H__ */

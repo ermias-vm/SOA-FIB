@@ -135,6 +135,7 @@
 #define CHAR_PLAYER '@' /* Dig Dug character */
 #define CHAR_POOKA 'O'  /* Pooka enemy (round) */
 #define CHAR_FYGAR 'F'  /* Fygar enemy (dragon) */
+#define CHAR_ROCK 'R'   /* Rock obstacle */
 #define CHAR_DIRT '#'   /* Solid dirt block */
 #define CHAR_EMPTY ' '  /* Empty tunnel */
 #define CHAR_FIRE '*'   /* Fygar fire */
@@ -166,7 +167,7 @@
  *                      STATUS BAR POSITIONS (Row 24)
  * ============================================================================ */
 
-/* Lives display: position 0-2, "♥♥♥" */
+/* Lives display: position 0-2, shows heart symbols */
 #define UI_LIVES_X 0
 #define UI_LIVES_Y ROW_STATUS_BOTTOM
 

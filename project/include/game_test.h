@@ -33,6 +33,7 @@
 #define RUN_RENDER_TESTS    1   /**< M5.6: Render buffer tests */
 #define RUN_UI_TESTS        1   /**< M5.7: UI system tests */
 #define RUN_LOGIC_TESTS     1   /**< M5.8: Game logic tests */
+#define RUN_RENDER_GAME_TESTS 1 /**< M5.9: Game rendering tests */
 // clang-format on
 
 /* ============================================================================
@@ -134,6 +135,21 @@ void test_logic_scoring(int *passed);
 void test_logic_game_state(int *passed);
 void test_logic_fygar_fire(int *passed);
 void game_logic_tests(void);
+
+/* ============================================================================
+ *                      M5.9 - GAME RENDER TEST FUNCTIONS
+ * ============================================================================ */
+
+void test_render_game_init(int *passed);
+void test_render_map_basic(int *passed);
+void test_render_player_display(int *passed);
+void test_render_enemy_display(int *passed);
+void test_render_rock_display(int *passed);
+void test_render_pump_display(int *passed);
+void test_render_explosion_effect(int *passed);
+void test_render_fire_effect(int *passed);
+void test_render_game_complete(int *passed);
+void game_render_tests(void);
 
 /* ============================================================================
  *                          MAIN ENTRY POINT

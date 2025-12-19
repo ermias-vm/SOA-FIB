@@ -5,8 +5,11 @@
  * Uses direct screen buffer writes via fd=10 for efficient rendering.
  */
 
+#include <game_logic.h>
+#include <game_map.h>
 #include <game_render.h>
 #include <game_types.h>
+#include <game_ui.h>
 #include <libc.h>
 
 /* ============================================================================
@@ -309,4 +312,361 @@ const ScreenCell *render_get_cell(int x, int y) {
         return 0; /* NULL */
     }
     return &g_back_buffer.cells[y][x];
+}
+
+/* ============================================================================
+ *                     GAME RENDERING (M5.9)
+ * ============================================================================ */
+
+void render_game(GameLogicState *state) {
+    if (!state) return;
+
+    /* 1. Clear the buffer (with colors by layer) */
+    render_clear();
+
+    /* 2. Draw the map (terrain and tunnels) */
+    render_map();
+
+    /* 3. Draw entities */
+    render_entities(state);
+
+    /* 4. Draw HUD */
+    int time_seconds = state->time_elapsed / TICKS_PER_SECOND;
+    ui_draw_hud(state->lives, state->score, state->round, time_seconds, 0);
+
+    /* 5. Draw special screens if needed */
+    switch (state->scene) {
+    case SCENE_PAUSED:
+        ui_draw_pause_screen();
+        break;
+    case SCENE_ROUND_CLEAR:
+        ui_draw_level_clear_screen(state->round, state->score);
+        break;
+    case SCENE_GAME_OVER:
+        ui_draw_game_over_screen(state->score);
+        break;
+    case SCENE_MENU:
+        ui_draw_menu_screen();
+        break;
+    default:
+        break;
+    }
+
+    /* 6. Present the frame */
+    render_present();
+}
+
+void render_map(void) {
+    for (int y = 0; y < SCREEN_HEIGHT; y++) {
+        /* Skip status rows */
+        if (y == STATUS_TOP_ROW || y == STATUS_BOTTOM_ROW) {
+            continue;
+        }
+
+        Color layer_color = render_get_layer_color(y);
+
+        for (int x = 0; x < SCREEN_WIDTH; x++) {
+            TileType tile = map_get_tile(x, y);
+            char display_char;
+            Color cell_color = layer_color;
+
+            switch (tile) {
+            case TILE_DIRT:
+                /* Solid dirt - use block character */
+                display_char = CHAR_DIRT;
+                break;
+
+            case TILE_EMPTY:
+                /* Tunnel - empty space with layer background color */
+                display_char = ' ';
+                break;
+
+            case TILE_SKY:
+                /* Sky - space with light blue background */
+                display_char = ' ';
+                cell_color.bg = COLOR_SKY_BG;
+                break;
+
+            case TILE_WALL:
+                /* Wall - special character */
+                display_char = '#';
+                cell_color.fg = COLOR_DARK_GRAY;
+                break;
+
+            case TILE_GEM:
+                /* Collectible gem */
+                display_char = '*';
+                cell_color.fg = COLOR_YELLOW;
+                break;
+
+            default:
+                display_char = ' ';
+                break;
+            }
+
+            render_set_cell(x, y, display_char, cell_color);
+        }
+    }
+}
+
+void render_entities(GameLogicState *state) {
+    if (!state) return;
+
+    /* Render order: rocks -> enemies -> pump -> player */
+    /* (player is drawn last to always be visible) */
+
+    render_rocks(state->rocks, state->rock_count);
+    render_enemies(state->enemies, state->enemy_count);
+
+    /* Draw pump before player */
+    if (state->player.is_pumping) {
+        render_pump(&state->player);
+    }
+
+    render_player(&state->player);
+}
+
+void render_entity(Entity *entity, char display_char, Color color) {
+    if (!entity || !entity->active) {
+        return;
+    }
+    render_set_cell(entity->pos.x, entity->pos.y, display_char, color);
+}
+
+void render_entity_at(int x, int y, char display_char, Color color) {
+    render_set_cell(x, y, display_char, color);
+}
+
+void render_player(Player *player) {
+    if (!player || player->state == PLAYER_DEAD) {
+        return;
+    }
+
+    Color player_color;
+    player_color.fg = COLOR_WHITE;
+    player_color.bg = render_get_layer_color(player->base.pos.y).bg;
+
+    char display_char = CHAR_PLAYER;
+
+    /* Modify appearance based on state */
+    switch (player->state) {
+    case PLAYER_DIGGING:
+        display_char = CHAR_PLAYER;
+        break;
+
+    case PLAYER_PUMPING:
+        /* Indicate pumping with different color */
+        player_color.fg = COLOR_YELLOW;
+        break;
+
+    default:
+        break;
+    }
+
+    render_entity(&player->base, display_char, player_color);
+}
+
+void render_enemies(Enemy *enemies, int count) {
+    if (!enemies) return;
+
+    for (int i = 0; i < count; i++) {
+        Enemy *enemy = &enemies[i];
+
+        if (!enemy->base.active || enemy->state == ENEMY_DEAD) {
+            continue;
+        }
+
+        Color enemy_color;
+        enemy_color.bg = render_get_layer_color(enemy->base.pos.y).bg;
+
+        char display_char;
+
+        /* Determine character based on type */
+        if (enemy->base.type == ENTITY_POOKA) {
+            display_char = CHAR_POOKA;
+            enemy_color.fg = COLOR_LIGHT_RED;
+        } else if (enemy->base.type == ENTITY_FYGAR) {
+            display_char = CHAR_FYGAR;
+            enemy_color.fg = COLOR_GREEN;
+        } else {
+            display_char = '?';
+            enemy_color.fg = COLOR_WHITE;
+        }
+
+        /* Modify appearance based on state */
+        switch (enemy->state) {
+        case ENEMY_INFLATING:
+            /* Change character based on inflate level */
+            switch (enemy->inflate_level) {
+            case 1:
+                display_char = CHAR_INFLATE_1;
+                break;
+            case 2:
+                display_char = CHAR_INFLATE_2;
+                break;
+            case 3:
+                display_char = CHAR_INFLATE_3;
+                break;
+            default:
+                break;
+            }
+            enemy_color.fg = COLOR_LIGHT_MAGENTA;
+            break;
+
+        case ENEMY_GHOST:
+            /* Semi-transparent (use darker color) */
+            enemy_color.fg = COLOR_DARK_GRAY;
+            break;
+
+        default:
+            break;
+        }
+
+        render_entity(&enemy->base, display_char, enemy_color);
+
+        /* Render Fygar fire if active */
+        if (enemy->base.type == ENTITY_FYGAR && enemy->fire_active) {
+            render_fire(enemy->base.pos.x, enemy->base.pos.y, enemy->base.dir,
+                        enemy->fire_duration);
+        }
+    }
+}
+
+void render_rocks(Rock *rocks, int count) {
+    if (!rocks) return;
+
+    for (int i = 0; i < count; i++) {
+        Rock *rock = &rocks[i];
+
+        if (!rock->base.active) {
+            continue;
+        }
+
+        Color rock_color;
+        rock_color.fg = COLOR_BROWN;
+        rock_color.bg = render_get_layer_color(rock->base.pos.y).bg;
+
+        char display_char = CHAR_ROCK;
+
+        /* Wobble animation */
+        if (rock->state == ROCK_WOBBLING) {
+            /* Alternate slightly for wobble effect */
+            if (rock->wobble_timer % 2 == 0) {
+                display_char = CHAR_ROCK;
+            } else {
+                display_char = '#';
+            }
+        }
+
+        render_entity(&rock->base, display_char, rock_color);
+    }
+}
+
+void render_pump(Player *player) {
+    if (!player || !player->is_pumping || player->pump_length <= 0) {
+        return;
+    }
+
+    Color pump_color;
+    pump_color.fg = COLOR_CYAN;
+    pump_color.bg = render_get_layer_color(player->base.pos.y).bg;
+
+    int x = player->base.pos.x;
+    int y = player->base.pos.y;
+
+    /* Determine pump character and direction */
+    char pump_char;
+    int dx = 0, dy = 0;
+
+    switch (player->pump_dir) {
+    case DIR_UP:
+        pump_char = '|';
+        dy = -1;
+        break;
+    case DIR_DOWN:
+        pump_char = '|';
+        dy = 1;
+        break;
+    case DIR_LEFT:
+        pump_char = '-';
+        dx = -1;
+        break;
+    case DIR_RIGHT:
+        pump_char = '-';
+        dx = 1;
+        break;
+    default:
+        return;
+    }
+
+    /* Draw the pump line */
+    for (int i = 1; i <= player->pump_length; i++) {
+        int px = x + (dx * i);
+        int py = y + (dy * i);
+
+        if (px >= 0 && px < SCREEN_WIDTH && py >= 0 && py < SCREEN_HEIGHT) {
+            pump_color.bg = render_get_layer_color(py).bg;
+            render_set_cell(px, py, pump_char, pump_color);
+        }
+    }
+
+    /* Draw pump tip */
+    int tip_x = x + (dx * player->pump_length);
+    int tip_y = y + (dy * player->pump_length);
+    if (tip_x >= 0 && tip_x < SCREEN_WIDTH && tip_y >= 0 && tip_y < SCREEN_HEIGHT) {
+        pump_color.fg = COLOR_YELLOW;
+        render_set_cell(tip_x, tip_y, '+', pump_color);
+    }
+}
+
+void render_explosion(int x, int y) {
+    Color explosion_color;
+    explosion_color.fg = COLOR_YELLOW;
+    explosion_color.bg = COLOR_RED;
+
+    /* Simple explosion pattern */
+    render_set_cell(x, y, '*', explosion_color);
+
+    /* Particles around */
+    if (x > 0) render_set_cell(x - 1, y, '+', explosion_color);
+    if (x < SCREEN_WIDTH - 1) render_set_cell(x + 1, y, '+', explosion_color);
+    if (y > 0) render_set_cell(x, y - 1, '+', explosion_color);
+    if (y < SCREEN_HEIGHT - 1) render_set_cell(x, y + 1, '+', explosion_color);
+}
+
+void render_fire(int x, int y, int dir, int length) {
+    Color fire_color;
+    fire_color.fg = COLOR_LIGHT_RED;
+    fire_color.bg = COLOR_RED;
+
+    int dx = 0;
+    switch (dir) {
+    case DIR_LEFT:
+        dx = -1;
+        break;
+    case DIR_RIGHT:
+        dx = 1;
+        break;
+    default:
+        return; /* Fygar only fires horizontally */
+    }
+
+    for (int i = 1; i <= length && i <= FYGAR_FIRE_RANGE; i++) {
+        int fx = x + (dx * i);
+
+        if (fx >= 0 && fx < SCREEN_WIDTH) {
+            char fire_char = (i == length) ? '*' : '~';
+            render_set_cell(fx, y, fire_char, fire_color);
+        }
+    }
+}
+
+void render_dig_particles(int x, int y) {
+    /* Simple particle effect when digging */
+    Color particle_color;
+    particle_color.fg = COLOR_BROWN;
+    particle_color.bg = render_get_layer_color(y).bg;
+
+    /* Show briefly (managed by game timer in practice) */
+    render_set_cell(x, y, '.', particle_color);
 }

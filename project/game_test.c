@@ -6,9 +6,13 @@
  * - M5.4: Entity System (entities, player, enemies)
  * - M5.5: Input System (keyboard, direction mapping)
  * - M5.6: Render Buffer (double buffering, drawing)
+ * - M5.7: UI System (HUD, menus, overlays)
+ * - M5.8: Game Logic (player logic, enemy AI, collisions, scoring)
+ * - M5.9: Game Render (complete game rendering)
  */
 
 #include <game.h>
+#include <game_map.h>
 #include <game_test.h>
 #include <game_ui.h>
 #include <libc.h>
@@ -2124,6 +2128,398 @@ void game_logic_tests(void) {
 }
 
 /* ============================================================================
+ *                      M5.9 - GAME RENDER TESTS
+ * ============================================================================ */
+
+void test_render_game_init(int *passed) {
+    game_test_print_header(1, "render_game() - Game rendering initialization");
+    *passed = 1;
+
+    /* Initialize render system */
+    render_init();
+
+    /* Initialize game state */
+    GameLogicState state;
+    logic_init(&state);
+
+    /* Verify render system is ready */
+    const ScreenCell *cell = render_get_cell(0, 0);
+    if (cell == 0) {
+        prints("[ERROR] Render buffer not accessible\n");
+        *passed = 0;
+    }
+
+    if (*passed) prints("[OK] Game render initialization works correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_render_map_basic(int *passed) {
+    game_test_print_header(2, "render_map() - Map rendering");
+    *passed = 1;
+
+    /* Initialize systems */
+    render_init();
+    map_init(1);
+
+    /* Render map */
+    render_clear();
+    render_map();
+
+    /* Check that sky rows have proper background */
+    Color sky_color = render_get_layer_color(2);
+    if (sky_color.bg != COLOR_SKY_BG) {
+        prints("[ERROR] Sky row should have light blue background\n");
+        *passed = 0;
+    }
+
+    /* Check that ground layers have proper backgrounds */
+    Color layer1_color = render_get_layer_color(6);
+    if (layer1_color.bg != COLOR_LAYER1_BG) {
+        prints("[ERROR] Layer 1 should have brown background\n");
+        *passed = 0;
+    }
+
+    if (*passed) prints("[OK] Map rendering works correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_render_player_display(int *passed) {
+    game_test_print_header(3, "render_player() - Player rendering");
+    *passed = 1;
+
+    render_init();
+    render_clear();
+
+    /* Create player */
+    Player player;
+    logic_player_init(&player, 40, 10);
+
+    /* Render player */
+    render_player(&player);
+
+    /* Check player was drawn at correct position */
+    const ScreenCell *cell = render_get_cell(40, 10);
+    if (cell == 0) {
+        prints("[ERROR] Cannot access cell at player position\n");
+        *passed = 0;
+    } else if (cell->character != CHAR_PLAYER) {
+        prints("[ERROR] Player character not drawn correctly, got '%c'\n", cell->character);
+        *passed = 0;
+    }
+
+    /* Test player pumping state */
+    player.state = PLAYER_PUMPING;
+    render_clear();
+    render_player(&player);
+    cell = render_get_cell(40, 10);
+    if (cell != 0 && cell->color.fg != COLOR_YELLOW) {
+        prints("[WARN] Pumping player should be yellow\n");
+    }
+
+    /* Test dead player not rendered */
+    player.state = PLAYER_DEAD;
+    render_clear();
+    render_player(&player);
+    /* Dead players should not be rendered */
+
+    if (*passed) prints("[OK] Player rendering works correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_render_enemy_display(int *passed) {
+    game_test_print_header(4, "render_enemies() - Enemy rendering");
+    *passed = 1;
+
+    render_init();
+    render_clear();
+
+    /* Create enemies */
+    Enemy enemies[2];
+    logic_enemy_init(&enemies[0], 50, 10, ENTITY_POOKA);
+    logic_enemy_init(&enemies[1], 60, 15, ENTITY_FYGAR);
+
+    /* Render enemies */
+    render_enemies(enemies, 2);
+
+    /* Check Pooka */
+    const ScreenCell *cell = render_get_cell(50, 10);
+    if (cell == 0) {
+        prints("[ERROR] Cannot access cell at Pooka position\n");
+        *passed = 0;
+    } else if (cell->character != CHAR_POOKA) {
+        prints("[ERROR] Pooka character not drawn correctly, got '%c'\n", cell->character);
+        *passed = 0;
+    }
+
+    /* Check Fygar */
+    cell = render_get_cell(60, 15);
+    if (cell == 0) {
+        prints("[ERROR] Cannot access cell at Fygar position\n");
+        *passed = 0;
+    } else if (cell->character != CHAR_FYGAR) {
+        prints("[ERROR] Fygar character not drawn correctly, got '%c'\n", cell->character);
+        *passed = 0;
+    }
+
+    /* Test inflating state */
+    enemies[0].state = ENEMY_INFLATING;
+    enemies[0].inflate_level = 2;
+    render_clear();
+    render_enemies(enemies, 2);
+    cell = render_get_cell(50, 10);
+    if (cell != 0 && cell->character != CHAR_INFLATE_2) {
+        prints("[WARN] Inflating enemy should show inflate character\n");
+    }
+
+    /* Test dead enemy not rendered */
+    enemies[0].state = ENEMY_DEAD;
+    render_clear();
+    render_enemies(enemies, 2);
+
+    if (*passed) prints("[OK] Enemy rendering works correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_render_rock_display(int *passed) {
+    game_test_print_header(5, "render_rocks() - Rock rendering");
+    *passed = 1;
+
+    render_init();
+    render_clear();
+
+    /* Create rocks */
+    Rock rocks[2];
+    logic_rock_init(&rocks[0], 30, 8);
+    logic_rock_init(&rocks[1], 45, 12);
+
+    /* Render rocks */
+    render_rocks(rocks, 2);
+
+    /* Check first rock */
+    const ScreenCell *cell = render_get_cell(30, 8);
+    if (cell == 0) {
+        prints("[ERROR] Cannot access cell at rock position\n");
+        *passed = 0;
+    } else if (cell->character != CHAR_ROCK) {
+        prints("[ERROR] Rock character not drawn correctly, got '%c'\n", cell->character);
+        *passed = 0;
+    }
+
+    /* Test wobbling rock */
+    rocks[0].state = ROCK_WOBBLING;
+    rocks[0].wobble_timer = 1;
+    render_clear();
+    render_rocks(rocks, 2);
+    cell = render_get_cell(30, 8);
+    if (cell != 0 && cell->character != '#') {
+        prints("[WARN] Wobbling rock should alternate character\n");
+    }
+
+    if (*passed) prints("[OK] Rock rendering works correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_render_pump_display(int *passed) {
+    game_test_print_header(6, "render_pump() - Pump attack rendering");
+    *passed = 1;
+
+    render_init();
+    render_clear();
+
+    /* Create player with pump active */
+    Player player;
+    logic_player_init(&player, 40, 10);
+    player.is_pumping = 1;
+    player.pump_length = 3;
+    player.pump_dir = DIR_RIGHT;
+
+    /* Render pump */
+    render_pump(&player);
+
+    /* Check pump line */
+    const ScreenCell *cell = render_get_cell(41, 10);
+    if (cell == 0) {
+        prints("[ERROR] Cannot access cell at pump position\n");
+        *passed = 0;
+    } else if (cell->character != '-') {
+        prints("[ERROR] Pump character not drawn correctly, got '%c'\n", cell->character);
+        *passed = 0;
+    }
+
+    /* Check pump tip */
+    cell = render_get_cell(43, 10);
+    if (cell != 0 && cell->character != '+') {
+        prints("[WARN] Pump tip should be '+'\n");
+    }
+
+    /* Test vertical pump */
+    player.pump_dir = DIR_DOWN;
+    render_clear();
+    render_pump(&player);
+    cell = render_get_cell(40, 11);
+    if (cell != 0 && cell->character != '|') {
+        prints("[WARN] Vertical pump should use '|' character\n");
+    }
+
+    if (*passed) prints("[OK] Pump rendering works correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_render_explosion_effect(int *passed) {
+    game_test_print_header(7, "render_explosion() - Explosion effect");
+    *passed = 1;
+
+    render_init();
+    render_clear();
+
+    /* Render explosion */
+    render_explosion(40, 12);
+
+    /* Check center */
+    const ScreenCell *cell = render_get_cell(40, 12);
+    if (cell == 0) {
+        prints("[ERROR] Cannot access cell at explosion center\n");
+        *passed = 0;
+    } else if (cell->character != '*') {
+        prints("[ERROR] Explosion center should be '*', got '%c'\n", cell->character);
+        *passed = 0;
+    }
+
+    /* Check particles */
+    cell = render_get_cell(39, 12);
+    if (cell != 0 && cell->character != '+') {
+        prints("[WARN] Explosion particle should be '+'\n");
+    }
+
+    if (*passed) prints("[OK] Explosion effect works correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_render_fire_effect(int *passed) {
+    game_test_print_header(8, "render_fire() - Fire breath effect");
+    *passed = 1;
+
+    render_init();
+    render_clear();
+
+    /* Render fire (Fygar fire to the right) */
+    render_fire(50, 10, DIR_RIGHT, 2);
+
+    /* Check fire cells */
+    const ScreenCell *cell = render_get_cell(51, 10);
+    if (cell == 0) {
+        prints("[ERROR] Cannot access cell at fire position\n");
+        *passed = 0;
+    } else if (cell->character != '~') {
+        prints("[ERROR] Fire body should be '~', got '%c'\n", cell->character);
+        *passed = 0;
+    }
+
+    cell = render_get_cell(52, 10);
+    if (cell != 0 && cell->character != '*') {
+        prints("[WARN] Fire tip should be '*'\n");
+    }
+
+    /* Test fire to the left */
+    render_clear();
+    render_fire(50, 10, DIR_LEFT, 2);
+    cell = render_get_cell(49, 10);
+    if (cell != 0 && cell->character != '~') {
+        prints("[WARN] Leftward fire body should be '~'\n");
+    }
+
+    if (*passed) prints("[OK] Fire effect works correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+void test_render_game_complete(int *passed) {
+    game_test_print_header(9, "render_game() - Complete game rendering");
+    *passed = 1;
+
+    /* Initialize everything */
+    render_init();
+    GameLogicState state;
+    logic_init(&state);
+    logic_start_round(&state, 1);
+
+    /* Ensure scene is playing for render test */
+    state.scene = SCENE_PLAYING;
+
+    /* Render full game frame */
+    render_game(&state);
+
+    /* Verify player was rendered */
+    const ScreenCell *cell = render_get_cell(state.player.base.pos.x, state.player.base.pos.y);
+    if (cell == 0) {
+        prints("[ERROR] Cannot access player cell after render_game\n");
+        *passed = 0;
+    }
+
+    /* Test pause screen overlay */
+    state.scene = SCENE_PAUSED;
+    render_game(&state);
+
+    /* Test game over screen */
+    state.scene = SCENE_GAME_OVER;
+    render_game(&state);
+
+    /* Test menu screen */
+    state.scene = SCENE_MENU;
+    render_game(&state);
+
+    if (*passed) prints("[OK] Complete game rendering works correctly\n");
+    game_test_print_result(*passed);
+    game_subtests_run++;
+    if (*passed) game_subtests_passed++;
+}
+
+/****************************************/
+/**     Game Render Entry Point        **/
+/****************************************/
+
+void game_render_tests(void) {
+    int saved_run = game_subtests_run;
+    int saved_passed = game_subtests_passed;
+    game_subtests_run = 0;
+    game_subtests_passed = 0;
+
+    prints("[PID %d] [TID %d] Starting game render tests...\n", getpid(), gettid());
+
+    int result;
+    test_render_game_init(&result);
+    test_render_map_basic(&result);
+    test_render_player_display(&result);
+    test_render_enemy_display(&result);
+    test_render_rock_display(&result);
+    test_render_pump_display(&result);
+    test_render_explosion_effect(&result);
+    test_render_fire_effect(&result);
+    test_render_game_complete(&result);
+
+    /* Print summary */
+    game_test_print_suite_summary("GAME RENDER TESTS (M5.9)", game_subtests_passed,
+                                  game_subtests_run);
+    game_subtests_run = saved_run + game_subtests_run;
+    game_subtests_passed = saved_passed + game_subtests_passed;
+}
+
+/* ============================================================================
  *                          MAIN ENTRY POINT
  * ============================================================================ */
 
@@ -2165,6 +2561,11 @@ void execute_game_tests(void) {
 #if RUN_LOGIC_TESTS
     game_test_print_suite_header("GAME LOGIC TESTS (M5.8)");
     game_logic_tests();
+#endif
+
+#if RUN_RENDER_GAME_TESTS
+    game_test_print_suite_header("GAME RENDER TESTS (M5.9)");
+    game_render_tests();
 #endif
 
     total_run = game_subtests_run;

@@ -46,7 +46,7 @@
 #define PH_USER_START 0x100000
 
 /* Initial ESP for user processes (top of data segment - 16 bytes) */
-#define USER_ESP L_USER_START + (NUM_PAG_DATA) * 0x1000 - 16
+#define USER_ESP L_USER_START + (NUM_PAG_DATA)*0x1000 - 16
 
 /* First page number in user space */
 #define USER_FIRST_PAGE (L_USER_START >> 12)
