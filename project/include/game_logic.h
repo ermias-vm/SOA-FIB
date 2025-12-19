@@ -26,7 +26,7 @@
 #define ENEMY_MOVE_DELAY 4
 #define GHOST_MODE_THRESHOLD 60 /* Ticks before enemy goes ghost */
 #define RESPAWN_DELAY 60        /* Ticks before player respawns */
-#define LEVEL_CLEAR_DELAY 90    /* Ticks before next level */
+#define LEVEL_CLEAR_DELAY 60    /* Frames before next level (1 sec at 60 FPS) */
 /* Note: ROUND_START_DELAY is already defined in game_config.h */
 
 /* Rock mechanics */
@@ -145,6 +145,20 @@ void logic_player_move(Player *player, Direction dir);
  * @param state Pointer to GameLogicState structure
  */
 void logic_player_pump(Player *player, GameLogicState *state);
+
+/**
+ * @brief Perform player attack.
+ *
+ * Attacks in the direction the player is facing.
+ * Vertical (up/down): 2 blocks with '|'
+ * Horizontal (left/right): 3 blocks with '-'
+ * Enemies hit become paralyzed and die after 2 seconds.
+ *
+ * @param player Pointer to Player structure
+ * @param state Pointer to GameLogicState structure
+ * @return 1 if attack was performed, 0 otherwise
+ */
+int logic_player_attack(Player *player, GameLogicState *state);
 
 /**
  * @brief Handle player death.

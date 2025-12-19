@@ -88,11 +88,27 @@ Direction input_get_direction(void);
 
 /**
  * @brief Check if action button was pressed and clear the flag.
- * @return 1 if action button (space) was pressed, 0 otherwise
+ * @return 1 if action button (enter) was pressed, 0 otherwise
  *
  * This function "consumes" the action input.
  */
 int input_is_action_pressed(void);
+
+/**
+ * @brief Check if attack button was pressed and clear the flag.
+ * @return 1 if attack button (space) was pressed, 0 otherwise
+ *
+ * This function "consumes" the attack input.
+ */
+int input_is_attack_pressed(void);
+
+/**
+ * @brief Check if attack button is currently being held.
+ * @return 1 if attack button (space) is held, 0 otherwise
+ *
+ * This function does NOT consume the input - returns held state.
+ */
+int input_is_attack_held(void);
 
 /**
  * @brief Check if pause button was pressed and clear the flag.
@@ -151,6 +167,14 @@ void input_clear_quit(void);
  * Clears all flags and resets all state to initial values.
  */
 void input_reset(void);
+
+/**
+ * @brief Reset the move_processed flag for a new frame.
+ *
+ * Call this at the start of each game logic frame to allow
+ * a new movement to be processed.
+ */
+void input_new_frame(void);
 
 /* ============================================================================
  *                            UTILITY FUNCTIONS

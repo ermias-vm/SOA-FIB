@@ -96,11 +96,15 @@ void ui_draw_fps(int fps) {
 }
 
 void ui_draw_lives(int lives) {
+    Color label_color = render_make_color(COLOR_WHITE, COLOR_BLACK);
     Color heart_color = render_make_color(COLOR_LIGHT_RED, COLOR_BLACK);
+
+    /* Draw "LIVES: " label */
+    render_put_string_colored(HUD_LIVES_X, STATUS_BOTTOM_ROW, "LIVES: ", label_color);
 
     /* Draw hearts for each life (max 5) */
     for (int i = 0; i < lives && i < 5; i++) {
-        render_set_cell(HUD_LIVES_X + i, STATUS_BOTTOM_ROW, CHAR_HEART, heart_color);
+        render_set_cell(HUD_LIVES_X + 7 + i, STATUS_BOTTOM_ROW, CHAR_HEART, heart_color);
     }
 }
 
@@ -136,18 +140,18 @@ void ui_draw_score(int score) {
 void ui_draw_round(int round) {
     Color round_color = render_make_color(COLOR_CYAN, COLOR_BLACK);
 
-    char round_text[10] = "ROUND ";
+    /* Build "ROUND:  X" string with two spaces between : and number */
+    char round_text[12] = "ROUND:  ";
     char round_digits[3];
     ui_number_to_string(round, round_digits, 2, ' ');
 
-    /* Concatenate "ROUND " + number */
-    int i = 6;
+    /* Append the number (skip leading spaces for single digit) */
+    int i = 8; /* After "ROUND:  " */
     int j = 0;
-    while (round_digits[j] && i < 9) {
-        if (round_digits[j] != ' ' || i > 6) { /* Skip leading spaces except first */
-            round_text[i++] = round_digits[j];
-        }
-        j++;
+    /* Skip leading space for single digit numbers */
+    if (round_digits[0] == ' ') j = 1;
+    while (round_digits[j] && i < 11) {
+        round_text[i++] = round_digits[j++];
     }
     round_text[i] = '\0';
 
@@ -295,27 +299,56 @@ void ui_draw_victory_screen(int final_score) {
     Color title_color = render_make_color(COLOR_LIGHT_GREEN, COLOR_BLACK);
     Color text_color = render_make_color(COLOR_WHITE, COLOR_BLACK);
     Color score_color = render_make_color(COLOR_YELLOW, COLOR_BLACK);
+    Color subtitle_color = render_make_color(COLOR_CYAN, COLOR_BLACK);
 
     /* Clear screen */
     render_clear();
 
     /* Victory title */
-    ui_draw_centered_text(6, "========================", title_color);
-    ui_draw_centered_text(7, "        VICTORY!        ", title_color);
-    ui_draw_centered_text(8, "      All levels        ", title_color);
-    ui_draw_centered_text(9, "      completed!        ", title_color);
-    ui_draw_centered_text(10, "========================", title_color);
+    ui_draw_centered_text(5, "========================", title_color);
+    ui_draw_centered_text(6, "       YOU WIN!         ", title_color);
+    ui_draw_centered_text(7, "========================", title_color);
+
+    /* Subtitle */
+    ui_draw_centered_text(9, "Finally, Baka Baka is defeated", subtitle_color);
 
     /* Final score */
-    ui_draw_centered_text(13, "TOTAL SCORE:", text_color);
+    ui_draw_centered_text(12, "TOTAL SCORE:", text_color);
 
     char score_str[6];
     ui_number_to_string(final_score, score_str, 5, '0');
-    ui_draw_centered_text(15, score_str, score_color);
+    ui_draw_centered_text(14, score_str, score_color);
 
-    /* Congratulations */
-    ui_draw_centered_text(18, "Congratulations!", title_color);
-    ui_draw_centered_text(20, "Press Q to quit", text_color);
+    /* Options */
+    ui_draw_centered_text(18, "Press SPACE to play again", text_color);
+    ui_draw_centered_text(19, "Press C for credits", text_color);
+    ui_draw_centered_text(20, "Press ESC for main menu", text_color);
+}
+
+void ui_draw_credits_screen(void) {
+    Color title_color = render_make_color(COLOR_LIGHT_CYAN, COLOR_BLACK);
+    Color text_color = render_make_color(COLOR_WHITE, COLOR_BLACK);
+    Color name_color = render_make_color(COLOR_YELLOW, COLOR_BLACK);
+
+    /* Clear screen */
+    render_clear();
+
+    /* Credits title */
+    ui_draw_centered_text(5, "========================", title_color);
+    ui_draw_centered_text(6, "        CREDITS         ", title_color);
+    ui_draw_centered_text(7, "========================", title_color);
+
+    /* Developers */
+    ui_draw_centered_text(10, "Developed by:", text_color);
+    ui_draw_centered_text(12, "ERMIAS VALLS", name_color);
+    ui_draw_centered_text(14, "MARC DE RIALP", name_color);
+
+    /* Course info */
+    ui_draw_centered_text(17, "SOA - FIB UPC", text_color);
+    ui_draw_centered_text(18, "2024-2025", text_color);
+
+    /* Return option */
+    ui_draw_centered_text(21, "Press ESC to return", text_color);
 }
 
 /* ============================================================================

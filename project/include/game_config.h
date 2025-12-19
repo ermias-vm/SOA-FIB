@@ -27,13 +27,13 @@
 #define ROW_STATUS_TOP 0     /* Row 0: TIME + FPS */
 #define ROW_STATUS_BOTTOM 24 /* Row 24: LIVES + SCORE + ROUND */
 
-/* Sky area (3 rows) */
+/* Sky area (2 rows) */
 #define ROW_SKY_START 1                            /* Sky starts here */
-#define ROW_SKY_END 3                              /* Sky ends here (rows 1, 2, 3) */
-#define SKY_ROWS (ROW_SKY_END - ROW_SKY_START + 1) /* 3 rows */
+#define ROW_SKY_END 2                              /* Sky ends here (rows 1, 2) */
+#define SKY_ROWS (ROW_SKY_END - ROW_SKY_START + 1) /* 2 rows */
 
-/* Ground area (20 rows, divided in 4 layers of 5 rows each) */
-#define ROW_GROUND_START 4                                  /* Ground starts here */
+/* Ground area (21 rows, layers 1-3 have 5 rows, layer 4 has 4 rows) */
+#define ROW_GROUND_START 3                                  /* Ground starts here */
 #define ROW_GROUND_END 23                                   /* Ground ends here */
 #define GROUND_ROWS (ROW_GROUND_END - ROW_GROUND_START + 1) /* 20 rows */
 
@@ -41,24 +41,27 @@
  *                           LAYER DEFINITIONS
  * ============================================================================ */
 
-/* Each layer has 5 rows */
+/* Layers 1-3 have 5 rows, layer 4 has 4 rows */
 #define ROWS_PER_LAYER 5
 
-/* Layer 1: rows 4-8 */
-#define LAYER_1_START 4
-#define LAYER_1_END 8
+/* Layer 1: rows 3-7 */
+#define LAYER_1_START 3
+#define LAYER_1_END 7
 
-/* Layer 2: rows 9-13 */
-#define LAYER_2_START 9
-#define LAYER_2_END 13
+/* Layer 2: rows 8-12 */
+#define LAYER_2_START 8
+#define LAYER_2_END 12
 
-/* Layer 3: rows 14-18 */
-#define LAYER_3_START 14
-#define LAYER_3_END 18
+/* Layer 3: rows 13-17 */
+#define LAYER_3_START 13
+#define LAYER_3_END 17
 
-/* Layer 4: rows 19-23 */
-#define LAYER_4_START 19
-#define LAYER_4_END 23
+/* Layer 4: rows 18-22 (4 rows for deepest layer) */
+#define LAYER_4_START 18
+#define LAYER_4_END 22
+
+/* Bottom border row */
+#define ROW_BORDER 23
 
 /* ============================================================================
  *                           SCORING SYSTEM
@@ -93,7 +96,7 @@
 #define MAX_ENEMIES 8
 #define INITIAL_LIVES 3
 #define MAX_LIVES 5
-#define MAX_ROUNDS 99
+#define MAX_ROUNDS 5
 #define MAX_SCORE 99999
 #define MAX_GEMS 20
 #define MAX_ROCKS 10
@@ -125,23 +128,37 @@
 #define INFLATE_DEFLATE_TIME ONE_SECOND /* Ticks to deflate one level */
 #define PUMP_RANGE 1                    /* Pump reaches 1 block ahead */
 
-#define ROUND_START_DELAY (ONE_SECOND * 2) /* Delay at round start */
-#define DEATH_DELAY ONE_SECOND             /* Delay after death */
+#define ROUND_START_DELAY HALF_SECOND /* Delay at round start */
+#define DEATH_DELAY ONE_SECOND        /* Delay after death */
 
 /* ============================================================================
  *                           GAME CHARACTERS (ASCII)
  * ============================================================================ */
 
-#define CHAR_PLAYER '@' /* Dig Dug character */
-#define CHAR_POOKA 'O'  /* Pooka enemy (round) */
-#define CHAR_FYGAR 'F'  /* Fygar enemy (dragon) */
-#define CHAR_ROCK 'R'   /* Rock obstacle */
-#define CHAR_DIRT '#'   /* Solid dirt block */
-#define CHAR_EMPTY ' '  /* Empty tunnel */
-#define CHAR_FIRE '*'   /* Fygar fire */
-#define CHAR_PUMP '-'   /* Pump attack */
-#define CHAR_LIFE 'V'   /* Life symbol (V for vida/life) */
-#define CHAR_SKY ' '    /* Sky (empty) */
+/* Player directional characters */
+#define CHAR_PLAYER_UP 'P'    /* Player facing up */
+#define CHAR_PLAYER_DOWN 'P'  /* Player facing down */
+#define CHAR_PLAYER_LEFT 'P'  /* Player facing left */
+#define CHAR_PLAYER_RIGHT 'P' /* Player facing right */
+#define CHAR_PLAYER 'P'       /* Default player (facing right) */
+
+/* Attack characters */
+#define CHAR_ATTACK_V '|' /* Vertical attack */
+#define CHAR_ATTACK_H '-' /* Horizontal attack */
+
+/* Attack range */
+#define ATTACK_RANGE_V 2 /* Vertical attack range (2 blocks) */
+#define ATTACK_RANGE_H 3 /* Horizontal attack range (3 blocks) */
+
+#define CHAR_POOKA 'O' /* Pooka enemy (round) */
+#define CHAR_FYGAR 'F' /* Fygar enemy (dragon) */
+#define CHAR_ROCK 'R'  /* Rock obstacle */
+#define CHAR_DIRT '#'  /* Solid dirt block */
+#define CHAR_EMPTY ' ' /* Empty tunnel */
+#define CHAR_FIRE '*'  /* Fygar fire */
+#define CHAR_PUMP '-'  /* Pump attack */
+#define CHAR_LIFE 'V'  /* Life symbol (V for vida/life) */
+#define CHAR_SKY ' '   /* Sky (empty) */
 
 /* Inflating enemy characters (stages) */
 #define CHAR_INFLATE_1 'o' /* Slightly inflated */
@@ -195,7 +212,7 @@
 #define COLOR_LAYER_1 0x6F /* White on brown (light soil) */
 #define COLOR_LAYER_2 0x6E /* Yellow on brown */
 #define COLOR_LAYER_3 0x4F /* White on red (deeper soil) */
-#define COLOR_LAYER_4 0x40 /* Black on red (deepest) */
+#define COLOR_LAYER_4 0x1F /* White on blue (deepest) */
 
 /* Tunnel color */
 #define COLOR_TUNNEL 0x00 /* Black on black */

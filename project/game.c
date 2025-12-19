@@ -38,6 +38,10 @@ static GameLogicState g_logic_state;
 #define MY_ROUND_START_DELAY TIME_SHORT  /* From times.h */
 #define MY_LEVEL_CLEAR_DELAY TIME_MEDIUM /* From times.h */
 
+/* Frame timing for 60 FPS limiting */
+static int g_last_frame_time = 0;
+static int g_frame_ticks = 0;
+
 /* ============================================================================
  *                          FORWARD DECLARATIONS
  * ============================================================================ */
@@ -47,6 +51,8 @@ static void process_playing_state(void);
 static void process_paused_state(void);
 static void process_level_clear_state(void);
 static void process_game_over_state(void);
+static void process_victory_state(void);
+static void process_credits_state(void);
 static void sync_logic_to_game_state(void);
 
 /* ============================================================================
@@ -57,7 +63,7 @@ static void sync_logic_to_game_state(void);
 
 static void debug_print_state_change(const char *new_state) {
 #if DEBUG_GAME_STATE
-    prints("[DEBUG] State -> %s\n", new_state);
+    printd("[DEBUG] State -> %s\n", new_state);
 #else
     (void)new_state;
 #endif
@@ -83,7 +89,7 @@ static void debug_print_input(Direction dir, int x, int y) {
         default:
             break;
         }
-        prints("[DEBUG] Input: %s | Pos: (%d, %d)\n", dir_name, x, y);
+        printd("[DEBUG] Input: %s | Pos: (%d, %d)\n", dir_name, x, y);
     }
 #else
     (void)dir;
@@ -94,7 +100,7 @@ static void debug_print_input(Direction dir, int x, int y) {
 
 static void debug_print_player(int x, int y, int state) {
 #if DEBUG_GAME_PLAYER
-    prints("[DEBUG] Player: pos=(%d,%d) state=%d\n", x, y, state);
+    printd("[DEBUG] Player: pos=(%d,%d) state=%d\n", x, y, state);
 #else
     (void)x;
     (void)y;
@@ -109,6 +115,35 @@ static void debug_print_player(int x, int y, int state) {
 #define debug_print_player(x, y, s) ((void)0)
 
 #endif /* DEBUG_GAME_ENABLED */
+
+/* ============================================================================
+ *                          FRAME RATE CONTROL
+ * ============================================================================ */
+
+/**
+ * @brief Wait until enough time has passed for the next frame (60 FPS limit).
+ *
+ * This function ensures consistent frame timing by waiting until at least
+ * TICKS_PER_FRAME ticks have passed since the last frame.
+ */
+static void wait_for_next_frame(void) {
+    int ticks_per_frame = TICKS_PER_FRAME;
+    if (ticks_per_frame < MIN_TICKS_PER_FRAME) {
+        ticks_per_frame = MIN_TICKS_PER_FRAME;
+    }
+
+    int current_time = gettime();
+    int elapsed = current_time - g_last_frame_time;
+
+    /* If not enough time has passed, busy-wait */
+    while (elapsed < ticks_per_frame) {
+        current_time = gettime();
+        elapsed = current_time - g_last_frame_time;
+    }
+
+    g_frame_ticks = elapsed;
+    g_last_frame_time = current_time;
+}
 
 /* ============================================================================
  *                          INITIALIZATION
@@ -136,7 +171,11 @@ void game_init(void) {
     g_running = 1;
     g_frame_ready = 0;
 
-    /* 6. Clear screen */
+    /* 6. Initialize frame timing */
+    g_last_frame_time = gettime();
+    g_frame_ticks = 0;
+
+    /* 7. Clear screen */
     render_clear();
     render_present();
 }
@@ -224,6 +263,8 @@ static void process_menu_state(void) {
         game_reset();
         g_game.level = 1;
         game_new_level();
+        /* Clear any residual attack input from menu selection */
+        input_clear();
         /* Scene is set to SCENE_ROUND_START in game_new_level() */
     }
 }
@@ -240,6 +281,8 @@ static void process_playing_state(void) {
     /* Get player input direction */
     Direction dir = input_get_direction();
     int pumping = input_is_action_pressed();
+    int attack_just_pressed = input_is_attack_pressed(); /* Consume first press */
+    int attack_held = input_is_attack_held();            /* Check if still held */
 
     /* Debug print for input */
     debug_print_input(dir, g_logic_state.player.base.pos.x, g_logic_state.player.base.pos.y);
@@ -249,6 +292,15 @@ static void process_playing_state(void) {
         g_logic_state.player.base.dir = dir;
     }
     g_logic_state.player.is_pumping = pumping;
+
+    /* Attack: trigger on first press, maintain while held */
+    if (attack_just_pressed) {
+        /* Start a new attack */
+        logic_player_attack(&g_logic_state.player, &g_logic_state);
+    } else if (attack_held && g_logic_state.player.is_attacking) {
+        /* Maintain attack while space is held */
+        g_logic_state.player.attack_timer = ATTACK_DISPLAY_FRAMES;
+    }
 
     /* Run game logic update */
     logic_update(&g_logic_state);
@@ -260,7 +312,7 @@ static void process_playing_state(void) {
     if (g_logic_state.enemies_remaining <= 0) {
         g_game.scene = SCENE_ROUND_CLEAR;
         g_logic_state.scene = SCENE_ROUND_CLEAR;
-        g_logic_state.round_start_timer = MY_LEVEL_CLEAR_DELAY;
+        g_logic_state.round_start_timer = ROUND_CLEAR_DELAY;
     }
 
     /* Check for game over */
@@ -287,9 +339,9 @@ static void process_level_clear_state(void) {
         g_logic_state.round++;
 
         if (g_game.level > MAX_ROUNDS) {
-            /* Victory - return to menu with high score */
-            g_game.scene = SCENE_MENU;
-            g_logic_state.scene = SCENE_MENU;
+            /* Victory - go to victory screen */
+            g_game.scene = SCENE_VICTORY;
+            g_logic_state.scene = SCENE_VICTORY;
         } else {
             game_new_level();
         }
@@ -309,6 +361,37 @@ static void process_game_over_state(void) {
     }
 }
 
+static void process_victory_state(void) {
+    /* Handle victory screen inputs */
+    if (input_is_action_pressed()) {
+        /* SPACE - play again */
+        game_reset();
+        g_game.level = 1;
+        game_new_level();
+    } else if (input_is_quit_pressed()) {
+        /* ESC - return to menu */
+        input_clear_quit();
+        g_game.scene = SCENE_MENU;
+        g_logic_state.scene = SCENE_MENU;
+    } else {
+        /* Check for 'C' key for credits */
+        char last_key = input_get_last_key();
+        if (last_key == 'c' || last_key == 'C') {
+            g_game.scene = SCENE_CREDITS;
+            g_logic_state.scene = SCENE_CREDITS;
+        }
+    }
+}
+
+static void process_credits_state(void) {
+    /* Return to victory screen or menu on ESC */
+    if (input_is_quit_pressed()) {
+        input_clear_quit();
+        g_game.scene = SCENE_VICTORY;
+        g_logic_state.scene = SCENE_VICTORY;
+    }
+}
+
 /* ============================================================================
  *                          THREAD FUNCTIONS
  * ============================================================================ */
@@ -317,13 +400,22 @@ void logic_thread_func(void *arg) {
     (void)arg; /* Unused */
 
     while (g_running) {
-        /* Update input state - no frame rate limiting */
+        /* Wait for next frame (60 FPS limit) */
+        wait_for_next_frame();
+
+        /* Start new input frame (reset move_processed, prepare held direction) */
+        input_new_frame();
+
+        /* Update input state */
         input_update();
 
-        /* Check for quit (ESC key) */
+        /* Check for quit (ESC key) - only in menu or playing scenes */
         if (input_is_quit_pressed()) {
-            g_running = 0;
-            break;
+            if (g_game.scene == SCENE_MENU) {
+                g_running = 0;
+                break;
+            }
+            /* Other scenes handle ESC themselves */
         }
 
         /* Process based on current scene */
@@ -354,7 +446,17 @@ void logic_thread_func(void *arg) {
             if (g_logic_state.round_start_timer <= 0) {
                 g_game.scene = SCENE_PLAYING;
                 g_logic_state.scene = SCENE_PLAYING;
+                /* Clear input to prevent accidental attack on round start */
+                input_clear();
             }
+            break;
+
+        case SCENE_VICTORY:
+            process_victory_state();
+            break;
+
+        case SCENE_CREDITS:
+            process_credits_state();
             break;
 
         default:
@@ -370,10 +472,17 @@ void logic_thread_func(void *arg) {
 }
 
 void render_thread_func(void *arg) {
-    (void)arg; /* Unused */
+    (void)arg;
 
     while (g_running) {
-        /* Clear buffer - no frame rate limiting, runs as fast as possible */
+        /* Wait for frame ready signal from logic thread */
+        while (!g_frame_ready && g_running) {
+            /* Busy wait - could yield here */
+        }
+
+        if (!g_running) break;
+
+        /* Clear buffer */
         render_clear();
 
         /* Render based on current scene */
@@ -415,6 +524,14 @@ void render_thread_func(void *arg) {
             ui_draw_level_clear_screen((int)g_game.level, (int)g_game.score);
             break;
 
+        case SCENE_VICTORY:
+            ui_draw_victory_screen((int)g_game.score);
+            break;
+
+        case SCENE_CREDITS:
+            ui_draw_credits_screen();
+            break;
+
         default:
             break;
         }
@@ -440,31 +557,31 @@ void game_run(void) {
 }
 
 void game_main(void) {
-    prints("[GAME] Initializing game systems...\n");
+    printd("[GAME] Initializing game systems...\n");
 
     /* Initialize all game systems */
     game_init();
 
-    prints("[GAME] Creating render thread...\n");
+    printd("[GAME] Creating render thread...\n");
 
     /* Create render thread */
     int tid = ThreadCreate(render_thread_func, NULL);
     if (tid < 0) {
-        prints("[GAME] ERROR: Failed to create render thread!\n");
+        printd("[GAME] ERROR: Failed to create render thread!\n");
         game_cleanup();
         return;
     }
 
-    prints("[GAME] Render thread created (TID=%d)\n", tid);
-    prints("[GAME] Starting game loop...\n");
+    printd("[GAME] Render thread created (TID=%d)\n", tid);
+    printd("[GAME] Starting game loop...\n");
 
     /* Run the main game loop (logic in main thread) */
     game_run();
 
-    prints("[GAME] Game loop ended. Cleaning up...\n");
+    printd("[GAME] Game loop ended. Cleaning up...\n");
 
     /* Cleanup */
     game_cleanup();
 
-    prints("[GAME] Game exited successfully.\n");
+    printd("[GAME] Game exited successfully.\n");
 }

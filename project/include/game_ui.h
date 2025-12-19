@@ -128,6 +128,11 @@ void ui_draw_level_clear_screen(int round, int score);
  */
 void ui_draw_victory_screen(int final_score);
 
+/**
+ * @brief Draw credits screen.
+ */
+void ui_draw_credits_screen(void);
+
 /* ============================================================================
  *                            TEXT UTILITIES
  * ============================================================================ */

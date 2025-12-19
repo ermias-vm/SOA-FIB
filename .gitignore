@@ -69,3 +69,5 @@ output
 .cache
 *.json
 DigDugPlan/
+others/
+gameInfo/

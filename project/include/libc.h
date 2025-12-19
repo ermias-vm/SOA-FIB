@@ -69,6 +69,18 @@ void perror(void);
  */
 void prints(const char *fmt, ...);
 
+/**
+ * @brief Formatted print to debug terminal only (not game screen).
+ *
+ * This function is identical to prints() but writes to FD_DEBUG (fd=2)
+ * which only outputs to the Bochs terminal without affecting the VGA
+ * game screen. Use this for debug messages during gameplay.
+ *
+ * @param fmt Format string with optional format specifiers.
+ * @param ... Variable arguments matching format specifiers.
+ */
+void printd(const char *fmt, ...);
+
 /****************************************/
 /**    System Call Wrappers            **/
 /****************************************/

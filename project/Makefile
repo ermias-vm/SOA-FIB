@@ -10,6 +10,7 @@ LD86 = ld86 -0
 
 # Parallel compilation configuration
 CORES ?= 1
+#CORES ?= 2
 MAKEFLAGS += -j$(CORES)
 
 # Print memory page requirements after build (1=yes, 0=no)

@@ -71,14 +71,14 @@
  * @param ms Milliseconds to convert.
  * @return Equivalent ticks after adjustment.
  */
-#define MS_TO_TICKS(ms) ((int)((ms)*TIME_ADJUSTMENT))
+#define MS_TO_TICKS(ms) ((int)((ms) * TIME_ADJUSTMENT))
 
 /**
  * @brief Convert seconds to ticks.
  * @param s Seconds to convert.
  * @return Equivalent ticks after adjustment.
  */
-#define SECONDS_TO_TICKS(s) ((s)*TICKS_PER_SECOND)
+#define SECONDS_TO_TICKS(s) ((s) * TICKS_PER_SECOND)
 
 /*============================================================================*
  *                    STANDARD TIME INTERVALS                                 *
@@ -138,9 +138,54 @@
  * @brief FPS display update interval.
  *
  * FPS is calculated as: frames_written_since_last_update
- * Updated every ONE_SECOND ticks, so the value is frames per second.
+ * We use BASE_TICKS_PER_SECOND (1000) to get real FPS regardless of
+ * TIME_ADJUSTMENT. This ensures the displayed FPS matches the actual
+ * frames rendered per real second.
  */
-#define FPS_UPDATE_INTERVAL ONE_SECOND
+#define FPS_UPDATE_INTERVAL BASE_TICKS_PER_SECOND
+
+/*============================================================================*
+ *                    GAME FPS LIMITING                                       *
+ *============================================================================*/
+
+/**
+ * @brief Target frames per second for the game.
+ */
+#define TARGET_FPS 60
+
+/**
+ * @brief Ticks per frame at target FPS.
+ *
+ * This is the minimum number of ticks that should pass between frames.
+ * We use BASE_TICKS_PER_SECOND (1000) to get real 60 FPS timing regardless
+ * of TIME_ADJUSTMENT. At 1000 Hz with TARGET_FPS=60, we wait ~16-17 ticks.
+ */
+#define TICKS_PER_FRAME (BASE_TICKS_PER_SECOND / TARGET_FPS)
+
+/**
+ * @brief Minimum ticks per frame (fallback if TICKS_PER_FRAME is 0).
+ */
+#define MIN_TICKS_PER_FRAME 1
+
+/*============================================================================*
+ *                    GAME ATTACK/PARALYSIS TIMES                             *
+ *============================================================================*/
+
+/**
+ * @brief Time an enemy stays paralyzed before dying (1 second).
+ */
+#define ENEMY_PARALYSIS_TIME SECONDS_TO_TICKS(1)
+
+/**
+ * @brief Attack display duration in frames.
+ */
+#define ATTACK_DISPLAY_FRAMES 10
+
+/**
+ * @brief Delay before transitioning to next round (1 second at 60 FPS).
+ * NOTE: This decrements once per frame, not per tick!
+ */
+#define ROUND_CLEAR_DELAY TARGET_FPS /* 60 frames = 1 second */
 
 /*============================================================================*
  *                    SYSTEM TIMES                                            *

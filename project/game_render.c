@@ -5,6 +5,7 @@
  * Uses direct screen buffer writes via fd=10 for efficient rendering.
  */
 
+#include <game_config.h>
 #include <game_logic.h>
 #include <game_map.h>
 #include <game_render.h>
@@ -153,29 +154,39 @@ void render_set_default_color(Color color) {
 
 Color render_get_layer_color(int y) {
     Color color;
-    color.bg = COLOR_BLACK; /* Background always black */
 
     if (y == STATUS_TOP_ROW || y == STATUS_BOTTOM_ROW) {
         /* Status bars: white text on black */
         color.fg = COLOR_WHITE;
+        color.bg = COLOR_BLACK;
     } else if (y >= SKY_START_ROW && y <= SKY_END_ROW) {
-        /* Sky area: light cyan for walls/dirt */
-        color.fg = COLOR_CYAN;
-    } else if (y >= LAYER1_START && y <= LAYER1_END) {
-        /* Layer 1: brown walls (200 pts) */
-        color.fg = COLOR_BROWN;
-    } else if (y >= LAYER2_START && y <= LAYER2_END) {
-        /* Layer 2: red walls (300 pts) */
-        color.fg = COLOR_RED;
-    } else if (y >= LAYER3_START && y <= LAYER3_END) {
-        /* Layer 3: magenta walls (400 pts) */
-        color.fg = COLOR_MAGENTA;
-    } else if (y >= LAYER4_START && y <= LAYER4_END) {
-        /* Layer 4: dark gray walls (500 pts) */
-        color.fg = COLOR_DARK_GRAY;
-    } else {
-        /* Default: white */
+        /* Sky area: light cyan background */
         color.fg = COLOR_WHITE;
+        color.bg = COLOR_LIGHT_CYAN;
+    } else if (y >= LAYER1_START && y <= LAYER1_END) {
+        /* Layer 1: brown background (200 pts) */
+        color.fg = COLOR_WHITE;
+        color.bg = COLOR_BROWN;
+    } else if (y >= LAYER2_START && y <= LAYER2_END) {
+        /* Layer 2: red background (300 pts) */
+        color.fg = COLOR_WHITE;
+        color.bg = COLOR_RED;
+    } else if (y >= LAYER3_START && y <= LAYER3_END) {
+        /* Layer 3: magenta background (400 pts) */
+        color.fg = COLOR_WHITE;
+        color.bg = COLOR_MAGENTA;
+    } else if (y >= LAYER4_START && y <= LAYER4_END) {
+        /* Layer 4: blue background (500 pts) */
+        color.fg = COLOR_WHITE;
+        color.bg = COLOR_BLUE;
+    } else if (y == ROW_BORDER) {
+        /* Bottom border: gray # on black */
+        color.fg = COLOR_DARK_GRAY;
+        color.bg = COLOR_BLACK;
+    } else {
+        /* Default: white on black */
+        color.fg = COLOR_WHITE;
+        color.bg = COLOR_BLACK;
     }
 
     return color;
@@ -356,7 +367,7 @@ void render_map(void) {
             continue;
         }
 
-        Color wall_color = render_get_layer_color(y);
+        Color layer_color = render_get_layer_color(y);
         Color empty_color;
         empty_color.fg = COLOR_WHITE;
         empty_color.bg = COLOR_BLACK;
@@ -368,9 +379,9 @@ void render_map(void) {
 
             switch (tile) {
             case TILE_DIRT:
-                /* Solid dirt - colored walls */
-                display_char = CHAR_DIRT;
-                cell_color = wall_color;
+                /* Solid dirt - space with colored background */
+                display_char = ' ';
+                cell_color = layer_color;
                 break;
 
             case TILE_EMPTY:
@@ -380,23 +391,36 @@ void render_map(void) {
                 break;
 
             case TILE_SKY:
-                /* Sky - space with cyan foreground (if any char) */
+                /* Sky - space with light cyan background */
                 display_char = ' ';
-                cell_color.fg = COLOR_CYAN;
-                cell_color.bg = COLOR_BLACK;
+                cell_color.fg = COLOR_WHITE;
+                cell_color.bg = COLOR_LIGHT_CYAN;
                 break;
 
             case TILE_WALL:
-                /* Wall - special character */
-                display_char = '#';
-                cell_color.fg = COLOR_DARK_GRAY;
-                cell_color.bg = COLOR_BLACK;
+                /* Wall - space with layer background color */
+                display_char = ' ';
+                cell_color = layer_color;
                 break;
 
             case TILE_GEM:
                 /* Collectible gem */
-                display_char = '*';
+                display_char = '$';
                 cell_color.fg = COLOR_YELLOW;
+                cell_color.bg = COLOR_BLACK;
+                break;
+
+            case TILE_BONUS:
+                /* Bonus item (100 points) */
+                display_char = 'x';
+                cell_color.fg = COLOR_LIGHT_CYAN;
+                cell_color.bg = COLOR_BLACK;
+                break;
+
+            case TILE_BORDER:
+                /* Bottom border - gray # on black */
+                display_char = '#';
+                cell_color.fg = COLOR_DARK_GRAY;
                 cell_color.bg = COLOR_BLACK;
                 break;
 
@@ -446,18 +470,40 @@ void render_player(Player *player) {
 
     Color player_color;
     player_color.fg = COLOR_YELLOW; /* Player is always yellow */
-    player_color.bg = COLOR_BLACK;  /* Black background */
+    /* Background depends on position - light cyan in sky, black elsewhere */
+    if (player->base.pos.y >= SKY_START_ROW && player->base.pos.y <= SKY_END_ROW) {
+        player_color.bg = COLOR_LIGHT_CYAN;
+    } else {
+        player_color.bg = COLOR_BLACK;
+    }
 
-    char display_char = CHAR_PLAYER;
+    /* Select character based on facing direction */
+    char display_char;
+    switch (player->facing_dir) {
+    case DIR_UP:
+        display_char = CHAR_PLAYER_UP;
+        break;
+    case DIR_DOWN:
+        display_char = CHAR_PLAYER_DOWN;
+        break;
+    case DIR_LEFT:
+        display_char = CHAR_PLAYER_LEFT;
+        break;
+    case DIR_RIGHT:
+    default:
+        display_char = CHAR_PLAYER_RIGHT;
+        break;
+    }
 
     /* Modify appearance based on state */
     switch (player->state) {
     case PLAYER_DIGGING:
-        display_char = CHAR_PLAYER;
+        /* Keep directional char */
         break;
 
     case PLAYER_PUMPING:
-        /* Indicate pumping with brighter color */
+    case PLAYER_ATTACKING:
+        /* Indicate attacking with brighter color */
         player_color.fg = COLOR_WHITE;
         break;
 
@@ -466,6 +512,74 @@ void render_player(Player *player) {
     }
 
     render_entity(&player->base, display_char, player_color);
+
+    /* Render attack if player is attacking */
+    if (player->is_attacking && player->attack_timer > 0) {
+        render_player_attack(player);
+    }
+}
+
+void render_player_attack(Player *player) {
+    if (!player) return;
+
+    Color attack_color;
+    attack_color.fg = COLOR_WHITE;
+    /* Use sky background if in sky area, black otherwise */
+    if (player->base.pos.y >= SKY_START_ROW && player->base.pos.y <= SKY_END_ROW) {
+        attack_color.bg = COLOR_LIGHT_CYAN;
+    } else {
+        attack_color.bg = COLOR_BLACK;
+    }
+
+    int px = player->base.pos.x;
+    int py = player->base.pos.y;
+    int range;
+    int dx = 0, dy = 0;
+    char attack_char;
+
+    /* Determine attack direction and range */
+    switch (player->facing_dir) {
+    case DIR_UP:
+        range = ATTACK_RANGE_V;
+        dy = -1;
+        attack_char = CHAR_ATTACK_V;
+        break;
+    case DIR_DOWN:
+        range = ATTACK_RANGE_V;
+        dy = 1;
+        attack_char = CHAR_ATTACK_V;
+        break;
+    case DIR_LEFT:
+        range = ATTACK_RANGE_H;
+        dx = -1;
+        attack_char = CHAR_ATTACK_H;
+        break;
+    case DIR_RIGHT:
+        range = ATTACK_RANGE_H;
+        dx = 1;
+        attack_char = CHAR_ATTACK_H;
+        break;
+    default:
+        return;
+    }
+
+    /* Render attack characters in range */
+    for (int i = 1; i <= range; i++) {
+        int ax = px + dx * i;
+        int ay = py + dy * i;
+
+        /* Check bounds */
+        if (ax < 0 || ax >= SCREEN_WIDTH || ay < 0 || ay >= SCREEN_HEIGHT) {
+            break;
+        }
+
+        /* Check if solid block stops attack */
+        if (map_is_solid(ax, ay)) {
+            break;
+        }
+
+        render_set_cell(ax, ay, attack_char, attack_color);
+    }
 }
 
 void render_enemies(Enemy *enemies, int count) {
@@ -520,6 +634,15 @@ void render_enemies(Enemy *enemies, int count) {
             enemy_color.fg = COLOR_DARK_GRAY;
             break;
 
+        case ENEMY_PARALYZED:
+            /* Paralyzed enemies blink (alternate visibility) */
+            if (enemy->paralyzed_timer % 2 == 0) {
+                enemy_color.fg = COLOR_LIGHT_CYAN;
+            } else {
+                enemy_color.fg = COLOR_BLACK; /* Invisible on blink */
+            }
+            break;
+
         default:
             break;
         }
@@ -545,18 +668,15 @@ void render_rocks(Rock *rocks, int count) {
         }
 
         Color rock_color;
-        rock_color.fg = COLOR_BROWN;
-        rock_color.bg = render_get_layer_color(rock->base.pos.y).bg;
+        rock_color.fg = COLOR_DARK_GRAY; /* Gray rock character */
+        rock_color.bg = COLOR_BLACK;     /* Black background */
 
-        char display_char = CHAR_ROCK;
+        char display_char = '#'; /* Rock displayed as # */
 
-        /* Wobble animation */
+        /* Wobble animation - slightly different appearance */
         if (rock->state == ROCK_WOBBLING) {
-            /* Alternate slightly for wobble effect */
             if (rock->wobble_timer % 2 == 0) {
-                display_char = CHAR_ROCK;
-            } else {
-                display_char = '#';
+                rock_color.fg = COLOR_LIGHT_GRAY;
             }
         }
 

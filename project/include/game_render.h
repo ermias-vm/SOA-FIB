@@ -394,6 +394,12 @@ void render_entities(GameLogicState *state);
 void render_player(Player *player);
 
 /**
+ * @brief Render player's attack visual.
+ * @param player Pointer to Player structure (must be attacking)
+ */
+void render_player_attack(Player *player);
+
+/**
  * @brief Render all enemies.
  * @param enemies Array of Enemy structures
  * @param count Number of enemies

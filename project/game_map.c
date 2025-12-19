@@ -60,7 +60,8 @@ int map_is_valid_position(int x, int y) {
 
 int map_is_walkable(int x, int y) {
     TileType tile = map_get_tile(x, y);
-    return (tile == TILE_EMPTY || tile == TILE_GEM || tile == TILE_SKY);
+    return (tile == TILE_EMPTY || tile == TILE_GEM || tile == TILE_BONUS || tile == TILE_SKY ||
+            tile == TILE_BORDER);
 }
 
 int map_is_solid(int x, int y) {
@@ -159,32 +160,39 @@ int map_has_gem(int x, int y) {
 void map_generate_level(int level) {
     map_create_borders();
 
-    int dirt_density = 60 + (level * 5);
-    if (dirt_density > 85) dirt_density = 85;
+    /* Fill the map completely with dirt (100% density) */
+    int dirt_density = 100;
 
     place_random_dirt(dirt_density);
-    create_initial_tunnels();
 
     /* Player spawn area in sky layer - keep as TILE_SKY */
     map_fill_area(1, ROW_SKY_START, 5, ROW_SKY_END, TILE_SKY);
 
-    int gem_count = 3 + (level * 2);
+    /* Note: Gems are optional, we can skip them or reduce count */
+    int gem_count = 1 + (level / 2);
     if (gem_count > MAX_GEMS) gem_count = MAX_GEMS;
 
-    map_place_gems(gem_count);
+    /* Don't place gems automatically - tunnels will be created by data_load_level */
 }
 
 void map_create_borders(void) {
     int x, y;
 
+    /* Top and bottom walls */
     for (x = 0; x < MAP_WIDTH; x++) {
         map_set_tile(x, 0, TILE_WALL);
         map_set_tile(x, MAP_HEIGHT - 1, TILE_WALL);
     }
 
+    /* Left and right walls */
     for (y = 0; y < MAP_HEIGHT; y++) {
         map_set_tile(0, y, TILE_WALL);
         map_set_tile(MAP_WIDTH - 1, y, TILE_WALL);
+    }
+
+    /* Bottom border row (row 23) - gray # characters */
+    for (x = 0; x < MAP_WIDTH; x++) {
+        map_set_tile(x, ROW_BORDER, TILE_BORDER);
     }
 }
 
@@ -312,13 +320,16 @@ void place_random_dirt(int density) {
                 continue;
             }
 
-            /* Sky layer (rows 1-3) - always empty, no dirt */
+            /* Sky layer - always empty, no dirt */
             if (y <= ROW_SKY_END) {
                 map_set_tile(x, y, TILE_SKY);
                 continue;
             }
 
-            if (random_int(100) < density) {
+            /* Fill everything with dirt (density 100% means always dirt) */
+            if (density >= 100) {
+                map_set_tile(x, y, TILE_DIRT);
+            } else if (random_int(100) < density) {
                 map_set_tile(x, y, TILE_DIRT);
             } else {
                 map_set_tile(x, y, TILE_EMPTY);

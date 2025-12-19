@@ -26,7 +26,9 @@ typedef enum {
     SCENE_PAUSED,      /* Game paused */
     SCENE_GAME_OVER,   /* Game over screen */
     SCENE_ROUND_CLEAR, /* Round completed */
-    SCENE_ROUND_START  /* Starting new round */
+    SCENE_ROUND_START, /* Starting new round */
+    SCENE_VICTORY,     /* Victory screen (all rounds completed) */
+    SCENE_CREDITS      /* Credits screen */
 } GameScene;
 
 /**
@@ -35,9 +37,11 @@ typedef enum {
 typedef enum {
     TILE_EMPTY, /* Excavated tunnel */
     TILE_DIRT,  /* Solid dirt (unexcavated) */
-    TILE_SKY,   /* Sky area (rows 1-3) */
+    TILE_SKY,   /* Sky area (rows 1-2) */
     TILE_WALL,  /* Solid wall (not walkable) */
-    TILE_GEM    /* Gem (collectible) */
+    TILE_GEM,   /* Gem (collectible) */
+    TILE_BONUS, /* Bonus item (100 points, 'X') */
+    TILE_BORDER /* Bottom border (gray # characters) */
 } TileType;
 
 /**
@@ -56,11 +60,12 @@ typedef enum {
  * @brief Player states.
  */
 typedef enum {
-    PLAYER_IDLE,    /* Not moving */
-    PLAYER_MOVING,  /* Walking/moving */
-    PLAYER_DIGGING, /* Excavating dirt */
-    PLAYER_PUMPING, /* Using pump to inflate enemy */
-    PLAYER_DEAD     /* Dead (hit by enemy/fire) */
+    PLAYER_IDLE,      /* Not moving */
+    PLAYER_MOVING,    /* Walking/moving */
+    PLAYER_DIGGING,   /* Excavating dirt */
+    PLAYER_PUMPING,   /* Using pump to inflate enemy */
+    PLAYER_ATTACKING, /* Attacking with harpoon */
+    PLAYER_DEAD       /* Dead (hit by enemy/fire) */
 } PlayerState;
 
 /**
@@ -70,6 +75,7 @@ typedef enum {
     ENEMY_NORMAL,    /* Moving normally in tunnels */
     ENEMY_GHOST,     /* Passing through dirt (ghost mode) */
     ENEMY_INFLATING, /* Being inflated by pump */
+    ENEMY_PARALYZED, /* Paralyzed by player attack (will die after 2 sec) */
     ENEMY_DEAD       /* Eliminated */
 } EnemyState;
 
@@ -121,6 +127,8 @@ typedef struct {
     int is_pumping;       /* 1 = currently firing pump */
     int pump_length;      /* Current pump extension (0-4 cells) */
     Direction pump_dir;   /* Direction pump is facing */
+    int is_attacking;     /* 1 = currently attacking */
+    int attack_timer;     /* Frames remaining for attack display */
 } Player;
 
 /**
@@ -129,13 +137,15 @@ typedef struct {
  * fire_* fields only used when base.type == ENTITY_FYGAR.
  */
 typedef struct {
-    Entity base;       /* Base entity data */
-    EnemyState state;  /* Enemy-specific state */
-    int inflate_level; /* Inflation level 0-4 (4 = explodes) */
-    int ghost_timer;   /* Ticks until ghost mode activates */
-    int fire_cooldown; /* Fygar: ticks until can fire again */
-    int fire_active;   /* Fygar: 1 = currently breathing fire */
-    int fire_duration; /* Fygar: remaining fire ticks */
+    Entity base;         /* Base entity data */
+    EnemyState state;    /* Enemy-specific state */
+    int inflate_level;   /* Inflation level 0-4 (4 = explodes) */
+    int ghost_timer;     /* Ticks until ghost mode activates */
+    int fire_cooldown;   /* Fygar: ticks until can fire again */
+    int fire_active;     /* Fygar: 1 = currently breathing fire */
+    int fire_duration;   /* Fygar: remaining fire ticks */
+    int paralyzed_timer; /* Timer for blink animation */
+    int blink_count;     /* Number of blinks remaining (dies at 0) */
 } Enemy;
 
 /**
@@ -154,12 +164,16 @@ typedef struct {
  * NOTE: This is the ONLY definition - do NOT redefine in other headers!
  */
 typedef struct {
-    Direction direction; /* Current movement direction */
-    int action_pressed;  /* Action button pressed (space/enter) */
+    Direction direction; /* Current movement direction (consumed each frame) */
+    Direction held_dir;  /* Direction currently being held (for continuous movement) */
+    int action_pressed;  /* Action button pressed (enter) */
+    int attack_pressed;  /* Attack button pressed once (space) */
+    int attack_held;     /* Attack button currently held down */
     int pause_pressed;   /* Pause button pressed (P/ESC) */
     int quit_pressed;    /* Quit button pressed (Q) */
     int any_key_pressed; /* Any key pressed flag */
     char last_key;       /* Last raw key pressed */
+    int move_processed;  /* Flag to ensure only one move per frame */
 } InputState;
 
 /**
@@ -235,7 +249,7 @@ typedef struct {
 /**
  * @brief Screen position calculation (byte offset in video memory).
  */
-#define SCREEN_POS(x, y) (((y)*SCREEN_WIDTH + (x)) * 2)
+#define SCREEN_POS(x, y) (((y) * SCREEN_WIDTH + (x)) * 2)
 
 /**
  * @brief Check if position is within screen bounds.

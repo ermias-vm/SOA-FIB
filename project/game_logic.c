@@ -46,6 +46,8 @@ void logic_player_init(Player *player, int x, int y) {
     player->is_pumping = 0;
     player->pump_length = 0;
     player->pump_dir = DIR_NONE;
+    player->is_attacking = 0;
+    player->attack_timer = 0;
 }
 
 void logic_enemy_init(Enemy *enemy, int x, int y, EntityType type) {
@@ -71,6 +73,7 @@ void logic_enemy_init(Enemy *enemy, int x, int y, EntityType type) {
     enemy->fire_cooldown = 0;
     enemy->fire_active = 0;
     enemy->fire_duration = 0;
+    enemy->paralyzed_timer = 0;
 }
 
 void logic_rock_init(Rock *rock, int x, int y) {
@@ -247,6 +250,15 @@ void logic_update_player(GameLogicState *state) {
         if (player->base.speed_counter <= 0) {
             logic_player_move(player, dir);
             player->base.speed_counter = PLAYER_MOVE_DELAY;
+
+            /* Check for bonus collection after moving (100 points) */
+            if (map_get_tile(player->base.pos.x, player->base.pos.y) == TILE_BONUS) {
+                map_set_tile(player->base.pos.x, player->base.pos.y, TILE_EMPTY);
+                state->score += 100;
+                if (state->score > MAX_SCORE) {
+                    state->score = MAX_SCORE;
+                }
+            }
         }
         /* Clear direction after processing */
         player->base.dir = DIR_NONE;
@@ -255,6 +267,18 @@ void logic_update_player(GameLogicState *state) {
     /* Decrement speed counter */
     if (player->base.speed_counter > 0) {
         player->base.speed_counter--;
+    }
+
+    /* Update attack timer */
+    if (player->is_attacking) {
+        if (player->attack_timer > 0) {
+            player->attack_timer--;
+        } else {
+            player->is_attacking = 0;
+            if (player->state == PLAYER_ATTACKING) {
+                player->state = PLAYER_IDLE;
+            }
+        }
     }
 
     /* Process pump action */
@@ -270,8 +294,9 @@ void logic_update_player(GameLogicState *state) {
     /* Check collision with enemies */
     int enemy_idx = logic_check_player_enemy_collision(player, state->enemies, state->enemy_count);
     if (enemy_idx >= 0) {
-        /* Only die if enemy is not being inflated */
-        if (state->enemies[enemy_idx].state != ENEMY_INFLATING) {
+        /* Only die if enemy is not being inflated or paralyzed */
+        EnemyState es = state->enemies[enemy_idx].state;
+        if (es != ENEMY_INFLATING && es != ENEMY_PARALYZED) {
             logic_player_die(state);
         }
     }
@@ -314,6 +339,11 @@ void logic_player_move(Player *player, Direction dir) {
         return;
     }
 
+    /* Prevent going above the sky area (player can only be at row ROW_SKY_END minimum) */
+    if (new_y < ROW_SKY_END) {
+        return;
+    }
+
     /* If there's dirt, dig it */
     if (map_is_diggable(new_x, new_y)) {
         map_dig(new_x, new_y);
@@ -334,6 +364,133 @@ void logic_player_move(Player *player, Direction dir) {
         map_remove_gem(new_x, new_y);
         /* Could add gem score here */
     }
+    /* Bonus collection is handled in logic_update_player with state access */
+}
+
+/**
+ * @brief Check if attack path is clear of solid blocks.
+ *
+ * @param x Starting X position
+ * @param y Starting Y position
+ * @param dir Direction of attack
+ * @param range Number of cells to check
+ * @return Number of cells that are clear (up to range)
+ */
+static int attack_path_clear(int x, int y, Direction dir, int range) {
+    int dx = 0, dy = 0;
+
+    switch (dir) {
+    case DIR_UP:
+        dy = -1;
+        break;
+    case DIR_DOWN:
+        dy = 1;
+        break;
+    case DIR_LEFT:
+        dx = -1;
+        break;
+    case DIR_RIGHT:
+        dx = 1;
+        break;
+    default:
+        return 0;
+    }
+
+    int clear_count = 0;
+    for (int i = 1; i <= range; i++) {
+        int check_x = x + dx * i;
+        int check_y = y + dy * i;
+
+        /* Check if position is valid and not solid */
+        if (!map_is_valid_position(check_x, check_y)) {
+            break;
+        }
+        if (map_is_solid(check_x, check_y)) {
+            break;
+        }
+        clear_count++;
+    }
+
+    return clear_count;
+}
+
+/**
+ * @brief Perform player attack.
+ *
+ * Attacks in the direction the player is facing.
+ * Vertical (up/down): 2 blocks with '|'
+ * Horizontal (left/right): 3 blocks with '-'
+ *
+ * @param player Pointer to player
+ * @param state Pointer to game logic state
+ * @return 1 if attack was performed, 0 otherwise
+ */
+int logic_player_attack(Player *player, GameLogicState *state) {
+    if (!player || !state) return 0;
+    if (player->state == PLAYER_DEAD) return 0;
+
+    Direction dir = player->facing_dir;
+    int range;
+    int dx = 0, dy = 0;
+
+    /* Determine attack range based on direction */
+    switch (dir) {
+    case DIR_UP:
+        range = ATTACK_RANGE_V;
+        dy = -1;
+        break;
+    case DIR_DOWN:
+        range = ATTACK_RANGE_V;
+        dy = 1;
+        break;
+    case DIR_LEFT:
+        range = ATTACK_RANGE_H;
+        dx = -1;
+        break;
+    case DIR_RIGHT:
+        range = ATTACK_RANGE_H;
+        dx = 1;
+        break;
+    default:
+        return 0;
+    }
+
+    /* Check how many cells are clear */
+    int clear = attack_path_clear(player->base.pos.x, player->base.pos.y, dir, range);
+    if (clear == 0) {
+        /* No clear path for attack */
+        return 0;
+    }
+
+    /* Set player attacking state */
+    player->is_attacking = 1;
+    player->attack_timer = ATTACK_DISPLAY_FRAMES;
+    player->state = PLAYER_ATTACKING;
+
+    /* Check for enemy hits in attack range */
+    int px = player->base.pos.x;
+    int py = player->base.pos.y;
+
+    for (int i = 1; i <= clear; i++) {
+        int check_x = px + dx * i;
+        int check_y = py + dy * i;
+
+        /* Check each enemy */
+        for (int e = 0; e < state->enemy_count; e++) {
+            Enemy *enemy = &state->enemies[e];
+            if (!enemy->base.active) continue;
+            if (enemy->state == ENEMY_PARALYZED) continue; /* Already paralyzed */
+
+            if (enemy->base.pos.x == check_x && enemy->base.pos.y == check_y) {
+                /* Hit! Paralyze the enemy - 10 blinks then dies */
+                enemy->state = ENEMY_PARALYZED;
+                enemy->blink_count = 10;    /* 10 blinks before death */
+                enemy->paralyzed_timer = 5; /* Ticks per blink cycle */
+            }
+        }
+    }
+
+    return 1;
 }
 
 void logic_player_pump(Player *player, GameLogicState *state) {
@@ -387,6 +544,28 @@ void logic_update_enemies(GameLogicState *state) {
         Enemy *enemy = &state->enemies[i];
 
         if (!enemy->base.active || enemy->state == ENEMY_DEAD) {
+            continue;
+        }
+
+        /* Handle paralyzed enemies - blink 10 times then die */
+        if (enemy->state == ENEMY_PARALYZED) {
+            if (enemy->paralyzed_timer > 0) {
+                enemy->paralyzed_timer--;
+            } else {
+                /* Reset timer and decrement blink count */
+                enemy->blink_count--;
+                if (enemy->blink_count <= 0) {
+                    /* All blinks done - enemy dies and gives score */
+                    enemy->state = ENEMY_DEAD;
+                    enemy->base.active = 0;
+                    state->enemies_remaining--;
+                    /* Add base score (200 points) */
+                    state->score += 200;
+                } else {
+                    /* Reset timer for next blink (5 ticks per blink cycle) */
+                    enemy->paralyzed_timer = 5;
+                }
+            }
             continue;
         }
 
