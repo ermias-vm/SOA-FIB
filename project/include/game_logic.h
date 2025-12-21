@@ -32,18 +32,17 @@ extern GameLogicState *g_current_logic_state;
  * ============================================================================ */
 
 /* Movement delays (ticks between movements) */
-#define PLAYER_MOVE_DELAY 4
+#define PLAYER_MOVE_DELAY 3
 #define ENEMY_MOVE_DELAY 8
 #define GHOST_MODE_THRESHOLD (12 * TICKS_PER_SECOND) /* Ghost mode every 12 seconds */
-#define RESPAWN_DELAY EIGHTH_SECOND                 /* Ticks before player respawns */
+#define RESPAWN_DELAY EIGHTH_SECOND                  /* Ticks before player respawns */
 #define LEVEL_CLEAR_DELAY HALF_SECOND /* Frames before next level (1 sec at 60 FPS) */
-/* Note: ROUND_START_DELAY is already defined in game_config.h */
 
 /* Rock mechanics */
-#define ROCK_WOBBLE_TICKS EIGHTH_SECOND   /* Ticks rock wobbles before falling */
-#define ROCK_BLINK_DURATION THIRTY_SECOND /* Ticks per blink cycle */
-#define ROCK_BLINK_COUNT 3                /* Number of times rock blinks when hitting ground */
-#define ROCK_LAND_DELAY EIGHTH_SECOND     /* Ticks rock stays visible after landing */
+#define ROCK_WOBBLE_TICKS SIXTEENTH_SECOND /* Ticks rock wobbles before falling */
+#define ROCK_BLINK_DURATION THIRTY_SECOND  /* Ticks per blink cycle */
+#define ROCK_BLINK_COUNT 3                 /* Number of times rock blinks when hitting ground */
+#define ROCK_LAND_DELAY EIGHTH_SECOND      /* Ticks rock stays visible after landing */
 
 /* Scoring */
 #define POINTS_LAYER1 200
@@ -94,8 +93,9 @@ struct GameLogicState_s {
     int enemies_remaining; /* Enemies still alive */
 
     /* Timing */
-    int time_elapsed;      /* Total game ticks elapsed */
-    int round_start_timer; /* Timer for round transitions/respawn */
+    int time_elapsed;         /* Total game ticks elapsed */
+    int round_start_timer;    /* Timer for round transitions/respawn */
+    int enemies_cleared_time; /* Timestamp when enemies_remaining hit 0 */
 
     /* Entities */
     Player player;              /* The player */

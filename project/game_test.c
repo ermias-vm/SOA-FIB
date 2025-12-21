@@ -2061,7 +2061,7 @@ void test_logic_fygar_fire(int *passed) {
     Enemy fygar;
     logic_enemy_init(&fygar, 45, 10, ENTITY_FYGAR);
     fygar.base.dir = DIR_LEFT;
-    fygar.fire_cooldown = 0;
+    fygar.fire_end_time = 0; /* No cooldown active */
 
     /* Put player in fire range */
     state.player.base.pos.x = 43; /* 2 tiles left of Fygar */

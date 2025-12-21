@@ -17,6 +17,7 @@
 #include <game_logic.h>
 #include <game_map.h>
 #include <game_types.h>
+#include <libc.h>
 
 /* ============================================================================
  *                          GLOBAL STATE
@@ -77,7 +78,8 @@ void logic_enemy_init(Enemy *enemy, int x, int y, EntityType type) {
     enemy->state = ENEMY_NORMAL;
     enemy->inflate_level = 0;
     enemy->ghost_timer = 0;
-    enemy->fire_cooldown = 0;
+    enemy->fire_start_time = 0;
+    enemy->fire_end_time = 0;
     enemy->fire_active = 0;
     enemy->fire_duration = 0;
     enemy->paralyzed_timer = 0;
@@ -111,6 +113,7 @@ void logic_init(GameLogicState *state) {
     state->lives = INITIAL_LIVES;
     state->time_elapsed = 0;
     state->round_start_timer = 0;
+    state->enemies_cleared_time = 0;
     state->running = 1;
     state->enemies_remaining = 0;
     state->enemy_count = 0;
@@ -135,6 +138,7 @@ void logic_start_round(GameLogicState *state, int round) {
     /* Don't reset time_elapsed - keep accumulating across rounds */
     state->scene = SCENE_ROUND_START;
     state->round_start_timer = ROUND_START_DELAY;
+    state->enemies_cleared_time = 0; /* Reset round clear delay tracker */
 
     /* Initialize player at starting position */
     logic_player_init(&state->player, PLAYER_START_X, PLAYER_START_Y);
@@ -852,6 +856,20 @@ void logic_update_enemies(GameLogicState *state) {
             continue;
         }
 
+        /* Fygar fire handling - check before movement */
+        if (enemy->base.type == ENTITY_FYGAR) {
+            /* If fire is active, Fygar stops moving */
+            if (enemy->fire_active) {
+                logic_fygar_fire(enemy, state);
+                continue; /* Skip movement while attacking */
+            }
+            logic_fygar_fire(enemy, state);
+            /* If fire just started, skip movement */
+            if (enemy->fire_active) {
+                continue;
+            }
+        }
+
         /* Execute AI */
         logic_enemy_ai(enemy, &state->player);
 
@@ -866,11 +884,6 @@ void logic_update_enemies(GameLogicState *state) {
                 enemy->state = ENEMY_GHOST;
                 enemy->has_left_tunnel = 0; /* Initialize ghost mode flag */
             }
-        }
-
-        /* Fygar fire handling */
-        if (enemy->base.type == ENTITY_FYGAR) {
-            logic_fygar_fire(enemy, state);
         }
     }
 }
@@ -1342,8 +1355,19 @@ void logic_check_round_complete(GameLogicState *state) {
     if (!state) return;
 
     if (state->enemies_remaining <= 0) {
-        state->scene = SCENE_ROUND_CLEAR;
-        state->round_start_timer = LEVEL_CLEAR_DELAY;
+        int current_time = gettime();
+
+        /* First time enemies reached 0 - record timestamp */
+        if (state->enemies_cleared_time == 0) {
+            state->enemies_cleared_time = current_time + 2*ONE_SECOND;
+        }
+
+        /* Wait 1 second (ONE_SECOND) before transitioning to round clear screen */
+        /* This allows the game to continue running briefly after last enemy dies */
+        if (state->enemies_cleared_time - current_time <= 0) {
+            state->scene = SCENE_ROUND_CLEAR;
+            state->round_start_timer = LEVEL_CLEAR_DELAY;
+        }
     }
 }
 
@@ -1374,36 +1398,31 @@ void logic_fygar_fire(Enemy *fygar, GameLogicState *state) {
     if (!fygar || !state) return;
     if (fygar->base.type != ENTITY_FYGAR) return;
 
-    /* Handle cooldown (5 seconds between attacks) */
-    if (fygar->fire_cooldown > 0) {
-        fygar->fire_cooldown--;
-        return;
-    }
+    int current_time = gettime();
 
-    /* Handle active fire (2 seconds duration) */
+    /* Handle active fire - check if duration has passed */
     if (fygar->fire_active) {
-        fygar->fire_duration--;
-        if (fygar->fire_duration <= 0) {
+        if (current_time - fygar->fire_start_time >= FYGAR_FIRE_DURATION) {
+            /* Fire duration ended */
             fygar->fire_active = 0;
-            fygar->fire_cooldown = FYGAR_FIRE_COOLDOWN;
-        }
-
-        /* Check if fire hits player */
-        if (logic_check_fire_collision(fygar, &state->player)) {
-            logic_player_die(state);
+            fygar->fire_end_time = current_time; /* Start cooldown */
+        } else {
+            /* Fire still active - check if hits player */
+            if (logic_check_fire_collision(fygar, &state->player)) {
+                logic_player_die(state);
+            }
         }
         return;
     }
 
-    /* Attack every time cooldown is ready - fire in current direction */
-    /* Determine fire direction based on Fygar's movement direction or player position */
-    Direction fire_dir = fygar->base.dir;
-
-    /* If not moving, choose direction based on player position */
-    if (fire_dir != DIR_LEFT && fire_dir != DIR_RIGHT) {
-        int dx = state->player.base.pos.x - fygar->base.pos.x;
-        fire_dir = (dx >= 0) ? DIR_RIGHT : DIR_LEFT;
+    /* Check cooldown - must wait 2 seconds after last attack */
+    if (fygar->fire_end_time > 0 && current_time - fygar->fire_end_time < FYGAR_FIRE_COOLDOWN) {
+        return; /* Still in cooldown */
     }
+
+    /* Determine fire direction based on player position */
+    int dx = state->player.base.pos.x - fygar->base.pos.x;
+    Direction fire_dir = (dx >= 0) ? DIR_RIGHT : DIR_LEFT;
 
     /* Check if there are exactly 2 empty cells in fire direction */
     int check_dx = (fire_dir == DIR_RIGHT) ? 1 : -1;
@@ -1421,28 +1440,29 @@ void logic_fygar_fire(Enemy *fygar, GameLogicState *state) {
     /* Fire only if exactly 2 empty cells in front */
     if (empty_cells == FYGAR_FIRE_RANGE) {
         fygar->fire_active = 1;
-        fygar->fire_duration = FYGAR_FIRE_DURATION;
+        fygar->fire_start_time = current_time;
         fygar->base.dir = fire_dir;
-    } else {
-        /* Try the other direction */
-        fire_dir = (fire_dir == DIR_RIGHT) ? DIR_LEFT : DIR_RIGHT;
-        check_dx = (fire_dir == DIR_RIGHT) ? 1 : -1;
-        empty_cells = 0;
-        for (int i = 1; i <= FYGAR_FIRE_RANGE; i++) {
-            int check_x = fygar->base.pos.x + (check_dx * i);
-            if (map_is_valid_position(check_x, fygar->base.pos.y) &&
-                map_is_walkable(check_x, fygar->base.pos.y)) {
-                empty_cells++;
-            } else {
-                break;
-            }
+        return;
+    }
+
+    /* Try the other direction */
+    fire_dir = (fire_dir == DIR_RIGHT) ? DIR_LEFT : DIR_RIGHT;
+    check_dx = (fire_dir == DIR_RIGHT) ? 1 : -1;
+    empty_cells = 0;
+    for (int i = 1; i <= FYGAR_FIRE_RANGE; i++) {
+        int check_x = fygar->base.pos.x + (check_dx * i);
+        if (map_is_valid_position(check_x, fygar->base.pos.y) &&
+            map_is_walkable(check_x, fygar->base.pos.y)) {
+            empty_cells++;
+        } else {
+            break;
         }
-        /* Fire only if exactly 2 empty cells in front */
-        if (empty_cells == FYGAR_FIRE_RANGE) {
-            fygar->fire_active = 1;
-            fygar->fire_duration = FYGAR_FIRE_DURATION;
-            fygar->base.dir = fire_dir;
-        }
+    }
+    /* Fire only if exactly 2 empty cells in front */
+    if (empty_cells == FYGAR_FIRE_RANGE) {
+        fygar->fire_active = 1;
+        fygar->fire_start_time = current_time;
+        fygar->base.dir = fire_dir;
     }
 }
 

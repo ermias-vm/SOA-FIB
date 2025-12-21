@@ -179,6 +179,10 @@ Color render_get_layer_color(int y) {
         /* Layer 4: blue background (500 pts) */
         color.fg = COLOR_WHITE;
         color.bg = COLOR_BLUE;
+    } else if (y == ROW_BORDER) {
+        /* Bottom border: gray # on black */
+        color.fg = COLOR_DARK_GRAY;
+        color.bg = COLOR_BLACK;
     } else {
         /* Default: white on black (includes status bars) */
         color.fg = COLOR_WHITE;
