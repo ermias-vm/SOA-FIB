@@ -746,34 +746,59 @@ Direction logic_find_path_bfs(Position start, Position target, int can_pass_wall
 }
 
 /**
- * @brief Task 1: Get random movement direction - move to max in one direction
+ * @brief Task 1: Get random movement direction that is valid
  */
 Direction logic_get_random_direction(Enemy *enemy) {
     Direction dirs[] = {DIR_UP, DIR_DOWN, DIR_LEFT, DIR_RIGHT};
 
     /* Simple pseudo-random: use position and time as seed */
     int seed = enemy->base.pos.x + enemy->base.pos.y * 79 + enemy->ghost_timer;
-    int chosen_idx = seed % 4;
-    Direction chosen_dir = dirs[chosen_idx];
+    int start_idx = seed % 4;
 
-    /* Try to move as far as possible in the chosen direction */
-    int moved = 0;
-    for (int steps = 0; steps < 20; steps++) { /* Max 20 steps */
-        if (logic_try_enemy_move(enemy, chosen_dir)) {
-            moved = 1;
-        } else {
-            break; /* Can't move further */
-        }
-    }
-
-    if (moved) {
-        return chosen_dir;
-    }
-
-    /* If can't move in chosen direction, try others */
+    /* Try starting from random direction and find first valid one */
     for (int i = 0; i < 4; i++) {
-        if (i != chosen_idx && logic_try_enemy_move(enemy, dirs[i])) {
-            return dirs[i];
+        int idx = (start_idx + i) % 4;
+        Direction dir = dirs[idx];
+
+        /* Check if can move in this direction without actually moving */
+        int new_x = enemy->base.pos.x;
+        int new_y = enemy->base.pos.y;
+
+        switch (dir) {
+        case DIR_UP:
+            new_y--;
+            break;
+        case DIR_DOWN:
+            new_y++;
+            break;
+        case DIR_LEFT:
+            new_x--;
+            break;
+        case DIR_RIGHT:
+            new_x++;
+            break;
+        default:
+            continue;
+        }
+
+        /* Check if valid move */
+        if (map_is_valid_position(new_x, new_y) && map_is_walkable(new_x, new_y) &&
+            new_y < ROW_BORDER) {
+            /* Check for rocks */
+            int blocked = 0;
+            if (g_current_logic_state) {
+                for (int r = 0; r < g_current_logic_state->rock_count; r++) {
+                    Rock *rock = &g_current_logic_state->rocks[r];
+                    if (rock->base.active && rock->base.pos.x == new_x &&
+                        rock->base.pos.y == new_y) {
+                        blocked = 1;
+                        break;
+                    }
+                }
+            }
+            if (!blocked) {
+                return dir;
+            }
         }
     }
 
@@ -802,8 +827,9 @@ void logic_update_enemies(GameLogicState *state) {
                     enemy->state = ENEMY_DEAD;
                     enemy->base.active = 0;
                     state->enemies_remaining--;
-                    /* Add base score (200 points) */
-                    state->score += 200;
+                    /* Add score based on enemy depth */
+                    int points = logic_calculate_enemy_points(enemy->base.pos.y);
+                    logic_add_score(state, points);
                 } else {
                     /* Reset timer for next blink (5 ticks per blink cycle) */
                     enemy->paralyzed_timer = 5;
@@ -876,8 +902,7 @@ void logic_enemy_move_towards_player(Enemy *enemy, Player *player) {
     /* Task 1: No path found - use random movement */
     Direction random_dir = logic_get_random_direction(enemy);
     if (random_dir != DIR_NONE) {
-        /* Direction already applied by logic_try_enemy_move in logic_get_random_direction */
-        return;
+        logic_try_enemy_move(enemy, random_dir);
     }
 }
 
@@ -1038,6 +1063,14 @@ void logic_enemy_inflate(Enemy *enemy) {
     if (enemy->inflate_level >= INFLATE_LEVELS) {
         enemy->state = ENEMY_DEAD;
         enemy->base.active = 0;
+
+        /* Use global state to update enemies_remaining and score */
+        if (g_current_logic_state) {
+            g_current_logic_state->enemies_remaining--;
+            /* Add score based on enemy depth */
+            int points = logic_calculate_enemy_points(enemy->base.pos.y);
+            logic_add_score(g_current_logic_state, points);
+        }
     }
 }
 
@@ -1223,33 +1256,45 @@ int logic_check_rock_crush(Rock *rock, GameLogicState *state) {
     if (!rock || !state) return 0;
 
     int rx = rock->base.pos.x;
-    int ry = rock->base.pos.y + 1; /* Position below */
+    int ry_current = rock->base.pos.y;   /* Current position */
+    int ry_below = rock->base.pos.y + 1; /* Position below (where rock is falling to) */
 
-    /* Check player */
-    if (state->player.base.pos.x == rx && state->player.base.pos.y == ry) {
+    int crushed = 0;
+
+    /* Check player at current rock position (rock is falling through) */
+    if (state->player.base.pos.x == rx && state->player.base.pos.y == ry_current) {
         logic_player_die(state);
         rock->has_crushed = 1;
-        return 1;
+        crushed = 1;
     }
 
-    /* Check enemies */
+    /* Check player at position below (where rock is falling to) */
+    if (state->player.base.pos.x == rx && state->player.base.pos.y == ry_below) {
+        logic_player_die(state);
+        rock->has_crushed = 1;
+        crushed = 1;
+    }
+
+    /* Check enemies at current rock position (rock is falling through) */
     for (int i = 0; i < state->enemy_count; i++) {
         Enemy *enemy = &state->enemies[i];
-        if (enemy->base.active && enemy->state != ENEMY_DEAD && enemy->base.pos.x == rx &&
-            enemy->base.pos.y == ry) {
-            enemy->state = ENEMY_DEAD;
-            enemy->base.active = 0;
-            state->enemies_remaining--;
+        if (enemy->base.active && enemy->state != ENEMY_DEAD) {
+            if (enemy->base.pos.x == rx &&
+                (enemy->base.pos.y == ry_current || enemy->base.pos.y == ry_below)) {
+                enemy->state = ENEMY_DEAD;
+                enemy->base.active = 0;
+                state->enemies_remaining--;
 
-            /* Bonus points for rock kill */
-            int points = logic_calculate_enemy_points(ry) * POINTS_ROCK_BONUS;
-            logic_add_score(state, points);
-            rock->has_crushed = 1;
-            return 1;
+                /* Bonus points for rock kill with multiplier */
+                int points = logic_calculate_enemy_points(enemy->base.pos.y) * ROCK_KILL_MULTIPLIER;
+                logic_add_score(state, points);
+                rock->has_crushed = 1;
+                crushed = 1;
+            }
         }
     }
 
-    return 0;
+    return crushed;
 }
 
 /* ============================================================================
@@ -1329,13 +1374,13 @@ void logic_fygar_fire(Enemy *fygar, GameLogicState *state) {
     if (!fygar || !state) return;
     if (fygar->base.type != ENTITY_FYGAR) return;
 
-    /* Handle cooldown */
+    /* Handle cooldown (5 seconds between attacks) */
     if (fygar->fire_cooldown > 0) {
         fygar->fire_cooldown--;
         return;
     }
 
-    /* Handle active fire */
+    /* Handle active fire (2 seconds duration) */
     if (fygar->fire_active) {
         fygar->fire_duration--;
         if (fygar->fire_duration <= 0) {
@@ -1350,38 +1395,53 @@ void logic_fygar_fire(Enemy *fygar, GameLogicState *state) {
         return;
     }
 
-    /* Task 2: Always try to attack when possible */
-    /* Fire if player is in horizontal line and within range */
-    if (fygar->base.pos.y == state->player.base.pos.y) {
+    /* Attack every time cooldown is ready - fire in current direction */
+    /* Determine fire direction based on Fygar's movement direction or player position */
+    Direction fire_dir = fygar->base.dir;
+
+    /* If not moving, choose direction based on player position */
+    if (fire_dir != DIR_LEFT && fire_dir != DIR_RIGHT) {
         int dx = state->player.base.pos.x - fygar->base.pos.x;
-        if (logic_abs(dx) <= FYGAR_FIRE_RANGE && dx != 0) {
-            /* Determine fire direction */
-            Direction fire_dir = (dx > 0) ? DIR_RIGHT : DIR_LEFT;
+        fire_dir = (dx >= 0) ? DIR_RIGHT : DIR_LEFT;
+    }
 
-            /* Task 2: Check if there are sufficient empty cells for fire attack */
-            int cells_needed = logic_abs(dx);
-            if (cells_needed > FYGAR_FIRE_RANGE) {
-                cells_needed = FYGAR_FIRE_RANGE;
-            }
+    /* Check if there are exactly 2 empty cells in fire direction */
+    int check_dx = (fire_dir == DIR_RIGHT) ? 1 : -1;
+    int empty_cells = 0;
+    for (int i = 1; i <= FYGAR_FIRE_RANGE; i++) {
+        int check_x = fygar->base.pos.x + (check_dx * i);
+        if (map_is_valid_position(check_x, fygar->base.pos.y) &&
+            map_is_walkable(check_x, fygar->base.pos.y)) {
+            empty_cells++;
+        } else {
+            break;
+        }
+    }
 
-            int empty_cells = 0;
-            int check_dx = (dx > 0) ? 1 : -1;
-            for (int i = 1; i <= cells_needed; i++) {
-                int check_x = fygar->base.pos.x + (check_dx * i);
-                if (map_is_valid_position(check_x, fygar->base.pos.y) &&
-                    map_is_walkable(check_x, fygar->base.pos.y)) {
-                    empty_cells++;
-                } else {
-                    break;
-                }
+    /* Fire only if exactly 2 empty cells in front */
+    if (empty_cells == FYGAR_FIRE_RANGE) {
+        fygar->fire_active = 1;
+        fygar->fire_duration = FYGAR_FIRE_DURATION;
+        fygar->base.dir = fire_dir;
+    } else {
+        /* Try the other direction */
+        fire_dir = (fire_dir == DIR_RIGHT) ? DIR_LEFT : DIR_RIGHT;
+        check_dx = (fire_dir == DIR_RIGHT) ? 1 : -1;
+        empty_cells = 0;
+        for (int i = 1; i <= FYGAR_FIRE_RANGE; i++) {
+            int check_x = fygar->base.pos.x + (check_dx * i);
+            if (map_is_valid_position(check_x, fygar->base.pos.y) &&
+                map_is_walkable(check_x, fygar->base.pos.y)) {
+                empty_cells++;
+            } else {
+                break;
             }
-
-            /* Only attack if all cells in range are empty */
-            if (empty_cells >= cells_needed) {
-                fygar->fire_active = 1;
-                fygar->fire_duration = FYGAR_FIRE_DURATION;
-                fygar->base.dir = fire_dir;
-            }
+        }
+        /* Fire only if exactly 2 empty cells in front */
+        if (empty_cells == FYGAR_FIRE_RANGE) {
+            fygar->fire_active = 1;
+            fygar->fire_duration = FYGAR_FIRE_DURATION;
+            fygar->base.dir = fire_dir;
         }
     }
 }

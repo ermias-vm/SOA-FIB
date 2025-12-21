@@ -56,12 +56,12 @@
 #define LAYER_3_START 13
 #define LAYER_3_END 17
 
-/* Layer 4: rows 18-22 (4 rows for deepest layer) */
+/* Layer 4: rows 18-23 (5 rows for deepest layer) */
 #define LAYER_4_START 18
-#define LAYER_4_END 22
+#define LAYER_4_END 23
 
 /* Bottom border row */
-#define ROW_BORDER 23
+#define ROW_BORDER 24
 
 /* ============================================================================
  *                           SCORING SYSTEM
@@ -120,9 +120,9 @@
  *                    GAME-SPECIFIC TIMES                                     *
  *============================================================================*/
 
-#define FYGAR_FIRE_RANGE 2                    /* Fire reaches 2 blocks horizontally */
-#define FYGAR_FIRE_COOLDOWN (ONE_SECOND * 10) /* Ticks between fire attacks */
-#define FYGAR_FIRE_DURATION HALF_SECOND       /* Ticks fire stays active */
+#define FYGAR_FIRE_RANGE 2                   /* Fire reaches 2 blocks horizontally */
+#define FYGAR_FIRE_COOLDOWN (ONE_SECOND * 5) /* 5 seconds cooldown between attacks */
+#define FYGAR_FIRE_DURATION 10               /* Brief fire display (same as player attack) */
 
 #define INFLATE_LEVELS 4                /* Levels before enemy explodes */
 #define INFLATE_DEFLATE_TIME ONE_SECOND /* Ticks to deflate one level */

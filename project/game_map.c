@@ -190,10 +190,7 @@ void map_create_borders(void) {
         map_set_tile(MAP_WIDTH - 1, y, TILE_WALL);
     }
 
-    /* Bottom border row (row 23) - gray # characters */
-    for (x = 0; x < MAP_WIDTH; x++) {
-        map_set_tile(x, ROW_BORDER, TILE_BORDER);
-    }
+    /* ROW_BORDER is now 24 (status bar) - no separate border row needed */
 }
 
 void map_create_dirt_pattern(int level) {

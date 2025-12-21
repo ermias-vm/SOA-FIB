@@ -499,9 +499,10 @@ void render_thread_func(void *arg) {
             render_enemies(g_logic_state.enemies, g_logic_state.enemy_count);
             render_rocks(g_logic_state.rocks, g_logic_state.rock_count);
 
-            /* Render HUD */
-            ui_draw_hud((int)g_game.lives, (int)g_game.score, (int)g_game.level,
-                        (int)g_game.ticks_elapsed / 100, 0);
+            /* Render HUD with enemies remaining */
+            ui_draw_hud_extended((int)g_game.lives, (int)g_game.score, (int)g_game.level,
+                                 (int)g_logic_state.time_elapsed, 0,
+                                 (int)g_logic_state.enemies_remaining);
             break;
 
         case SCENE_PAUSED:

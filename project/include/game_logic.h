@@ -32,24 +32,25 @@ extern GameLogicState *g_current_logic_state;
  * ============================================================================ */
 
 /* Movement delays (ticks between movements) */
-#define PLAYER_MOVE_DELAY 6
+#define PLAYER_MOVE_DELAY 4
 #define ENEMY_MOVE_DELAY 8
-#define GHOST_MODE_THRESHOLD (5 * TICKS_PER_SECOND) /* Ghost mode every 12 seconds */
-#define RESPAWN_DELAY QUARTER_SECOND                /* Ticks before player respawns */
-#define LEVEL_CLEAR_DELAY HALF_SECOND               /* Frames before next level (1 sec at 60 FPS) */
+#define GHOST_MODE_THRESHOLD (12 * TICKS_PER_SECOND) /* Ghost mode every 12 seconds */
+#define RESPAWN_DELAY EIGHTH_SECOND                 /* Ticks before player respawns */
+#define LEVEL_CLEAR_DELAY HALF_SECOND /* Frames before next level (1 sec at 60 FPS) */
 /* Note: ROUND_START_DELAY is already defined in game_config.h */
 
 /* Rock mechanics */
-#define ROCK_WOBBLE_TICKS EIGHTH_SECOND      /* Ticks rock wobbles before falling */
-#define ROCK_BLINK_COUNT 4                   /* Number of times rock blinks when hitting earth */
-#define ROCK_BLINK_DURATION SIXTEENTH_SECOND /* Ticks per blink cycle */
+#define ROCK_WOBBLE_TICKS EIGHTH_SECOND   /* Ticks rock wobbles before falling */
+#define ROCK_BLINK_DURATION THIRTY_SECOND /* Ticks per blink cycle */
+#define ROCK_BLINK_COUNT 3                /* Number of times rock blinks when hitting ground */
+#define ROCK_LAND_DELAY EIGHTH_SECOND     /* Ticks rock stays visible after landing */
 
 /* Scoring */
 #define POINTS_LAYER1 200
 #define POINTS_LAYER2 300
 #define POINTS_LAYER3 400
 #define POINTS_LAYER4 500
-#define POINTS_ROCK_BONUS 2 /* Multiplier for rock kills */
+#define ROCK_KILL_MULTIPLIER 2 /* Multiplier for rock kills */
 
 /* Player starting position */
 #define PLAYER_START_X 40

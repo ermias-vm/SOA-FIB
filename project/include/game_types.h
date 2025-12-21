@@ -87,7 +87,7 @@ typedef enum {
     ROCK_WOBBLING, /* About to fall */
     ROCK_FALLING,  /* Currently falling */
     ROCK_LANDED,   /* Just landed (brief state) */
-    ROCK_BLINKING  /* Blinking after hitting earth */
+    ROCK_BLINKING  /* Blinking after hitting ground */
 } RockState;
 
 /* ============================================================================

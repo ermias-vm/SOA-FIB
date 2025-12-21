@@ -160,8 +160,8 @@ Color render_get_layer_color(int y) {
         color.fg = COLOR_WHITE;
         color.bg = COLOR_BLACK;
     } else if (y >= SKY_START_ROW && y <= SKY_END_ROW) {
-        /* Sky area: completely black (Task 3) */
-        color.fg = COLOR_BLACK;
+        /* Sky area: completely black - empty cells */
+        color.fg = COLOR_WHITE;
         color.bg = COLOR_BLACK;
     } else if (y >= LAYER1_START && y <= LAYER1_END) {
         /* Layer 1: brown background (200 pts) */
@@ -179,12 +179,8 @@ Color render_get_layer_color(int y) {
         /* Layer 4: blue background (500 pts) */
         color.fg = COLOR_WHITE;
         color.bg = COLOR_BLUE;
-    } else if (y == ROW_BORDER) {
-        /* Bottom border: gray # on black */
-        color.fg = COLOR_DARK_GRAY;
-        color.bg = COLOR_BLACK;
     } else {
-        /* Default: white on black */
+        /* Default: white on black (includes status bars) */
         color.fg = COLOR_WHITE;
         color.bg = COLOR_BLACK;
     }
@@ -390,10 +386,10 @@ void render_map(void) {
                 break;
 
             case TILE_SKY:
-                /* Sky - space with light cyan background */
+                /* Sky - space with black background (empty cells) */
                 display_char = ' ';
                 cell_color.fg = COLOR_WHITE;
-                cell_color.bg = COLOR_LIGHT_CYAN;
+                cell_color.bg = COLOR_BLACK;
                 break;
 
             case TILE_WALL:
@@ -594,7 +590,10 @@ void render_enemies(Enemy *enemies, int count) {
             enemy_color.fg = COLOR_LIGHT_RED;
         } else if (enemy->base.type == ENTITY_FYGAR) {
             display_char = CHAR_FYGAR;
-            enemy_color.fg = COLOR_GREEN;
+            /* Fygar is always green */
+            {
+                enemy_color.fg = COLOR_GREEN;
+            }
         } else {
             display_char = '?';
             enemy_color.fg = COLOR_WHITE;
@@ -661,12 +660,19 @@ void render_rocks(Rock *rocks, int count) {
 
         Color rock_color;
         rock_color.fg = COLOR_DARK_GRAY; /* Gray rock character */
-        /* Task 5: Rock background matches earth layer color */
-        rock_color.bg = render_get_layer_color(rock->base.pos.y).bg;
+
+        /* Determine background color based on rock state */
+        if (rock->state == ROCK_FALLING || rock->state == ROCK_BLINKING) {
+            /* Falling or landed rocks have black background */
+            rock_color.bg = COLOR_BLACK;
+        } else {
+            /* Stable/wobbling rocks match earth layer color */
+            rock_color.bg = render_get_layer_color(rock->base.pos.y).bg;
+        }
 
         char display_char = '#'; /* Rock displayed as # */
 
-        /* Task 5: Blinking animation when hitting earth */
+        /* Blinking animation when hitting earth */
         if (rock->state == ROCK_BLINKING) {
             if (rock->blink_timer % 2 == 0) {
                 rock_color.fg = COLOR_WHITE; /* Blink to white */
@@ -755,9 +761,11 @@ void render_explosion(int x, int y) {
 }
 
 void render_fire(int x, int y, int dir, int length) {
+    (void)length; /* Not used - we always render full range */
+
     Color fire_color;
-    fire_color.fg = COLOR_LIGHT_RED;
-    fire_color.bg = COLOR_BLACK; /* Task 2: Fire has black background */
+    fire_color.fg = COLOR_RED;
+    fire_color.bg = COLOR_BLACK; /* Fire: red on black background */
 
     int dx = 0;
     switch (dir) {
@@ -771,12 +779,12 @@ void render_fire(int x, int y, int dir, int length) {
         return; /* Fygar only fires horizontally */
     }
 
-    for (int i = 1; i <= length && i <= FYGAR_FIRE_RANGE; i++) {
+    /* Draw fire for the full range (2 cells) */
+    for (int i = 1; i <= FYGAR_FIRE_RANGE; i++) {
         int fx = x + (dx * i);
 
         if (fx >= 0 && fx < SCREEN_WIDTH) {
-            char fire_char = (i == length) ? '*' : '~';
-            render_set_cell(fx, y, fire_char, fire_color);
+            render_set_cell(fx, y, '*', fire_color);
         }
     }
 }
