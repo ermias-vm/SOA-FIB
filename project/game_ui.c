@@ -20,19 +20,19 @@ static int g_life_lost_timer = 0;
  *                            MAIN HUD FUNCTIONS
  * ============================================================================ */
 
-void ui_draw_hud(int lives, int score, int round, int time_seconds, int fps) {
-    ui_draw_top_bar(time_seconds, fps);
+void ui_draw_hud(int lives, int score, int round, int time_ticks, int fps) {
+    ui_draw_top_bar(time_ticks, fps);
     ui_draw_bottom_bar(lives, score, round);
 }
 
-void ui_draw_top_bar(int time_seconds, int fps) {
+void ui_draw_top_bar(int time_ticks, int fps) {
     Color status_color = render_make_color(COLOR_WHITE, COLOR_BLACK);
 
     /* Clear the top row */
     render_fill_rect(0, STATUS_TOP_ROW, SCREEN_WIDTH, 1, ' ', status_color);
 
     /* Draw time on the left */
-    ui_draw_time(time_seconds);
+    ui_draw_time(time_ticks);
 
     /* Draw FPS on the right */
     ui_draw_fps(fps);
@@ -58,21 +58,39 @@ void ui_draw_bottom_bar(int lives, int score, int round) {
  *                         INDIVIDUAL HUD ELEMENTS
  * ============================================================================ */
 
-void ui_draw_time(int seconds) {
+void ui_draw_time(int ticks) {
     Color time_color = render_make_color(COLOR_WHITE, COLOR_BLACK);
 
-    int minutes = seconds / 60;
-    int secs = seconds % 60;
+    char time_str[16];
+    int pos = 0;
 
-    char time_str[6];
-    time_str[0] = '0' + (minutes / 10) % 10;
-    time_str[1] = '0' + (minutes % 10);
-    time_str[2] = ':';
-    time_str[3] = '0' + (secs / 10);
-    time_str[4] = '0' + (secs % 10);
-    time_str[5] = '\0';
+    /* Format: SSS:mmm or SSSS:mmm (no leading zeros) */
+    int secs = ticks / TICKS_PER_SECOND;
+    int millis = ((ticks % TICKS_PER_SECOND) * 1000) / TICKS_PER_SECOND;
 
-    render_put_string_colored(HUD_TIME_X, STATUS_TOP_ROW, time_str, time_color);
+    /* Convert seconds to string (no leading zeros) */
+    if (secs >= 1000) {
+        time_str[pos++] = '0' + (secs / 1000) % 10;
+    }
+    if (secs >= 100) {
+        time_str[pos++] = '0' + (secs / 100) % 10;
+    }
+    if (secs >= 10) {
+        time_str[pos++] = '0' + (secs / 10) % 10;
+    }
+    time_str[pos++] = '0' + (secs % 10);
+
+    /* Add colon */
+    time_str[pos++] = ':';
+
+    /* Add milliseconds (always 3 digits) */
+    time_str[pos++] = '0' + (millis / 100) % 10;
+    time_str[pos++] = '0' + (millis / 10) % 10;
+    time_str[pos++] = '0' + (millis % 10);
+    time_str[pos] = '\0';
+
+    /* Draw on the right side of time area */
+    render_put_string_colored(HUD_TIME_X + 10, STATUS_TOP_ROW, time_str, time_color);
 }
 
 void ui_draw_fps(int fps) {

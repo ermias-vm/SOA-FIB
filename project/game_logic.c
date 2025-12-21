@@ -19,6 +19,13 @@
 #include <game_types.h>
 
 /* ============================================================================
+ *                          GLOBAL STATE
+ * ============================================================================ */
+
+/* Global pointer to current game state (for rock collision checks) */
+GameLogicState *g_current_logic_state = 0;
+
+/* ============================================================================
  *                          UTILITY FUNCTIONS
  * ============================================================================ */
 
@@ -74,6 +81,7 @@ void logic_enemy_init(Enemy *enemy, int x, int y, EntityType type) {
     enemy->fire_active = 0;
     enemy->fire_duration = 0;
     enemy->paralyzed_timer = 0;
+    enemy->has_left_tunnel = 0;
 }
 
 void logic_rock_init(Rock *rock, int x, int y) {
@@ -90,6 +98,8 @@ void logic_rock_init(Rock *rock, int x, int y) {
     rock->state = ROCK_STABLE;
     rock->wobble_timer = 0;
     rock->has_crushed = 0;
+    rock->blink_timer = 0;
+    rock->blink_count = 0;
 }
 
 void logic_init(GameLogicState *state) {
@@ -122,7 +132,7 @@ void logic_start_round(GameLogicState *state, int round) {
     if (!state) return;
 
     state->round = round;
-    state->time_elapsed = 0;
+    /* Don't reset time_elapsed - keep accumulating across rounds */
     state->scene = SCENE_ROUND_START;
     state->round_start_timer = ROUND_START_DELAY;
 
@@ -149,8 +159,8 @@ void logic_start_round(GameLogicState *state, int round) {
         logic_enemy_init(&state->enemies[i], ex, ey, type);
     }
 
-    /* Place rocks using configured spawn positions */
-    state->rock_count = 1 + (round / 3);
+    /* Place rocks using configured spawn positions - 4 per map */
+    state->rock_count = 4;
     if (state->rock_count > MAX_ROCKS) state->rock_count = MAX_ROCKS;
 
     for (int i = 0; i < state->rock_count; i++) {
@@ -166,6 +176,9 @@ void logic_start_round(GameLogicState *state, int round) {
 
 void logic_update(GameLogicState *state) {
     if (!state) return;
+
+    /* Update global state pointer for rock collision checks */
+    g_current_logic_state = state;
 
     /* Handle different scenes */
     switch (state->scene) {
@@ -308,6 +321,19 @@ void logic_update_player(GameLogicState *state) {
     }
 }
 
+/**
+ * @brief Check if there's a rock at the given position.
+ */
+static int has_rock_at(Rock *rocks, int count, int x, int y) {
+    for (int i = 0; i < count; i++) {
+        if (rocks[i].base.active && rocks[i].base.pos.x == x && rocks[i].base.pos.y == y &&
+            (rocks[i].state == ROCK_STABLE || rocks[i].state == ROCK_WOBBLING)) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 void logic_player_move(Player *player, Direction dir) {
     if (!player || !player->base.active) return;
 
@@ -344,6 +370,18 @@ void logic_player_move(Player *player, Direction dir) {
         return;
     }
 
+    /* Prevent going to the border row (max depth is ROW_GROUND_END - 1) */
+    if (new_y >= ROW_BORDER) {
+        return;
+    }
+
+    /* Check for rocks - they block movement */
+    extern GameLogicState *g_current_logic_state;
+    if (g_current_logic_state && has_rock_at(g_current_logic_state->rocks,
+                                             g_current_logic_state->rock_count, new_x, new_y)) {
+        return; /* Can't move through rocks */
+    }
+
     /* If there's dirt, dig it */
     if (map_is_diggable(new_x, new_y)) {
         map_dig(new_x, new_y);
@@ -351,7 +389,7 @@ void logic_player_move(Player *player, Direction dir) {
     } else if (map_is_walkable(new_x, new_y)) {
         player->state = PLAYER_MOVING;
     } else {
-        /* Blocked by wall or other solid tile */
+        /* Blocked by wall, rock, or other solid tile */
         return;
     }
 
@@ -537,6 +575,211 @@ void logic_player_respawn(GameLogicState *state) {
  *                          ENEMY FUNCTIONS
  * ============================================================================ */
 
+/* Task 1: Dijkstra Pathfinding structures and functions */
+#define MAX_PRIORITY_QUEUE_SIZE 256
+
+typedef struct {
+    Position pos;
+    Direction first_dir;
+    int cost;
+} DijkstraNode;
+
+typedef struct {
+    DijkstraNode nodes[MAX_PRIORITY_QUEUE_SIZE];
+    int size;
+} PriorityQueue;
+
+void pq_init(PriorityQueue *pq) {
+    pq->size = 0;
+}
+
+int pq_empty(PriorityQueue *pq) {
+    return pq->size == 0;
+}
+
+int pq_full(PriorityQueue *pq) {
+    return pq->size >= MAX_PRIORITY_QUEUE_SIZE;
+}
+
+void pq_push(PriorityQueue *pq, Position pos, Direction first_dir, int cost) {
+    if (pq_full(pq)) return;
+
+    /* Insert at end */
+    pq->nodes[pq->size].pos = pos;
+    pq->nodes[pq->size].first_dir = first_dir;
+    pq->nodes[pq->size].cost = cost;
+
+    /* Bubble up to maintain min-heap property */
+    int i = pq->size;
+    pq->size++;
+
+    while (i > 0) {
+        int parent = (i - 1) / 2;
+        if (pq->nodes[i].cost >= pq->nodes[parent].cost) break;
+
+        /* Swap with parent */
+        DijkstraNode temp = pq->nodes[i];
+        pq->nodes[i] = pq->nodes[parent];
+        pq->nodes[parent] = temp;
+        i = parent;
+    }
+}
+
+DijkstraNode pq_pop(PriorityQueue *pq) {
+    DijkstraNode result = {{-1, -1}, DIR_NONE, 9999};
+    if (pq_empty(pq)) return result;
+
+    result = pq->nodes[0];
+    pq->size--;
+
+    if (pq->size > 0) {
+        pq->nodes[0] = pq->nodes[pq->size];
+
+        /* Bubble down */
+        int i = 0;
+        while (1) {
+            int left = 2 * i + 1;
+            int right = 2 * i + 2;
+            int smallest = i;
+
+            if (left < pq->size && pq->nodes[left].cost < pq->nodes[smallest].cost) {
+                smallest = left;
+            }
+            if (right < pq->size && pq->nodes[right].cost < pq->nodes[smallest].cost) {
+                smallest = right;
+            }
+
+            if (smallest == i) break;
+
+            /* Swap */
+            DijkstraNode temp = pq->nodes[i];
+            pq->nodes[i] = pq->nodes[smallest];
+            pq->nodes[smallest] = temp;
+            i = smallest;
+        }
+    }
+
+    return result;
+}
+
+/**
+ * @brief Task 1: Find shortest path using Dijkstra with weighted costs
+ * @param can_pass_walls If 1, can move through solid tiles (ghost mode)
+ * @return Direction to move, or DIR_NONE if no path
+ */
+Direction logic_find_path_bfs(Position start, Position target, int can_pass_walls) {
+    static PriorityQueue pq;
+    static int cost[MAP_HEIGHT][MAP_WIDTH];
+    static Direction first_dir[MAP_HEIGHT][MAP_WIDTH];
+
+    /* Initialize costs to infinity */
+    for (int y = 0; y < MAP_HEIGHT; y++) {
+        for (int x = 0; x < MAP_WIDTH; x++) {
+            cost[y][x] = 9999;
+            first_dir[y][x] = DIR_NONE;
+        }
+    }
+
+    pq_init(&pq);
+    pq_push(&pq, start, DIR_NONE, 0);
+    cost[start.y][start.x] = 0;
+
+    Direction dirs[] = {DIR_UP, DIR_DOWN, DIR_LEFT, DIR_RIGHT};
+    int dx[] = {0, 0, -1, 1};
+    int dy[] = {-1, 1, 0, 0};
+
+    while (!pq_empty(&pq)) {
+        DijkstraNode current = pq_pop(&pq);
+
+        /* Check if we reached target */
+        if (current.pos.x == target.x && current.pos.y == target.y) {
+            return first_dir[target.y][target.x];
+        }
+
+        /* Skip if we already found a better path */
+        if (current.cost > cost[current.pos.y][current.pos.x]) {
+            continue;
+        }
+
+        /* Explore neighbors */
+        for (int i = 0; i < 4; i++) {
+            int nx = current.pos.x + dx[i];
+            int ny = current.pos.y + dy[i];
+
+            /* Check bounds */
+            if (!map_is_valid_position(nx, ny)) continue;
+
+            /* Calculate movement cost */
+            int move_cost = 1; /* Default cost for tunnels */
+
+            if (can_pass_walls) {
+                /* In ghost mode: tunnels cost 1, walls cost 10 */
+                if (!map_is_walkable(nx, ny)) {
+                    move_cost = 10; /* Penalty for passing through walls */
+                }
+            } else {
+                /* Normal mode: can't pass walls */
+                if (!map_is_walkable(nx, ny)) {
+                    continue;
+                }
+            }
+
+            int new_cost = current.cost + move_cost;
+
+            /* Update if we found a better path */
+            if (new_cost < cost[ny][nx]) {
+                cost[ny][nx] = new_cost;
+
+                /* Track first direction from start */
+                Direction dir_to_use =
+                    (current.first_dir == DIR_NONE) ? dirs[i] : current.first_dir;
+                first_dir[ny][nx] = dir_to_use;
+
+                Position next_pos = {nx, ny};
+                pq_push(&pq, next_pos, dir_to_use, new_cost);
+            }
+        }
+    }
+
+    /* No path found */
+    return DIR_NONE;
+}
+
+/**
+ * @brief Task 1: Get random movement direction - move to max in one direction
+ */
+Direction logic_get_random_direction(Enemy *enemy) {
+    Direction dirs[] = {DIR_UP, DIR_DOWN, DIR_LEFT, DIR_RIGHT};
+
+    /* Simple pseudo-random: use position and time as seed */
+    int seed = enemy->base.pos.x + enemy->base.pos.y * 79 + enemy->ghost_timer;
+    int chosen_idx = seed % 4;
+    Direction chosen_dir = dirs[chosen_idx];
+
+    /* Try to move as far as possible in the chosen direction */
+    int moved = 0;
+    for (int steps = 0; steps < 20; steps++) { /* Max 20 steps */
+        if (logic_try_enemy_move(enemy, chosen_dir)) {
+            moved = 1;
+        } else {
+            break; /* Can't move further */
+        }
+    }
+
+    if (moved) {
+        return chosen_dir;
+    }
+
+    /* If can't move in chosen direction, try others */
+    for (int i = 0; i < 4; i++) {
+        if (i != chosen_idx && logic_try_enemy_move(enemy, dirs[i])) {
+            return dirs[i];
+        }
+    }
+
+    return DIR_NONE;
+}
+
 void logic_update_enemies(GameLogicState *state) {
     if (!state) return;
 
@@ -595,6 +838,7 @@ void logic_update_enemies(GameLogicState *state) {
             /* Activate ghost mode if stuck */
             if (!logic_can_see_player(enemy, &state->player)) {
                 enemy->state = ENEMY_GHOST;
+                enemy->has_left_tunnel = 0; /* Initialize ghost mode flag */
             }
         }
 
@@ -609,7 +853,7 @@ void logic_enemy_ai(Enemy *enemy, Player *player) {
     if (!enemy || !player) return;
 
     if (enemy->state == ENEMY_GHOST) {
-        logic_enemy_ghost_mode(enemy);
+        logic_enemy_ghost_mode(enemy, player);
     } else {
         logic_enemy_move_towards_player(enemy, player);
     }
@@ -618,47 +862,22 @@ void logic_enemy_ai(Enemy *enemy, Player *player) {
 void logic_enemy_move_towards_player(Enemy *enemy, Player *player) {
     if (!enemy || !player) return;
 
-    int ex = enemy->base.pos.x;
-    int ey = enemy->base.pos.y;
-    int px = player->base.pos.x;
-    int py = player->base.pos.y;
+    Position enemy_pos = {enemy->base.pos.x, enemy->base.pos.y};
+    Position player_pos = {player->base.pos.x, player->base.pos.y};
 
-    /* Calculate distance */
-    int dx = px - ex;
-    int dy = py - ey;
+    /* Task 1: Use BFS pathfinding to find actual shortest path */
+    Direction best_dir = logic_find_path_bfs(enemy_pos, player_pos, 0);
 
-    /* Determine primary and secondary directions */
-    Direction primary, secondary;
-
-    if (logic_abs(dx) > logic_abs(dy)) {
-        /* Prioritize horizontal movement */
-        primary = (dx > 0) ? DIR_RIGHT : DIR_LEFT;
-        secondary = (dy > 0) ? DIR_DOWN : DIR_UP;
-    } else {
-        /* Prioritize vertical movement */
-        primary = (dy > 0) ? DIR_DOWN : DIR_UP;
-        secondary = (dx > 0) ? DIR_RIGHT : DIR_LEFT;
-    }
-
-    /* Try primary direction */
-    if (logic_try_enemy_move(enemy, primary)) {
-        enemy->ghost_timer = 0;
+    if (best_dir != DIR_NONE && logic_try_enemy_move(enemy, best_dir)) {
+        enemy->ghost_timer = 0; /* Reset ghost timer on successful move */
         return;
     }
 
-    /* Try secondary direction */
-    if (logic_try_enemy_move(enemy, secondary)) {
+    /* Task 1: No path found - use random movement */
+    Direction random_dir = logic_get_random_direction(enemy);
+    if (random_dir != DIR_NONE) {
+        /* Direction already applied by logic_try_enemy_move in logic_get_random_direction */
         return;
-    }
-
-    /* Try other directions */
-    Direction dirs[] = {DIR_UP, DIR_DOWN, DIR_LEFT, DIR_RIGHT};
-    for (int i = 0; i < 4; i++) {
-        if (dirs[i] != primary && dirs[i] != secondary) {
-            if (logic_try_enemy_move(enemy, dirs[i])) {
-                return;
-            }
-        }
     }
 }
 
@@ -686,7 +905,22 @@ int logic_try_enemy_move(Enemy *enemy, Direction dir) {
     }
 
     /* Check if can move */
-    if (map_is_valid_position(new_x, new_y) && map_is_walkable(new_x, new_y)) {
+    if (!map_is_valid_position(new_x, new_y)) {
+        return 0;
+    }
+
+    /* Check for rocks - enemies can't move through rocks */
+    if (g_current_logic_state && has_rock_at(g_current_logic_state->rocks,
+                                             g_current_logic_state->rock_count, new_x, new_y)) {
+        return 0; /* Can't move through rocks */
+    }
+
+    /* Limit depth - enemies can't go to border row */
+    if (new_y >= ROW_BORDER) {
+        return 0;
+    }
+
+    if (map_is_walkable(new_x, new_y)) {
         enemy->base.pos.x = new_x;
         enemy->base.pos.y = new_y;
         enemy->base.dir = dir;
@@ -696,77 +930,63 @@ int logic_try_enemy_move(Enemy *enemy, Direction dir) {
     return 0;
 }
 
-void logic_enemy_ghost_mode(Enemy *enemy) {
+void logic_enemy_ghost_mode(Enemy *enemy, Player *player) {
     if (!enemy) return;
 
-    int new_x = enemy->base.pos.x;
-    int new_y = enemy->base.pos.y;
-    Direction current_dir = enemy->base.dir;
+    Position enemy_pos = {enemy->base.pos.x, enemy->base.pos.y};
+    Position player_pos = {player->base.pos.x, player->base.pos.y};
 
-    /* If no direction set, pick one */
-    if (current_dir == DIR_NONE) {
-        current_dir = DIR_DOWN;
-        enemy->base.dir = current_dir;
+    /* Check if currently on a tunnel */
+    int on_tunnel = map_is_walkable(enemy->base.pos.x, enemy->base.pos.y);
+
+    /* Task 4: Return to normal only if: on tunnel AND has previously left a tunnel */
+    if (on_tunnel && enemy->has_left_tunnel) {
+        enemy->state = ENEMY_NORMAL;
+        enemy->ghost_timer = 0;
+        enemy->has_left_tunnel = 0;
+        return;
     }
 
-    /* Move in current direction (can pass through walls) */
-    switch (current_dir) {
-    case DIR_UP:
-        new_y--;
-        break;
-    case DIR_DOWN:
-        new_y++;
-        break;
-    case DIR_LEFT:
-        new_x--;
-        break;
-    case DIR_RIGHT:
-        new_x++;
-        break;
-    default:
-        new_y++;
-        break;
+    /* Track if we've moved through dirt (left tunnel) */
+    if (!on_tunnel && !enemy->has_left_tunnel) {
+        enemy->has_left_tunnel = 1;
     }
 
-    /* Check if we can move to new position */
-    if (map_is_valid_position(new_x, new_y)) {
-        enemy->base.pos.x = new_x;
-        enemy->base.pos.y = new_y;
+    /* Task 4: Use pathfinding with wall-passing enabled to find shortest path */
+    Direction best_dir = logic_find_path_bfs(enemy_pos, player_pos, 1);
 
-        /* Return to normal mode if in a tunnel */
-        if (map_is_walkable(new_x, new_y)) {
-            enemy->state = ENEMY_NORMAL;
-            enemy->ghost_timer = 0;
+    if (best_dir != DIR_NONE) {
+        /* Apply the movement (ghosts can pass through walls) */
+        int new_x = enemy->base.pos.x;
+        int new_y = enemy->base.pos.y;
+
+        switch (best_dir) {
+        case DIR_UP:
+            new_y--;
+            break;
+        case DIR_DOWN:
+            new_y++;
+            break;
+        case DIR_LEFT:
+            new_x--;
+            break;
+        case DIR_RIGHT:
+            new_x++;
+            break;
+        default:
+            break;
         }
-    } else {
-        /* Hit boundary - change direction */
-        /* Try perpendicular directions */
-        Direction new_dirs[4] = {DIR_DOWN, DIR_UP, DIR_RIGHT, DIR_LEFT};
-        for (int i = 0; i < 4; i++) {
-            if (new_dirs[i] == current_dir) continue;
 
-            int test_x = enemy->base.pos.x;
-            int test_y = enemy->base.pos.y;
-            switch (new_dirs[i]) {
-            case DIR_UP:
-                test_y--;
-                break;
-            case DIR_DOWN:
-                test_y++;
-                break;
-            case DIR_LEFT:
-                test_x--;
-                break;
-            case DIR_RIGHT:
-                test_x++;
-                break;
-            default:
-                break;
-            }
+        if (map_is_valid_position(new_x, new_y)) {
+            enemy->base.pos.x = new_x;
+            enemy->base.pos.y = new_y;
+            enemy->base.dir = best_dir;
 
-            if (map_is_valid_position(test_x, test_y)) {
-                enemy->base.dir = new_dirs[i];
-                break;
+            /* Check if reached a tunnel after leaving one */
+            if (map_is_walkable(new_x, new_y) && enemy->has_left_tunnel) {
+                enemy->state = ENEMY_NORMAL;
+                enemy->ghost_timer = 0;
+                enemy->has_left_tunnel = 0;
             }
         }
     }
@@ -842,7 +1062,7 @@ void logic_update_rocks(GameLogicState *state) {
     for (int i = 0; i < state->rock_count; i++) {
         Rock *rock = &state->rocks[i];
 
-        if (!rock->base.active || rock->state == ROCK_LANDED) {
+        if (!rock->base.active) {
             continue;
         }
 
@@ -860,6 +1080,27 @@ void logic_update_rocks(GameLogicState *state) {
 
         case ROCK_FALLING:
             logic_rock_fall(rock, state);
+            break;
+
+        case ROCK_BLINKING:
+            /* Task 5: Handle blink animation */
+            rock->blink_timer--;
+            if (rock->blink_timer <= 0) {
+                rock->blink_count--;
+                if (rock->blink_count <= 0) {
+                    /* Done blinking, make rock inactive */
+                    rock->state = ROCK_LANDED;
+                    rock->base.active = 0;
+                } else {
+                    /* Reset timer for next blink cycle */
+                    rock->blink_timer = ROCK_BLINK_DURATION;
+                }
+            }
+            break;
+
+        case ROCK_LANDED:
+            /* Rock is done - could be cleaned up */
+            rock->base.active = 0;
             break;
 
         default:
@@ -886,10 +1127,12 @@ void logic_rock_fall(Rock *rock, GameLogicState *state) {
 
     int new_y = rock->base.pos.y + 1;
 
-    /* Check if hit ground */
+    /* Task 5: Check if hit solid earth block */
     if (!map_is_valid_position(rock->base.pos.x, new_y) || map_is_solid(rock->base.pos.x, new_y)) {
-        rock->state = ROCK_LANDED;
-        rock->base.active = 0;
+        /* Rock hit earth - start blinking animation */
+        rock->state = ROCK_BLINKING;
+        rock->blink_count = ROCK_BLINK_COUNT;
+        rock->blink_timer = ROCK_BLINK_DURATION;
         return;
     }
 
@@ -1107,16 +1350,37 @@ void logic_fygar_fire(Enemy *fygar, GameLogicState *state) {
         return;
     }
 
-    /* Decide whether to breathe fire (simple heuristic) */
+    /* Task 2: Always try to attack when possible */
     /* Fire if player is in horizontal line and within range */
     if (fygar->base.pos.y == state->player.base.pos.y) {
         int dx = state->player.base.pos.x - fygar->base.pos.x;
-        if (logic_abs(dx) <= FYGAR_FIRE_RANGE) {
-            /* Check direction */
-            if ((dx > 0 && fygar->base.dir == DIR_RIGHT) ||
-                (dx < 0 && fygar->base.dir == DIR_LEFT)) {
+        if (logic_abs(dx) <= FYGAR_FIRE_RANGE && dx != 0) {
+            /* Determine fire direction */
+            Direction fire_dir = (dx > 0) ? DIR_RIGHT : DIR_LEFT;
+
+            /* Task 2: Check if there are sufficient empty cells for fire attack */
+            int cells_needed = logic_abs(dx);
+            if (cells_needed > FYGAR_FIRE_RANGE) {
+                cells_needed = FYGAR_FIRE_RANGE;
+            }
+
+            int empty_cells = 0;
+            int check_dx = (dx > 0) ? 1 : -1;
+            for (int i = 1; i <= cells_needed; i++) {
+                int check_x = fygar->base.pos.x + (check_dx * i);
+                if (map_is_valid_position(check_x, fygar->base.pos.y) &&
+                    map_is_walkable(check_x, fygar->base.pos.y)) {
+                    empty_cells++;
+                } else {
+                    break;
+                }
+            }
+
+            /* Only attack if all cells in range are empty */
+            if (empty_cells >= cells_needed) {
                 fygar->fire_active = 1;
                 fygar->fire_duration = FYGAR_FIRE_DURATION;
+                fygar->base.dir = fire_dir;
             }
         }
     }

@@ -120,9 +120,9 @@
  *                    GAME-SPECIFIC TIMES                                     *
  *============================================================================*/
 
-#define FYGAR_FIRE_RANGE 2                   /* Fire reaches 2 blocks horizontally */
-#define FYGAR_FIRE_COOLDOWN (ONE_SECOND * 2) /* Ticks between fire attacks */
-#define FYGAR_FIRE_DURATION HALF_SECOND      /* Ticks fire stays active */
+#define FYGAR_FIRE_RANGE 2                    /* Fire reaches 2 blocks horizontally */
+#define FYGAR_FIRE_COOLDOWN (ONE_SECOND * 10) /* Ticks between fire attacks */
+#define FYGAR_FIRE_DURATION HALF_SECOND       /* Ticks fire stays active */
 
 #define INFLATE_LEVELS 4                /* Levels before enemy explodes */
 #define INFLATE_DEFLATE_TIME ONE_SECOND /* Ticks to deflate one level */

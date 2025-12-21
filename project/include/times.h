@@ -62,6 +62,21 @@
  */
 #define QUARTER_SECOND (TICKS_PER_SECOND / 4)
 
+/**
+ * @brief Eighth second in ticks (adjusted).
+ */
+#define EIGHTH_SECOND (TICKS_PER_SECOND / 8)
+
+/**
+ * @brief Sixteenth second in ticks (adjusted).
+ */
+#define SIXTEENTH_SECOND (TICKS_PER_SECOND / 16)
+
+/**
+ * @brief Thirty-second second in ticks (adjusted).
+ */
+#define THIRTY_SECOND (TICKS_PER_SECOND / 32)
+
 /*============================================================================*
  *                    MILLISECOND CONVERSIONS                                 *
  *============================================================================*/

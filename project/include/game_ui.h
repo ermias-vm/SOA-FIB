@@ -44,7 +44,7 @@
  * @param time_seconds Elapsed time in seconds
  * @param fps Current frames per second
  */
-void ui_draw_hud(int lives, int score, int round, int time_seconds, int fps);
+void ui_draw_hud(int lives, int score, int round, int time_ticks, int fps);
 
 /**
  * @brief Draw the top status bar (time and FPS).
@@ -69,7 +69,7 @@ void ui_draw_bottom_bar(int lives, int score, int round);
  * @brief Draw game time in MM:SS format.
  * @param seconds Total seconds elapsed
  */
-void ui_draw_time(int seconds);
+void ui_draw_time(int ticks);
 
 /**
  * @brief Draw FPS counter.
