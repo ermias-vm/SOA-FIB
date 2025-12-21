@@ -135,12 +135,11 @@ Direction enemy_ai_direction(Entity *enemy, Position target);
 void enemy_reset_position(Entity *enemy, int enemy_index);
 
 /**
- * @brief Initialize all enemies for a level.
+ * @brief Initialize all enemies.
  * @param enemies Array of enemy entities
  * @param count Number of enemies
- * @param level Current level (affects enemy behavior)
  */
-void enemies_init_all(Entity enemies[], int count, int level);
+void enemies_init_all(Entity enemies[], int count);
 
 /**
  * @brief Update all active enemies.

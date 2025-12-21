@@ -266,7 +266,7 @@ void logic_update_player(GameLogicState *state) {
         /* Check speed counter (movement cooldown) */
         if (player->base.speed_counter <= 0) {
             logic_player_move(player, dir);
-            player->base.speed_counter = PLAYER_MOVE_DELAY;
+            player->base.speed_counter = PLAYER_SPEED;
 
             /* Check for bonus collection after moving (100 points) */
             if (map_get_tile(player->base.pos.x, player->base.pos.y) == TILE_BONUS) {
@@ -1357,13 +1357,12 @@ void logic_check_round_complete(GameLogicState *state) {
     if (state->enemies_remaining <= 0) {
         int current_time = gettime();
 
-        /* First time enemies reached 0 - record timestamp */
+        /* First time enemies reached 0 - record timestamp for 3 seconds delay */
         if (state->enemies_cleared_time == 0) {
-            state->enemies_cleared_time = current_time + 2 * ONE_SECOND;
+            state->enemies_cleared_time = current_time + 3 * ONE_SECOND;
         }
 
-        /* Wait 1 second (ONE_SECOND) before transitioning to round clear screen */
-        /* This allows the game to continue running briefly after last enemy dies */
+        /* Wait 3 seconds before transitioning to round clear screen */
         if (state->enemies_cleared_time - current_time <= 0) {
             /* If this was the last round (level 5), go directly to victory */
             if (state->round >= MAX_ROUNDS) {

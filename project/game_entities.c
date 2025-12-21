@@ -246,16 +246,11 @@ void enemy_reset_position(Entity *enemy, int enemy_index) {
     enemy->speed_counter = 0;
 }
 
-void enemies_init_all(Entity enemies[], int count, int level) {
+void enemies_init_all(Entity enemies[], int count) {
     if (!enemies) return;
-
-    /* Adjust enemy speed based on level */
-    int enemy_speed = ENEMY_BASE_SPEED - (level * SPEED_INCREMENT_PER_LEVEL);
-    if (enemy_speed < 1) enemy_speed = 1;
 
     for (int i = 0; i < count; i++) {
         enemy_init(&enemies[i], 0, 0); /* Position will be set by reset */
-        enemies[i].speed_limit = enemy_speed;
         enemy_reset_position(&enemies[i], i);
     }
 }
