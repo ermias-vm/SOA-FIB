@@ -382,7 +382,7 @@ static void process_victory_state(void) {
     } else {
         /* Check for 'C' key for credits */
         char last_key = input_get_last_key();
-        if (last_key == 'c' || last_key == 'C') {
+        if (last_key == KEY_C) {
             g_game.scene = SCENE_CREDITS;
             g_logic_state.scene = SCENE_CREDITS;
         }
@@ -488,8 +488,14 @@ void render_thread_func(void *arg) {
 
         if (!g_running) break;
 
-        /* Clear buffer */
-        render_clear();
+        /* Clear buffer based on scene type */
+        /* SCENE_PLAYING and SCENE_PAUSED show the game map with colored layers */
+        /* All other scenes use black background */
+        if (g_game.scene == SCENE_PLAYING || g_game.scene == SCENE_PAUSED) {
+            render_clear();
+        } else {
+            render_clear_black();
+        }
 
         /* Render based on current scene */
         switch (g_game.scene) {
@@ -527,8 +533,10 @@ void render_thread_func(void *arg) {
             break;
 
         case SCENE_ROUND_START:
-            /* Show round starting message */
-            ui_draw_level_clear_screen((int)g_game.level, (int)g_game.score);
+            /* Show round starting message - display "Preparing round X" where X is current round */
+            /* Note: We pass level-1 so that ui_draw_level_clear_screen shows the correct next round
+             */
+            ui_draw_level_clear_screen((int)g_game.level - 1, (int)g_game.score);
             break;
 
         case SCENE_VICTORY:

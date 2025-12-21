@@ -230,9 +230,6 @@ void ui_draw_menu_screen(void) {
     Color text_color = render_make_color(COLOR_WHITE, COLOR_BLACK);
     Color highlight_color = render_make_color(COLOR_LIGHT_GREEN, COLOR_BLACK);
 
-    /* Clear screen */
-    render_clear();
-
     /* Title */
     ui_draw_centered_text(5, "========================", title_color);
     ui_draw_centered_text(6, "         DIG DUG        ", title_color);
@@ -288,9 +285,6 @@ void ui_draw_game_over_screen(int final_score) {
     Color text_color = render_make_color(COLOR_WHITE, COLOR_BLACK);
     Color score_color = render_make_color(COLOR_YELLOW, COLOR_BLACK);
 
-    /* Clear screen */
-    render_clear();
-
     /* Game Over title */
     ui_draw_centered_text(7, "========================", title_color);
     ui_draw_centered_text(8, "      GAME  OVER        ", title_color);
@@ -310,49 +304,22 @@ void ui_draw_game_over_screen(int final_score) {
 
 void ui_draw_level_clear_screen(int round, int score) {
     (void)score; /* Score not displayed in current implementation */
-    Color box_color = render_make_color(COLOR_BLACK, COLOR_GREEN);
-    Color title_color = render_make_color(COLOR_WHITE, COLOR_GREEN);
     Color text_color = render_make_color(COLOR_WHITE, COLOR_BLACK);
 
-    /* Draw completion box */
-    int box_x = (SCREEN_WIDTH - 30) / 2;
-    int box_y = 9;
-    int box_w = 30;
-    int box_h = 7;
+    /* Build "Preparing round X" message */
+    /* round is the current round that was cleared, so next round is round+1 */
+    int next_round = round + 1;
+    char msg[25] = "Preparing round ";
+    int i = 16; /* Position after "Preparing round " */
 
-    /* Fill background */
-    render_fill_rect(box_x, box_y, box_w, box_h, ' ', box_color);
-
-    /* Title */
-    ui_draw_centered_text(box_y + 1, "ROUND CLEAR!", title_color);
-
-    /* Round completed */
-    char round_text[20] = "Round ";
-    char round_num[3];
-    ui_number_to_string(round, round_num, 2, ' ');
-
-    int i = 6;
-    int j = 0;
-    while (round_num[j]) {
-        if (round_num[j] != ' ' || i > 6) {
-            round_text[i++] = round_num[j];
-        }
-        j++;
+    if (next_round >= 10) {
+        msg[i++] = '0' + (next_round / 10);
     }
-    round_text[i++] = ' ';
-    round_text[i++] = 'C';
-    round_text[i++] = 'l';
-    round_text[i++] = 'e';
-    round_text[i++] = 'a';
-    round_text[i++] = 'r';
-    round_text[i++] = 'e';
-    round_text[i++] = 'd';
-    round_text[i] = '\0';
+    msg[i++] = '0' + (next_round % 10);
+    msg[i] = '\0';
 
-    ui_draw_centered_text(box_y + 3, round_text, title_color);
-
-    /* Next round message */
-    ui_draw_centered_text(box_y + box_h + 1, "Preparing next round...", text_color);
+    /* Draw centered on middle row (row 12 is the middle of 25 rows) */
+    ui_draw_centered_text(12, msg, text_color);
 }
 
 void ui_draw_victory_screen(int final_score) {
@@ -360,9 +327,6 @@ void ui_draw_victory_screen(int final_score) {
     Color text_color = render_make_color(COLOR_WHITE, COLOR_BLACK);
     Color score_color = render_make_color(COLOR_YELLOW, COLOR_BLACK);
     Color subtitle_color = render_make_color(COLOR_CYAN, COLOR_BLACK);
-
-    /* Clear screen */
-    render_clear();
 
     /* Victory title */
     ui_draw_centered_text(5, "========================", title_color);
@@ -389,9 +353,6 @@ void ui_draw_credits_screen(void) {
     Color title_color = render_make_color(COLOR_LIGHT_CYAN, COLOR_BLACK);
     Color text_color = render_make_color(COLOR_WHITE, COLOR_BLACK);
     Color name_color = render_make_color(COLOR_YELLOW, COLOR_BLACK);
-
-    /* Clear screen */
-    render_clear();
 
     /* Credits title */
     ui_draw_centered_text(5, "========================", title_color);

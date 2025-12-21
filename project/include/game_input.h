@@ -25,6 +25,7 @@
 #define KEY_SPACE 0x39 /* Spacebar */
 #define KEY_P 0x19     /* P key */
 #define KEY_K 0x25     /* K key (developer: kill enemy) */
+#define KEY_C 0x2E     /* C key (credits) */
 
 /* Arrow keys (extended scancodes) */
 #define KEY_ARROW_UP 0x48    /* Up arrow */

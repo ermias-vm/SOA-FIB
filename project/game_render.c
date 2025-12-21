@@ -83,6 +83,20 @@ void render_clear_buffer(ScreenBuffer *buffer) {
     buffer->dirty = 1;
 }
 
+void render_clear_black(void) {
+    Color black_color;
+    black_color.fg = COLOR_WHITE;
+    black_color.bg = COLOR_BLACK;
+
+    for (int y = 0; y < SCREEN_HEIGHT; y++) {
+        for (int x = 0; x < SCREEN_WIDTH; x++) {
+            g_back_buffer.cells[y][x].character = ' ';
+            g_back_buffer.cells[y][x].color = black_color;
+        }
+    }
+    g_back_buffer.dirty = 1;
+}
+
 void render_set_cell(int x, int y, char c, Color color) {
     if (!render_is_valid_pos(x, y)) {
         return;

@@ -176,6 +176,13 @@ void render_cleanup(void);
 void render_clear(void);
 
 /**
+ * @brief Clear the back buffer with black background.
+ *
+ * Used for menu, game over, victory, credits, and round clear scenes.
+ */
+void render_clear_black(void);
+
+/**
  * @brief Set a single cell in the back buffer.
  * @param x Column position (0-79)
  * @param y Row position (0-24)

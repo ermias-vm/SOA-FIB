@@ -1365,8 +1365,13 @@ void logic_check_round_complete(GameLogicState *state) {
         /* Wait 1 second (ONE_SECOND) before transitioning to round clear screen */
         /* This allows the game to continue running briefly after last enemy dies */
         if (state->enemies_cleared_time - current_time <= 0) {
-            state->scene = SCENE_ROUND_CLEAR;
-            state->round_start_timer = LEVEL_CLEAR_DELAY;
+            /* If this was the last round (level 5), go directly to victory */
+            if (state->round >= MAX_ROUNDS) {
+                state->scene = SCENE_VICTORY;
+            } else {
+                state->scene = SCENE_ROUND_CLEAR;
+                state->round_start_timer = LEVEL_CLEAR_DELAY;
+            }
         }
     }
 }
