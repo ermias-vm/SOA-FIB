@@ -22,7 +22,7 @@ static int last_frame_count = 0;
 static int current_fps = 0;
 
 /* Cached display strings */
-static char cached_time[7] = "00:000";
+static char cached_time[9] = "0000:000";
 static char cached_fps[10] = "    0 FPS"; /* 5 digits + space + FPS + null */
 
 int ret_from_fork(void) {
@@ -156,18 +156,20 @@ void update_time_and_fps(void) {
     /* Calculate time components using adjusted ticks per second */
     int total_ticks = zeos_ticks;
     int total_seconds = total_ticks / TICKS_PER_SECOND;
-    int seconds = total_seconds % 100; /* Wrap at 100 seconds */
+    int seconds = total_seconds % 10000; /* Wrap at 10000 seconds */
     int remaining_ticks = total_ticks % TICKS_PER_SECOND;
     int milliseconds = (remaining_ticks * 1000) / TICKS_PER_SECOND;
 
-    /* Format time as "SS:MMM" */
-    cached_time[0] = '0' + (seconds / 10);
-    cached_time[1] = '0' + (seconds % 10);
-    cached_time[2] = ':';
-    cached_time[3] = '0' + (milliseconds / 100);
-    cached_time[4] = '0' + ((milliseconds / 10) % 10);
-    cached_time[5] = '0' + (milliseconds % 10);
-    cached_time[6] = '\0';
+    /* Format time as "SSSS:MMM" */
+    cached_time[0] = '0' + (seconds / 1000) % 10;
+    cached_time[1] = '0' + (seconds / 100) % 10;
+    cached_time[2] = '0' + (seconds / 10) % 10;
+    cached_time[3] = '0' + (seconds % 10);
+    cached_time[4] = ':';
+    cached_time[5] = '0' + (milliseconds / 100);
+    cached_time[6] = '0' + ((milliseconds / 10) % 10);
+    cached_time[7] = '0' + (milliseconds % 10);
+    cached_time[8] = '\0';
 
     /* Calculate FPS every FPS_UPDATE_INTERVAL ticks (1 second) */
     if (zeos_ticks - last_fps_update_tick >= FPS_UPDATE_INTERVAL) {

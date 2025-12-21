@@ -160,9 +160,9 @@ Color render_get_layer_color(int y) {
         color.fg = COLOR_WHITE;
         color.bg = COLOR_BLACK;
     } else if (y >= SKY_START_ROW && y <= SKY_END_ROW) {
-        /* Sky area: light cyan background */
+        /* Sky area: completely black - empty cells */
         color.fg = COLOR_WHITE;
-        color.bg = COLOR_LIGHT_CYAN;
+        color.bg = COLOR_BLACK;
     } else if (y >= LAYER1_START && y <= LAYER1_END) {
         /* Layer 1: brown background (200 pts) */
         color.fg = COLOR_WHITE;
@@ -184,7 +184,7 @@ Color render_get_layer_color(int y) {
         color.fg = COLOR_DARK_GRAY;
         color.bg = COLOR_BLACK;
     } else {
-        /* Default: white on black */
+        /* Default: white on black (includes status bars) */
         color.fg = COLOR_WHITE;
         color.bg = COLOR_BLACK;
     }
@@ -334,9 +334,8 @@ void render_game(GameLogicState *state) {
     /* 3. Draw entities */
     render_entities(state);
 
-    /* 4. Draw HUD */
-    int time_seconds = state->time_elapsed / TICKS_PER_SECOND;
-    ui_draw_hud(state->lives, state->score, state->round, time_seconds, 0);
+    /* 4. Draw HUD - pass time_elapsed directly (ui_draw_time handles conversion) */
+    ui_draw_hud(state->lives, state->score, state->round, state->time_elapsed, 0);
 
     /* 5. Draw special screens if needed */
     switch (state->scene) {
@@ -391,10 +390,10 @@ void render_map(void) {
                 break;
 
             case TILE_SKY:
-                /* Sky - space with light cyan background */
+                /* Sky - space with black background (empty cells) */
                 display_char = ' ';
                 cell_color.fg = COLOR_WHITE;
-                cell_color.bg = COLOR_LIGHT_CYAN;
+                cell_color.bg = COLOR_BLACK;
                 break;
 
             case TILE_WALL:
@@ -412,9 +411,9 @@ void render_map(void) {
 
             case TILE_BONUS:
                 /* Bonus item (100 points) */
-                display_char = 'x';
-                cell_color.fg = COLOR_LIGHT_CYAN;
-                cell_color.bg = COLOR_BLACK;
+                display_char = '+';
+                cell_color.fg = COLOR_YELLOW;
+                cell_color.bg = layer_color.bg; /* Usar color de capa de tierra */
                 break;
 
             case TILE_BORDER:
@@ -470,12 +469,8 @@ void render_player(Player *player) {
 
     Color player_color;
     player_color.fg = COLOR_YELLOW; /* Player is always yellow */
-    /* Background depends on position - light cyan in sky, black elsewhere */
-    if (player->base.pos.y >= SKY_START_ROW && player->base.pos.y <= SKY_END_ROW) {
-        player_color.bg = COLOR_LIGHT_CYAN;
-    } else {
-        player_color.bg = COLOR_BLACK;
-    }
+    /* Task 3: Player background is always black */
+    player_color.bg = COLOR_BLACK;
 
     /* Select character based on facing direction */
     char display_char;
@@ -524,12 +519,8 @@ void render_player_attack(Player *player) {
 
     Color attack_color;
     attack_color.fg = COLOR_WHITE;
-    /* Use sky background if in sky area, black otherwise */
-    if (player->base.pos.y >= SKY_START_ROW && player->base.pos.y <= SKY_END_ROW) {
-        attack_color.bg = COLOR_LIGHT_CYAN;
-    } else {
-        attack_color.bg = COLOR_BLACK;
-    }
+    /* Task 3: Attack background is always black */
+    attack_color.bg = COLOR_BLACK;
 
     int px = player->base.pos.x;
     int py = player->base.pos.y;
@@ -593,7 +584,7 @@ void render_enemies(Enemy *enemies, int count) {
         }
 
         Color enemy_color;
-        enemy_color.bg = COLOR_BLACK; /* Black background */
+        enemy_color.bg = COLOR_BLACK; /* Default: Black background */
 
         char display_char;
 
@@ -603,7 +594,10 @@ void render_enemies(Enemy *enemies, int count) {
             enemy_color.fg = COLOR_LIGHT_RED;
         } else if (enemy->base.type == ENTITY_FYGAR) {
             display_char = CHAR_FYGAR;
-            enemy_color.fg = COLOR_GREEN;
+            /* Fygar is always green */
+            {
+                enemy_color.fg = COLOR_GREEN;
+            }
         } else {
             display_char = '?';
             enemy_color.fg = COLOR_WHITE;
@@ -630,8 +624,9 @@ void render_enemies(Enemy *enemies, int count) {
             break;
 
         case ENEMY_GHOST:
-            /* Semi-transparent (use darker color) */
-            enemy_color.fg = COLOR_DARK_GRAY;
+            /* Task 4: Ghost mode - white enemy with earth color background */
+            enemy_color.fg = COLOR_WHITE;
+            enemy_color.bg = render_get_layer_color(enemy->base.pos.y).bg;
             break;
 
         case ENEMY_PARALYZED:
@@ -669,12 +664,25 @@ void render_rocks(Rock *rocks, int count) {
 
         Color rock_color;
         rock_color.fg = COLOR_DARK_GRAY; /* Gray rock character */
-        rock_color.bg = COLOR_BLACK;     /* Black background */
+
+        /* Determine background color based on rock state */
+        if (rock->state == ROCK_FALLING || rock->state == ROCK_BLINKING) {
+            /* Falling or landed rocks have black background */
+            rock_color.bg = COLOR_BLACK;
+        } else {
+            /* Stable/wobbling rocks match earth layer color */
+            rock_color.bg = render_get_layer_color(rock->base.pos.y).bg;
+        }
 
         char display_char = '#'; /* Rock displayed as # */
 
-        /* Wobble animation - slightly different appearance */
-        if (rock->state == ROCK_WOBBLING) {
+        /* Blinking animation when hitting earth */
+        if (rock->state == ROCK_BLINKING) {
+            if (rock->blink_timer % 2 == 0) {
+                rock_color.fg = COLOR_WHITE; /* Blink to white */
+            }
+        } else if (rock->state == ROCK_WOBBLING) {
+            /* Wobble animation - slightly different appearance */
             if (rock->wobble_timer % 2 == 0) {
                 rock_color.fg = COLOR_LIGHT_GRAY;
             }
@@ -757,9 +765,11 @@ void render_explosion(int x, int y) {
 }
 
 void render_fire(int x, int y, int dir, int length) {
+    (void)length; /* Not used - we always render full range */
+
     Color fire_color;
-    fire_color.fg = COLOR_LIGHT_RED;
-    fire_color.bg = COLOR_RED;
+    fire_color.fg = COLOR_RED;
+    fire_color.bg = COLOR_BLACK; /* Fire: red on black background */
 
     int dx = 0;
     switch (dir) {
@@ -773,12 +783,12 @@ void render_fire(int x, int y, int dir, int length) {
         return; /* Fygar only fires horizontally */
     }
 
-    for (int i = 1; i <= length && i <= FYGAR_FIRE_RANGE; i++) {
+    /* Draw fire for the full range (2 cells) */
+    for (int i = 1; i <= FYGAR_FIRE_RANGE; i++) {
         int fx = x + (dx * i);
 
         if (fx >= 0 && fx < SCREEN_WIDTH) {
-            char fire_char = (i == length) ? '*' : '~';
-            render_set_cell(fx, y, fire_char, fire_color);
+            render_set_cell(fx, y, '*', fire_color);
         }
     }
 }

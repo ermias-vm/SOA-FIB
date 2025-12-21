@@ -36,8 +36,11 @@ static const LevelData g_levels[NUM_LEVELS_DEFINED] = {
         .rocks =
             {
                 {30, 10, ENTITY_ROCK},
+                {50, 8, ENTITY_ROCK},
+                {20, 15, ENTITY_ROCK},
+                {65, 12, ENTITY_ROCK},
             },
-        .rock_count = 1,
+        .rock_count = 4,
 
         .tunnels =
             {
@@ -68,8 +71,10 @@ static const LevelData g_levels[NUM_LEVELS_DEFINED] = {
             {
                 {25, 7, ENTITY_ROCK},
                 {45, 13, ENTITY_ROCK},
+                {15, 18, ENTITY_ROCK},
+                {70, 10, ENTITY_ROCK},
             },
-        .rock_count = 2,
+        .rock_count = 4,
 
         .tunnels =
             {
@@ -103,8 +108,10 @@ static const LevelData g_levels[NUM_LEVELS_DEFINED] = {
             {
                 {20, 8, ENTITY_ROCK},
                 {55, 15, ENTITY_ROCK},
+                {40, 10, ENTITY_ROCK},
+                {65, 20, ENTITY_ROCK},
             },
-        .rock_count = 2,
+        .rock_count = 4,
 
         .tunnels =
             {
@@ -142,8 +149,9 @@ static const LevelData g_levels[NUM_LEVELS_DEFINED] = {
                 {20, 10, ENTITY_ROCK},
                 {60, 10, ENTITY_ROCK},
                 {40, 18, ENTITY_ROCK},
+                {30, 14, ENTITY_ROCK},
             },
-        .rock_count = 3,
+        .rock_count = 4,
 
         .tunnels =
             {

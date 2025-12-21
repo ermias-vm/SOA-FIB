@@ -18,26 +18,38 @@
 #include <game_types.h>
 
 /* ============================================================================
+ *                              GLOBAL STATE
+ * ============================================================================ */
+
+/* Forward declaration for GameLogicState */
+typedef struct GameLogicState_s GameLogicState;
+
+/* Global pointer to current game state (for rock collision checks) */
+extern GameLogicState *g_current_logic_state;
+
+/* ============================================================================
  *                              CONSTANTS
  * ============================================================================ */
 
 /* Movement delays (ticks between movements) */
-#define PLAYER_MOVE_DELAY 2
-#define ENEMY_MOVE_DELAY 4
-#define GHOST_MODE_THRESHOLD 60 /* Ticks before enemy goes ghost */
-#define RESPAWN_DELAY 60        /* Ticks before player respawns */
-#define LEVEL_CLEAR_DELAY 60    /* Frames before next level (1 sec at 60 FPS) */
-/* Note: ROUND_START_DELAY is already defined in game_config.h */
+#define PLAYER_MOVE_DELAY 3
+#define ENEMY_MOVE_DELAY 8
+#define GHOST_MODE_THRESHOLD (12 * TICKS_PER_SECOND) /* Ghost mode every 12 seconds */
+#define RESPAWN_DELAY EIGHTH_SECOND                  /* Ticks before player respawns */
+#define LEVEL_CLEAR_DELAY HALF_SECOND /* Frames before next level (1 sec at 60 FPS) */
 
 /* Rock mechanics */
-#define ROCK_WOBBLE_TICKS 30 /* Ticks rock wobbles before falling */
+#define ROCK_WOBBLE_TICKS SIXTEENTH_SECOND /* Ticks rock wobbles before falling */
+#define ROCK_BLINK_DURATION THIRTY_SECOND  /* Ticks per blink cycle */
+#define ROCK_BLINK_COUNT 3                 /* Number of times rock blinks when hitting ground */
+#define ROCK_LAND_DELAY EIGHTH_SECOND      /* Ticks rock stays visible after landing */
 
 /* Scoring */
 #define POINTS_LAYER1 200
 #define POINTS_LAYER2 300
 #define POINTS_LAYER3 400
 #define POINTS_LAYER4 500
-#define POINTS_ROCK_BONUS 2 /* Multiplier for rock kills */
+#define ROCK_KILL_MULTIPLIER 2 /* Multiplier for rock kills */
 
 /* Player starting position */
 #define PLAYER_START_X 40
@@ -70,7 +82,7 @@
  * This structure extends the basic GameState with additional fields
  * needed for complete game logic (enemies as Enemy struct, rocks, etc.)
  */
-typedef struct {
+struct GameLogicState_s {
     /* Scene management */
     GameScene scene; /* Current game scene */
 
@@ -81,8 +93,9 @@ typedef struct {
     int enemies_remaining; /* Enemies still alive */
 
     /* Timing */
-    int time_elapsed;      /* Total game ticks elapsed */
-    int round_start_timer; /* Timer for round transitions/respawn */
+    int time_elapsed;         /* Total game ticks elapsed */
+    int round_start_timer;    /* Timer for round transitions/respawn */
+    int enemies_cleared_time; /* Timestamp when enemies_remaining hit 0 */
 
     /* Entities */
     Player player;              /* The player */
@@ -93,7 +106,7 @@ typedef struct {
 
     /* Game flags */
     int running; /* Game is running */
-} GameLogicState;
+};
 
 /* ============================================================================
  *                           INITIALIZATION
@@ -199,8 +212,9 @@ void logic_enemy_move_towards_player(Enemy *enemy, Player *player);
 /**
  * @brief Handle enemy ghost mode movement.
  * @param enemy Pointer to Enemy structure
+ * @param player Pointer to Player structure (Task 4: needed for pathfinding)
  */
-void logic_enemy_ghost_mode(Enemy *enemy);
+void logic_enemy_ghost_mode(Enemy *enemy, Player *player);
 
 /**
  * @brief Try to move enemy in a direction.

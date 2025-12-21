@@ -40,7 +40,7 @@ typedef enum {
     TILE_SKY,   /* Sky area (rows 1-2) */
     TILE_WALL,  /* Solid wall (not walkable) */
     TILE_GEM,   /* Gem (collectible) */
-    TILE_BONUS, /* Bonus item (100 points, 'X') */
+    TILE_BONUS, /* Bonus item (100 points, '+') */
     TILE_BORDER /* Bottom border (gray # characters) */
 } TileType;
 
@@ -86,7 +86,8 @@ typedef enum {
     ROCK_STABLE,   /* Resting on solid ground */
     ROCK_WOBBLING, /* About to fall */
     ROCK_FALLING,  /* Currently falling */
-    ROCK_LANDED    /* Just landed (brief state) */
+    ROCK_LANDED,   /* Just landed (brief state) */
+    ROCK_BLINKING  /* Blinking after hitting ground */
 } RockState;
 
 /* ============================================================================
@@ -141,11 +142,13 @@ typedef struct {
     EnemyState state;    /* Enemy-specific state */
     int inflate_level;   /* Inflation level 0-4 (4 = explodes) */
     int ghost_timer;     /* Ticks until ghost mode activates */
-    int fire_cooldown;   /* Fygar: ticks until can fire again */
+    int fire_start_time; /* Fygar: timestamp when fire started (0 = not active) */
+    int fire_end_time;   /* Fygar: timestamp when cooldown ends */
     int fire_active;     /* Fygar: 1 = currently breathing fire */
-    int fire_duration;   /* Fygar: remaining fire ticks */
+    int fire_duration;   /* Fygar: unused, kept for compatibility */
     int paralyzed_timer; /* Timer for blink animation */
     int blink_count;     /* Number of blinks remaining (dies at 0) */
+    int has_left_tunnel; /* Ghost mode: 1 = has moved through dirt */
 } Enemy;
 
 /**
@@ -156,6 +159,8 @@ typedef struct {
     RockState state;  /* Rock-specific state */
     int wobble_timer; /* Frames wobbling before fall */
     int has_crushed;  /* 1 = has crushed something this fall */
+    int blink_timer;  /* Timer for blink animation */
+    int blink_count;  /* Number of blinks remaining */
 } Rock;
 
 /**
@@ -249,7 +254,7 @@ typedef struct {
 /**
  * @brief Screen position calculation (byte offset in video memory).
  */
-#define SCREEN_POS(x, y) (((y)*SCREEN_WIDTH + (x)) * 2)
+#define SCREEN_POS(x, y) (((y) * SCREEN_WIDTH + (x)) * 2)
 
 /**
  * @brief Check if position is within screen bounds.

@@ -56,11 +56,11 @@
 #define LAYER_3_START 13
 #define LAYER_3_END 17
 
-/* Layer 4: rows 18-22 (4 rows for deepest layer) */
+/* Layer 4: rows 18-22 (5 rows for deepest layer) */
 #define LAYER_4_START 18
 #define LAYER_4_END 22
 
-/* Bottom border row */
+/* Bottom border row (gray # characters) */
 #define ROW_BORDER 23
 
 /* ============================================================================
@@ -80,9 +80,9 @@
  *                           MAP DIMENSIONS
  * ============================================================================ */
 
-#define MAP_WIDTH SCREEN_WIDTH                          /* 80 columns */
-#define MAP_HEIGHT (ROW_GROUND_END - ROW_SKY_START + 1) /* 23 rows (sky + ground) */
-#define MAP_OFFSET_Y ROW_SKY_START                      /* Maps starts at row 1 */
+#define MAP_WIDTH SCREEN_WIDTH      /* 80 columns */
+#define MAP_HEIGHT (ROW_BORDER + 1) /* 24 rows (0-23 inclusive, for border at row 23) */
+#define MAP_OFFSET_Y ROW_SKY_START  /* Maps starts at row 1 */
 
 /* Playable ground area */
 #define GROUND_WIDTH MAP_WIDTH
@@ -106,9 +106,9 @@
  * ============================================================================ */
 
 #define PLAYER_SPEED 2              /* Player moves every 2 ticks */
-#define POOKA_BASE_SPEED 4          /* Pooka moves every 4 ticks */
-#define FYGAR_BASE_SPEED 5          /* Fygar is slightly slower */
-#define GHOST_SPEED 6               /* Ghost mode is slow */
+#define POOKA_BASE_SPEED 8          /* Pooka moves every 8 ticks */
+#define FYGAR_BASE_SPEED 4          /* Fygar is faster */
+#define GHOST_SPEED 10              /* Ghost mode is slow */
 #define ENEMY_BASE_SPEED 3          /* Base enemy speed */
 #define SPEED_INCREMENT_PER_LEVEL 1 /* Speed increase per level */
 
@@ -121,8 +121,8 @@
  *============================================================================*/
 
 #define FYGAR_FIRE_RANGE 2                   /* Fire reaches 2 blocks horizontally */
-#define FYGAR_FIRE_COOLDOWN (ONE_SECOND * 2) /* Ticks between fire attacks */
-#define FYGAR_FIRE_DURATION HALF_SECOND      /* Ticks fire stays active */
+#define FYGAR_FIRE_COOLDOWN (ONE_SECOND * 2) /* 2 seconds cooldown between attacks */
+#define FYGAR_FIRE_DURATION SIXTEENTH_SECOND /* Fire lasts a sixteenth of a second */
 
 #define INFLATE_LEVELS 4                /* Levels before enemy explodes */
 #define INFLATE_DEFLATE_TIME ONE_SECOND /* Ticks to deflate one level */
@@ -205,8 +205,8 @@
  * ============================================================================ */
 
 /* Sky colors */
-#define COLOR_SKY 0x9F    /* White on light blue */
-#define COLOR_SKY_BG 0x99 /* Light blue background */
+#define COLOR_SKY 0x00
+#define COLOR_SKY_BG 0x00
 
 /* Layer colors (background represents dirt color) */
 #define COLOR_LAYER_1 0x6F /* White on brown (light soil) */

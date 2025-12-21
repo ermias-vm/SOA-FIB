@@ -12,7 +12,7 @@ SECTIONS
   .data : { *(.data) }          /* Normal Data */
   .bss : { *(.bss) }            /* Uninitialized Data */
 
-  . = 0x114000; /* User CODE will start at this address */
+  . = 0x118000; /* User CODE will start at this address */
   .text : {
        *(.text.main);
        *(.text)

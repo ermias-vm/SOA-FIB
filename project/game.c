@@ -305,15 +305,13 @@ static void process_playing_state(void) {
     /* Run game logic update */
     logic_update(&g_logic_state);
 
-    /* Sync state */
+    /* Sync state (includes scene sync from logic_check_round_complete) */
     sync_logic_to_game_state();
 
-    /* Check for level clear */
-    if (g_logic_state.enemies_remaining <= 0) {
-        g_game.scene = SCENE_ROUND_CLEAR;
-        g_logic_state.scene = SCENE_ROUND_CLEAR;
-        g_logic_state.round_start_timer = ROUND_CLEAR_DELAY;
-    }
+    /* Note: Level clear is handled by logic_check_round_complete() in logic_update()
+     * which waits 2*ONE_SECOND after enemies_remaining reaches 0 before transitioning
+     * to SCENE_ROUND_CLEAR. This allows the game to continue running briefly after
+     * the last enemy is killed (e.g., by rock). */
 
     /* Check for game over */
     if (g_logic_state.lives <= 0) {
@@ -335,6 +333,9 @@ static void process_level_clear_state(void) {
     g_logic_state.round_start_timer--;
 
     if (g_logic_state.round_start_timer <= 0) {
+        /* Increment level/round AFTER displaying the clear screen */
+        /* Note: ui_draw_level_clear_screen is called with g_game.level (current round that was
+         * cleared) */
         g_game.level++;
         g_logic_state.round++;
 
@@ -499,9 +500,10 @@ void render_thread_func(void *arg) {
             render_enemies(g_logic_state.enemies, g_logic_state.enemy_count);
             render_rocks(g_logic_state.rocks, g_logic_state.rock_count);
 
-            /* Render HUD */
-            ui_draw_hud((int)g_game.lives, (int)g_game.score, (int)g_game.level,
-                        (int)g_game.ticks_elapsed / 100, 0);
+            /* Render HUD with enemies remaining */
+            ui_draw_hud_extended((int)g_game.lives, (int)g_game.score, (int)g_game.level,
+                                 (int)g_logic_state.time_elapsed, 0,
+                                 (int)g_logic_state.enemies_remaining);
             break;
 
         case SCENE_PAUSED:

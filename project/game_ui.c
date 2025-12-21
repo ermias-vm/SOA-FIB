@@ -20,19 +20,25 @@ static int g_life_lost_timer = 0;
  *                            MAIN HUD FUNCTIONS
  * ============================================================================ */
 
-void ui_draw_hud(int lives, int score, int round, int time_seconds, int fps) {
-    ui_draw_top_bar(time_seconds, fps);
+void ui_draw_hud(int lives, int score, int round, int time_ticks, int fps) {
+    ui_draw_top_bar(time_ticks, fps);
     ui_draw_bottom_bar(lives, score, round);
 }
 
-void ui_draw_top_bar(int time_seconds, int fps) {
+void ui_draw_hud_extended(int lives, int score, int round, int time_ticks, int fps,
+                          int enemies_left) {
+    ui_draw_top_bar(time_ticks, fps);
+    ui_draw_bottom_bar_extended(lives, score, round, enemies_left);
+}
+
+void ui_draw_top_bar(int time_ticks, int fps) {
     Color status_color = render_make_color(COLOR_WHITE, COLOR_BLACK);
 
     /* Clear the top row */
     render_fill_rect(0, STATUS_TOP_ROW, SCREEN_WIDTH, 1, ' ', status_color);
 
     /* Draw time on the left */
-    ui_draw_time(time_seconds);
+    ui_draw_time(time_ticks);
 
     /* Draw FPS on the right */
     ui_draw_fps(fps);
@@ -54,24 +60,59 @@ void ui_draw_bottom_bar(int lives, int score, int round) {
     ui_draw_round(round);
 }
 
+void ui_draw_bottom_bar_extended(int lives, int score, int round, int enemies_left) {
+    Color status_color = render_make_color(COLOR_WHITE, COLOR_BLACK);
+
+    /* Clear the bottom row */
+    render_fill_rect(0, STATUS_BOTTOM_ROW, SCREEN_WIDTH, 1, ' ', status_color);
+
+    /* Draw lives on the left */
+    ui_draw_lives(lives);
+
+    /* Draw score in the center-left */
+    ui_draw_score(score);
+
+    /* Draw enemies left after score */
+    ui_draw_enemies_left(enemies_left);
+
+    /* Draw round on the right */
+    ui_draw_round(round);
+}
+
 /* ============================================================================
  *                         INDIVIDUAL HUD ELEMENTS
  * ============================================================================ */
 
-void ui_draw_time(int seconds) {
-    Color time_color = render_make_color(COLOR_WHITE, COLOR_BLACK);
+void ui_draw_time(int ticks) {
+    Color time_color = render_make_color(COLOR_CYAN, COLOR_BLACK);
 
-    int minutes = seconds / 60;
-    int secs = seconds % 60;
+    char time_str[16];
+    int pos = 0;
 
-    char time_str[6];
-    time_str[0] = '0' + (minutes / 10) % 10;
-    time_str[1] = '0' + (minutes % 10);
-    time_str[2] = ':';
-    time_str[3] = '0' + (secs / 10);
-    time_str[4] = '0' + (secs % 10);
-    time_str[5] = '\0';
+    /* Format: SSSS:MMM (seconds : milliseconds) */
+    int secs = ticks / TICKS_PER_SECOND;
+    /* Calculate milliseconds (0-999) from remaining ticks */
+    int millis = ((ticks % TICKS_PER_SECOND) * 1000) / TICKS_PER_SECOND;
 
+    /* Clamp seconds to 9999 max */
+    if (secs > 9999) secs = 9999;
+
+    /* Always show 4 digits for seconds with leading zeros */
+    time_str[pos++] = '0' + (secs / 1000) % 10;
+    time_str[pos++] = '0' + (secs / 100) % 10;
+    time_str[pos++] = '0' + (secs / 10) % 10;
+    time_str[pos++] = '0' + (secs % 10);
+
+    /* Add colon */
+    time_str[pos++] = ':';
+
+    /* Add milliseconds (always 3 digits, 000-999) */
+    time_str[pos++] = '0' + (millis / 100) % 10;
+    time_str[pos++] = '0' + (millis / 10) % 10;
+    time_str[pos++] = '0' + (millis % 10);
+    time_str[pos] = '\0';
+
+    /* Draw at position 0 (left side) */
     render_put_string_colored(HUD_TIME_X, STATUS_TOP_ROW, time_str, time_color);
 }
 
@@ -159,6 +200,25 @@ void ui_draw_round(int round) {
     int len = ui_strlen(round_text);
     int x = SCREEN_WIDTH - len;
     render_put_string_colored(x, STATUS_BOTTOM_ROW, round_text, round_color);
+}
+
+void ui_draw_enemies_left(int enemies) {
+    Color enemy_color = render_make_color(COLOR_LIGHT_RED, COLOR_BLACK);
+
+    /* Clamp to max 9 enemies for display */
+    if (enemies > 9) enemies = 9;
+    if (enemies < 0) enemies = 0;
+
+    /* Build "ENEMIES LEFT: X" string */
+    char enemy_text[18] = "ENEMIES LEFT: ";
+    enemy_text[14] = '0' + enemies;
+    enemy_text[15] = '\0';
+
+    /* Position: end 2 spaces before ROUND (ROUND:  X = 9 chars from right edge) */
+    /* So we need to end at position SCREEN_WIDTH - 9 - 2 = SCREEN_WIDTH - 11 */
+    int len = 15; /* "ENEMIES LEFT: X" */
+    int x = SCREEN_WIDTH - 11 - len;
+    render_put_string_colored(x, STATUS_BOTTOM_ROW, enemy_text, enemy_color);
 }
 
 /* ============================================================================

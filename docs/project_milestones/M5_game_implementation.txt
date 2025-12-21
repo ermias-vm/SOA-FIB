@@ -160,7 +160,7 @@ game_config.h
 --------------------
 
 game_logic.c / game_logic.h
-  - Motor de lógica del juego (1150+ líneas)
+  - Motor de lógica del juego
   - Inicialización de entidades: logic_player_init, logic_enemy_init, logic_rock_init
   - Actualización de estado: logic_update (actualiza player, enemies, rocks)
   - Movimiento y colisiones: logic_player_move, logic_check_collision

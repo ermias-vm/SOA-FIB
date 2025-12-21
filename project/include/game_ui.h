@@ -41,17 +41,29 @@
  * @param lives Current player lives
  * @param score Current game score
  * @param round Current round number
- * @param time_seconds Elapsed time in seconds
+ * @param time_ticks Elapsed time in ticks
  * @param fps Current frames per second
  */
-void ui_draw_hud(int lives, int score, int round, int time_seconds, int fps);
+void ui_draw_hud(int lives, int score, int round, int time_ticks, int fps);
+
+/**
+ * @brief Draw the complete HUD with enemies left counter.
+ * @param lives Current player lives
+ * @param score Current game score
+ * @param round Current round number
+ * @param time_ticks Elapsed time in ticks
+ * @param fps Current frames per second
+ * @param enemies_left Number of enemies remaining
+ */
+void ui_draw_hud_extended(int lives, int score, int round, int time_ticks, int fps,
+                          int enemies_left);
 
 /**
  * @brief Draw the top status bar (time and FPS).
- * @param time_seconds Game time in seconds
+ * @param time_ticks Game time in ticks
  * @param fps Current FPS
  */
-void ui_draw_top_bar(int time_seconds, int fps);
+void ui_draw_top_bar(int time_ticks, int fps);
 
 /**
  * @brief Draw the bottom status bar (lives, score, round).
@@ -61,15 +73,24 @@ void ui_draw_top_bar(int time_seconds, int fps);
  */
 void ui_draw_bottom_bar(int lives, int score, int round);
 
+/**
+ * @brief Draw the bottom status bar with enemies left.
+ * @param lives Number of lives remaining
+ * @param score Current score
+ * @param round Current round number
+ * @param enemies_left Number of enemies remaining
+ */
+void ui_draw_bottom_bar_extended(int lives, int score, int round, int enemies_left);
+
 /* ============================================================================
  *                         INDIVIDUAL HUD ELEMENTS
  * ============================================================================ */
 
 /**
- * @brief Draw game time in MM:SS format.
- * @param seconds Total seconds elapsed
+ * @brief Draw game time in SSSS:mmm format.
+ * @param ticks Total ticks elapsed
  */
-void ui_draw_time(int seconds);
+void ui_draw_time(int ticks);
 
 /**
  * @brief Draw FPS counter.
@@ -94,6 +115,12 @@ void ui_draw_score(int score);
  * @param round Round number to display
  */
 void ui_draw_round(int round);
+
+/**
+ * @brief Draw enemies left counter.
+ * @param enemies Number of enemies remaining (0-5)
+ */
+void ui_draw_enemies_left(int enemies);
 
 /* ============================================================================
  *                            SCREEN OVERLAYS
