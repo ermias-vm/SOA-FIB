@@ -1359,7 +1359,7 @@ void logic_check_round_complete(GameLogicState *state) {
 
         /* First time enemies reached 0 - record timestamp */
         if (state->enemies_cleared_time == 0) {
-            state->enemies_cleared_time = current_time + 2*ONE_SECOND;
+            state->enemies_cleared_time = current_time + 2 * ONE_SECOND;
         }
 
         /* Wait 1 second (ONE_SECOND) before transitioning to round clear screen */
@@ -1388,6 +1388,29 @@ void logic_transition_to_next_round(GameLogicState *state) {
     } else {
         logic_start_round(state, state->round);
     }
+}
+
+int logic_dev_kill_enemy(GameLogicState *state) {
+    if (!state) return 0;
+
+    /* Find the first active enemy and kill it */
+    for (int i = 0; i < state->enemy_count; i++) {
+        Enemy *enemy = &state->enemies[i];
+        if (enemy->base.active && enemy->state != ENEMY_DEAD) {
+            /* Kill this enemy */
+            enemy->state = ENEMY_DEAD;
+            enemy->base.active = 0;
+            state->enemies_remaining--;
+
+            /* Award points based on layer */
+            int points = logic_calculate_enemy_points(enemy->base.pos.y);
+            logic_add_score(state, points);
+
+            return 1; /* Enemy killed */
+        }
+    }
+
+    return 0; /* No enemies to kill */
 }
 
 /* ============================================================================

@@ -353,6 +353,15 @@ void logic_check_game_over(GameLogicState *state);
  */
 void logic_transition_to_next_round(GameLogicState *state);
 
+/**
+ * @brief Developer function: kill one active enemy.
+ * @param state Pointer to GameLogicState structure
+ * @return 1 if an enemy was killed, 0 if no enemies remain
+ *
+ * Kills the first active enemy found. Awards points as normal.
+ */
+int logic_dev_kill_enemy(GameLogicState *state);
+
 /* ============================================================================
  *                          FYGAR SPECIFIC
  * ============================================================================ */

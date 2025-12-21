@@ -94,7 +94,7 @@
  * ============================================================================ */
 
 #define MAX_ENEMIES 8
-#define INITIAL_LIVES 3
+#define INITIAL_LIVES 5
 #define MAX_LIVES 5
 #define MAX_ROUNDS 5
 #define MAX_SCORE 99999

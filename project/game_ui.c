@@ -252,7 +252,7 @@ void ui_draw_menu_screen(void) {
     ui_draw_centered_text(20, "Deeper = More points", text_color);
 
     /* Start prompt */
-    ui_draw_centered_text(23, "Press SPACE to start", highlight_color);
+    ui_draw_centered_text(23, "Press ENTER to start", highlight_color);
 
     /* Credits */
     ui_draw_centered_text(1, "SOA Project 2025-2026",
@@ -304,7 +304,7 @@ void ui_draw_game_over_screen(int final_score) {
     ui_draw_centered_text(14, score_str, score_color);
 
     /* Options */
-    ui_draw_centered_text(18, "Press SPACE to restart", text_color);
+    ui_draw_centered_text(18, "Press ENTER to restart", text_color);
     ui_draw_centered_text(19, "Press Q to quit", text_color);
 }
 
@@ -380,7 +380,7 @@ void ui_draw_victory_screen(int final_score) {
     ui_draw_centered_text(14, score_str, score_color);
 
     /* Options */
-    ui_draw_centered_text(18, "Press SPACE to play again", text_color);
+    ui_draw_centered_text(18, "Press ENTER to play again", text_color);
     ui_draw_centered_text(19, "Press C for credits", text_color);
     ui_draw_centered_text(20, "Press ESC for main menu", text_color);
 }

@@ -33,7 +33,7 @@ static GameLogicState g_logic_state;
  *                            GAME CONSTANTS
  * ============================================================================ */
 
-#define INITIAL_LIVES 3
+#define INITIAL_LIVES 5
 #define GAME_OVER_DELAY TIME_LONG        /* From times.h */
 #define MY_ROUND_START_DELAY TIME_SHORT  /* From times.h */
 #define MY_LEVEL_CLEAR_DELAY TIME_MEDIUM /* From times.h */
@@ -258,7 +258,7 @@ static void sync_logic_to_game_state(void) {
  * ============================================================================ */
 
 static void process_menu_state(void) {
-    /* Wait for action key (Space/Enter) to start */
+    /* Wait for Enter key to start */
     if (input_is_action_pressed()) {
         game_reset();
         g_game.level = 1;
@@ -276,6 +276,11 @@ static void process_playing_state(void) {
         g_game.scene = SCENE_PAUSED;
         g_logic_state.scene = SCENE_PAUSED;
         return;
+    }
+
+    /* Developer feature: kill one enemy with K key */
+    if (input_is_dev_kill_pressed()) {
+        logic_dev_kill_enemy(&g_logic_state);
     }
 
     /* Get player input direction */
@@ -365,7 +370,7 @@ static void process_game_over_state(void) {
 static void process_victory_state(void) {
     /* Handle victory screen inputs */
     if (input_is_action_pressed()) {
-        /* SPACE - play again */
+        /* ENTER - play again */
         game_reset();
         g_game.level = 1;
         game_new_level();

@@ -94,7 +94,7 @@ void input_keyboard_handler(char key, int pressed) {
         if (pressed) {
             g_input.attack_held = 1;
             g_input.attack_pressed = 1;
-            g_input.action_pressed = 1; /* Also trigger action for menus */
+            /* SPACE is only for attack, not for menu actions */
         } else {
             g_input.attack_held = 0;
         }
@@ -118,6 +118,10 @@ void input_keyboard_handler(char key, int pressed) {
     case KEY_ESC:
     case KEY_Q:
         g_input.quit_pressed = 1;
+        break;
+
+    case KEY_K:
+        g_input.dev_kill_pressed = 1;
         break;
     }
 }
@@ -157,6 +161,12 @@ int input_is_pause_pressed(void) {
 
 int input_is_quit_pressed(void) {
     return g_input.quit_pressed; /* Don't consume - let caller decide */
+}
+
+int input_is_dev_kill_pressed(void) {
+    int pressed = g_input.dev_kill_pressed;
+    g_input.dev_kill_pressed = 0; /* Consume the input */
+    return pressed;
 }
 
 int input_any_key_pressed(void) {

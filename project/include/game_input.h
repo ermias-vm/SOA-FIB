@@ -24,6 +24,7 @@
 #define KEY_ENTER 0x1C /* Enter key */
 #define KEY_SPACE 0x39 /* Spacebar */
 #define KEY_P 0x19     /* P key */
+#define KEY_K 0x25     /* K key (developer: kill enemy) */
 
 /* Arrow keys (extended scancodes) */
 #define KEY_ARROW_UP 0x48    /* Up arrow */
@@ -125,6 +126,14 @@ int input_is_pause_pressed(void);
  * This function does NOT consume the quit input - it persists until cleared.
  */
 int input_is_quit_pressed(void);
+
+/**
+ * @brief Check if developer kill button was pressed and clear the flag.
+ * @return 1 if K key was pressed, 0 otherwise
+ *
+ * Developer feature: kills one enemy per press during gameplay.
+ */
+int input_is_dev_kill_pressed(void);
 
 /**
  * @brief Check if any key was pressed and clear the flag.
