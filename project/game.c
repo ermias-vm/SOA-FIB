@@ -34,9 +34,8 @@ static GameLogicState g_logic_state;
  * ============================================================================ */
 
 #define INITIAL_LIVES 5
-#define GAME_OVER_DELAY TIME_LONG        /* From times.h */
-#define MY_ROUND_START_DELAY TIME_SHORT  /* From times.h */
-#define MY_LEVEL_CLEAR_DELAY TIME_MEDIUM /* From times.h */
+#define GAME_OVER_DELAY TIME_LONG       /* From times.h */
+#define MY_ROUND_START_DELAY TIME_SHORT /* From times.h */
 
 /* Frame timing for 60 FPS limiting */
 static int g_last_frame_time = 0;
@@ -98,21 +97,10 @@ static void debug_print_input(Direction dir, int x, int y) {
 #endif
 }
 
-static void debug_print_player(int x, int y, int state) {
-#if DEBUG_GAME_PLAYER
-    printd("[DEBUG] Player: pos=(%d,%d) state=%d\n", x, y, state);
-#else
-    (void)x;
-    (void)y;
-    (void)state;
-#endif
-}
-
 #else /* DEBUG_GAME_ENABLED == 0 */
 
 #define debug_print_state_change(s) ((void)0)
 #define debug_print_input(d, x, y) ((void)0)
-#define debug_print_player(x, y, s) ((void)0)
 
 #endif /* DEBUG_GAME_ENABLED */
 

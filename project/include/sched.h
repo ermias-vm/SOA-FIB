@@ -23,7 +23,7 @@
 #define SW_AND_HW_CONTEXT_SIZE 16
 
 /** Default quantum assigned to new processes (ticks) */
-#define DEFAULT_QUANTUM 10
+#define DEFAULT_QUANTUM 1
 
 /** Maximum TIDs per process: 10 threads (slots 0-9) */
 #define MAX_TIDS_PER_PROCESS 10

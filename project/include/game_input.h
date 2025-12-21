@@ -186,22 +186,4 @@ void input_reset(void);
  */
 void input_new_frame(void);
 
-/* ============================================================================
- *                            UTILITY FUNCTIONS
- * ============================================================================ */
-
-/**
- * @brief Check if a specific key is currently held down.
- * @param scancode Keyboard scancode to check
- * @return 1 if key is held, 0 otherwise
- */
-int input_is_key_held(unsigned char scancode);
-
-/**
- * @brief Convert scancode to printable character (for debugging).
- * @param scancode Keyboard scancode
- * @return Printable character or '?' if not printable
- */
-char input_scancode_to_char(char scancode);
-
 #endif /* __GAME_INPUT_H__ */

@@ -408,11 +408,4 @@ void logic_enemy_init(Enemy *enemy, int x, int y, EntityType type);
  */
 void logic_rock_init(Rock *rock, int x, int y);
 
-/**
- * @brief Calculate absolute value.
- * @param x Value
- * @return Absolute value of x
- */
-int logic_abs(int x);
-
 #endif /* __GAME_LOGIC_H__ */
