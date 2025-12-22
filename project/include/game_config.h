@@ -105,11 +105,10 @@
  *                           SPEEDS (ticks between movements)
  * ============================================================================ */
 
-#define PLAYER_SPEED 3     /* Player moves every 3 ticks */
-#define POOKA_BASE_SPEED 8 /* Pooka moves every 8 ticks */
-#define FYGAR_BASE_SPEED 4 /* Fygar is faster */
-#define GHOST_SPEED 10     /* Ghost mode is slow */
-#define ENEMY_BASE_SPEED 3 /* Base enemy speed */
+#define PLAYER_SPEED 6      /* Player moves every 6 ticks */
+#define POOKA_BASE_SPEED 16 /* Pooka moves every 16 ticks (slower) */
+#define FYGAR_BASE_SPEED 12 /* Fygar moves every 8 ticks (faster) */
+#define GHOST_SPEED 20      /* Ghost mode is slow */
 
 /*============================================================================*
  *                    GAME-SPECIFIC TIMES                                     *
@@ -117,7 +116,7 @@
 
 #define FYGAR_FIRE_RANGE 2                   /* Fire reaches 2 blocks horizontally */
 #define FYGAR_FIRE_COOLDOWN (ONE_SECOND * 2) /* 2 seconds cooldown between attacks */
-#define FYGAR_FIRE_DURATION SIXTEENTH_SECOND /* Fire lasts a sixteenth of a second */
+#define FYGAR_FIRE_DURATION QUARTER_SECOND   /* Fire lasts an eighth of a second (doubled) */
 
 #define INFLATE_LEVELS 4                /* Levels before enemy explodes */
 #define INFLATE_DEFLATE_TIME ONE_SECOND /* Ticks to deflate one level */

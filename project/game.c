@@ -292,7 +292,7 @@ static void process_playing_state(void) {
         logic_player_attack(&g_logic_state.player, &g_logic_state);
     } else if (attack_held && g_logic_state.player.is_attacking) {
         /* Maintain attack while space is held */
-        g_logic_state.player.attack_timer = ATTACK_DISPLAY_FRAMES;
+        g_logic_state.player.attack_timer = ATTACK_DISPLAY_TIME;
     }
 
     /* Run game logic update */

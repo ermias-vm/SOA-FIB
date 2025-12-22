@@ -7,6 +7,7 @@
 #include <game_types.h>
 #include <game_ui.h>
 #include <libc.h>
+#include <times.h>
 
 /* ============================================================================
  *                            STATIC VARIABLES
@@ -362,7 +363,7 @@ void ui_draw_credits_screen(void) {
     /* Developers */
     ui_draw_centered_text(10, "Developed by:", text_color);
     ui_draw_centered_text(12, "ERMIAS VALLS", name_color);
-    ui_draw_centered_text(14, "MARC DE RIALP", name_color);
+    ui_draw_centered_text(14, " MARC DE RIALP", name_color);
 
     /* Course info */
     ui_draw_centered_text(17, "SOA - FIB UPC", text_color);
@@ -480,7 +481,7 @@ void ui_flash_score(int duration) {
 }
 
 void ui_animate_life_lost(void) {
-    g_life_lost_timer = 30; /* Flash for 30 frames */
+    g_life_lost_timer = LIFE_LOST_FLASH_TIME; /* Flash for ~quarter second */
 }
 
 void ui_clear_game_area(void) {

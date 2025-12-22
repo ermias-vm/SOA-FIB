@@ -50,7 +50,6 @@ static const LevelData g_levels[NUM_LEVELS_DEFINED] = {
             },
         .tunnel_count = 3,
 
-        .enemy_speed = 8, /* Slower for first round */
         .ghost_threshold = 400,
     },
 
@@ -86,7 +85,6 @@ static const LevelData g_levels[NUM_LEVELS_DEFINED] = {
             },
         .tunnel_count = 5,
 
-        .enemy_speed = 6,
         .ghost_threshold = 300,
     },
 
@@ -125,7 +123,6 @@ static const LevelData g_levels[NUM_LEVELS_DEFINED] = {
             },
         .tunnel_count = 7,
 
-        .enemy_speed = 5,
         .ghost_threshold = 250,
     },
 
@@ -167,7 +164,6 @@ static const LevelData g_levels[NUM_LEVELS_DEFINED] = {
             },
         .tunnel_count = 9,
 
-        .enemy_speed = 4,
         .ghost_threshold = 200,
     },
 
@@ -212,7 +208,6 @@ static const LevelData g_levels[NUM_LEVELS_DEFINED] = {
             },
         .tunnel_count = 11,
 
-        .enemy_speed = 4,
         .ghost_threshold = 150,
     },
 };
@@ -294,10 +289,8 @@ void data_spawn_enemies(GameLogicState *state, const LevelData *level) {
         Enemy *enemy = &state->enemies[i];
 
         /* Initialize enemy using logic function */
+        /* Speed is set by logic_enemy_init based on enemy type */
         logic_enemy_init(enemy, spawn->x, spawn->y, spawn->type);
-
-        /* Apply level-specific speed */
-        enemy->base.speed_limit = level->enemy_speed;
     }
 
     /* Deactivate unused slots */

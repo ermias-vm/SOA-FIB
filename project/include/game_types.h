@@ -169,17 +169,19 @@ typedef struct {
  * NOTE: This is the ONLY definition - do NOT redefine in other headers!
  */
 typedef struct {
-    Direction direction;  /* Current movement direction (consumed each frame) */
-    Direction held_dir;   /* Direction currently being held (for continuous movement) */
-    int action_pressed;   /* Action button pressed (enter) */
-    int attack_pressed;   /* Attack button pressed once (space) */
-    int attack_held;      /* Attack button currently held down */
-    int pause_pressed;    /* Pause button pressed (P/ESC) */
-    int quit_pressed;     /* Quit button pressed (Q) */
-    int dev_kill_pressed; /* Developer: kill one enemy (K) */
-    int any_key_pressed;  /* Any key pressed flag */
-    char last_key;        /* Last raw key pressed */
-    int move_processed;   /* Flag to ensure only one move per frame */
+    Direction direction;   /* Current movement direction (consumed each frame) */
+    Direction held_dir;    /* Direction currently being held (for continuous movement) */
+    int move_just_pressed; /* 1 = movement key was just pressed this frame */
+    int hold_time;         /* Ticks the movement key has been held */
+    int action_pressed;    /* Action button pressed (enter) */
+    int attack_pressed;    /* Attack button pressed once (space) */
+    int attack_held;       /* Attack button currently held down */
+    int pause_pressed;     /* Pause button pressed (P/ESC) */
+    int quit_pressed;      /* Quit button pressed (Q) */
+    int dev_kill_pressed;  /* Developer: kill one enemy (K) */
+    int any_key_pressed;   /* Any key pressed flag */
+    char last_key;         /* Last raw key pressed */
+    int move_processed;    /* Flag to ensure only one move per frame */
 } InputState;
 
 /**

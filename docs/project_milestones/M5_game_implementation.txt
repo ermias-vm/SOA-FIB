@@ -57,7 +57,7 @@ Estado de nivel:
 ---------------------
 
 Vidas:
-  - INITIAL_LIVES = 3 vidas al inicio
+  - INITIAL_LIVES = 5 vidas al inicio
   - Se pierde vida si: enemigo toca al jugador, fuego de Fygar alcanza jugador
   - Game over cuando vidas = 0
 
@@ -139,7 +139,7 @@ game.c / game.h
   - Entry point principal del juego (GameMain)
   - Game loop: procesa input → actualiza lógica → renderiza
   - Gestión de threads: thread principal + thread de renderizado
-  - Sincronización de frames a 60 FPS con WaitForTick
+  - Sincronización de frames a 120 FPS con WaitForTick
   - Máquina de estados: MENU → PLAYING → PAUSED → ROUND_CLEAR → GAME_OVER
 
 game_types.h
@@ -252,7 +252,7 @@ implementadas en milestones anteriores:
 - M1 (Threads): GameMain crea thread de renderizado con ThreadCreate
 - M2 (Keyboard): KeyboardEvent registra input_keyboard_handler
 - M3 (Screen): ScreenWrite dibuja frames en doble buffer (user-space)
-- M4 (Time): WaitForTick sincroniza game loop a 60 FPS
+- M4 (Time): WaitForTick sincroniza game loop a 120 FPS
 
 Flujo de ejecución:
   1. user.c llama GameMain()

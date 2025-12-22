@@ -498,7 +498,7 @@ int logic_player_attack(Player *player, GameLogicState *state) {
 
     /* Set player attacking state */
     player->is_attacking = 1;
-    player->attack_timer = ATTACK_DISPLAY_FRAMES;
+    player->attack_timer = ATTACK_DISPLAY_TIME;
     player->state = PLAYER_ATTACKING;
 
     /* Check for enemy hits in attack range */

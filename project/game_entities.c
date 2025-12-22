@@ -29,7 +29,11 @@ void entity_init(Entity *e, int x, int y, EntityType type) {
         e->speed_limit = PLAYER_SPEED;
         break;
     case ENTITY_ENEMY:
-        e->speed_limit = ENEMY_BASE_SPEED;
+    case ENTITY_POOKA:
+        e->speed_limit = POOKA_BASE_SPEED;
+        break;
+    case ENTITY_FYGAR:
+        e->speed_limit = FYGAR_BASE_SPEED;
         break;
     default:
         e->speed_limit = 1;
@@ -161,7 +165,7 @@ void player_dig(Entity *player, Direction dir) {
 
 void enemy_init(Entity *enemy, int x, int y) {
     entity_init(enemy, x, y, ENTITY_ENEMY);
-    enemy->speed_limit = ENEMY_BASE_SPEED;
+    enemy->speed_limit = POOKA_BASE_SPEED; /* Use POOKA speed by default */
 }
 
 void enemy_update(Entity *enemy, Position player_pos) {

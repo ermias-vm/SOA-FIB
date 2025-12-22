@@ -7,9 +7,13 @@
 #include <game_types.h>
 #include <libc.h>
 #include <stddef.h>
+#include <times.h>
 
 /* Global input state */
 volatile InputState g_input;
+
+/* Ticks to hold before continuous movement starts */
+#define HOLD_THRESHOLD (EIGHTH_SECOND)
 
 /* ============================================================================
  *                            INITIALIZATION
@@ -39,8 +43,10 @@ void input_cleanup(void) {
  * ============================================================================ */
 
 void input_update(void) {
-    /* Movement is now one-shot per key press, not continuous */
-    /* Direction is set directly in keyboard_handler and consumed by game logic */
+    /* Increment hold time if a direction key is held */
+    if (g_input.held_dir != DIR_NONE) {
+        g_input.hold_time++;
+    }
 }
 
 void input_keyboard_handler(char key, int pressed) {
@@ -76,14 +82,17 @@ void input_keyboard_handler(char key, int pressed) {
     /* Handle movement key press/release */
     if (key_dir != DIR_NONE) {
         if (pressed) {
-            /* Key pressed: update both held direction and immediate direction */
+            /* Key pressed: set held direction and mark as just pressed */
             g_input.held_dir = key_dir;
-            g_input.direction = key_dir;
-            g_input.move_processed = 0; /* Allow movement on this press */
+            g_input.move_just_pressed = 1;
+            g_input.hold_time = 0;
+            g_input.move_processed = 0;
         } else {
-            /* Key released: clear held direction if it matches */
+            /* Key released: clear held direction only if it matches */
             if (g_input.held_dir == key_dir) {
                 g_input.held_dir = DIR_NONE;
+                g_input.hold_time = 0;
+                g_input.move_just_pressed = 0;
             }
         }
         return;
@@ -131,10 +140,25 @@ void input_keyboard_handler(char key, int pressed) {
  * ============================================================================ */
 
 Direction input_get_direction(void) {
-    Direction dir = g_input.direction;
-    g_input.direction = DIR_NONE; /* Consume the input */
-    g_input.move_processed = 1;   /* Mark that we processed a move this frame */
-    return dir;
+    /* No movement key held */
+    if (g_input.held_dir == DIR_NONE) {
+        return DIR_NONE;
+    }
+
+    /* First press: allow one immediate move */
+    if (g_input.move_just_pressed && !g_input.move_processed) {
+        g_input.move_processed = 1;
+        g_input.move_just_pressed = 0; /* Consume the just-pressed flag */
+        return g_input.held_dir;
+    }
+
+    /* Continuous movement: only after holding for HOLD_THRESHOLD ticks */
+    if (g_input.hold_time >= HOLD_THRESHOLD) {
+        return g_input.held_dir;
+    }
+
+    /* Key is held but not long enough for continuous movement */
+    return DIR_NONE;
 }
 
 int input_is_action_pressed(void) {
@@ -186,6 +210,8 @@ char input_get_last_key(void) {
 void input_clear(void) {
     g_input.direction = DIR_NONE;
     g_input.held_dir = DIR_NONE;
+    g_input.move_just_pressed = 0;
+    g_input.hold_time = 0;
     g_input.action_pressed = 0;
     g_input.attack_pressed = 0;
     g_input.attack_held = 0;
@@ -202,6 +228,8 @@ void input_clear_quit(void) {
 void input_reset(void) {
     g_input.direction = DIR_NONE;
     g_input.held_dir = DIR_NONE;
+    g_input.move_just_pressed = 0;
+    g_input.hold_time = 0;
     g_input.action_pressed = 0;
     g_input.attack_pressed = 0;
     g_input.attack_held = 0;
@@ -213,11 +241,6 @@ void input_reset(void) {
 }
 
 void input_new_frame(void) {
-    /* Reset move_processed to allow one new move this frame */
-    g_input.move_processed = 0;
-
-    /* If a key is being held, prepare the direction for this frame */
-    if (g_input.held_dir != DIR_NONE) {
-        g_input.direction = g_input.held_dir;
-    }
+    /* Reset move_processed for the new frame */
+    /* Note: move_just_pressed is consumed by input_get_direction */
 }

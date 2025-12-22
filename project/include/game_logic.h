@@ -37,7 +37,7 @@ extern GameLogicState *g_current_logic_state;
 #define LEVEL_CLEAR_DELAY QUARTER_SECOND             /* Minimum time before next level */
 
 /* Rock mechanics */
-#define ROCK_WOBBLE_TICKS EIGHTH_SECOND   /* Ticks rock wobbles before falling */
+#define ROCK_WOBBLE_TICKS QUARTER_SECOND   /* Ticks rock wobbles before falling */
 #define ROCK_BLINK_DURATION THIRTY_SECOND /* Ticks per blink cycle */
 #define ROCK_BLINK_COUNT 3                /* Number of times rock blinks when hitting ground */
 #define ROCK_LAND_DELAY EIGHTH_SECOND     /* Ticks rock stays visible after landing */

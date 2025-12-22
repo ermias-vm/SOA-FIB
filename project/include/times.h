@@ -86,14 +86,14 @@
  * @param ms Milliseconds to convert.
  * @return Equivalent ticks after adjustment.
  */
-#define MS_TO_TICKS(ms) ((int)((ms)*TIME_ADJUSTMENT))
+#define MS_TO_TICKS(ms) ((int)((ms) * TIME_ADJUSTMENT))
 
 /**
  * @brief Convert seconds to ticks.
  * @param s Seconds to convert.
  * @return Equivalent ticks after adjustment.
  */
-#define SECONDS_TO_TICKS(s) ((s)*TICKS_PER_SECOND)
+#define SECONDS_TO_TICKS(s) ((s) * TICKS_PER_SECOND)
 
 /*============================================================================*
  *                    STANDARD TIME INTERVALS                                 *
@@ -166,14 +166,14 @@
 /**
  * @brief Target frames per second for the game.
  */
-#define TARGET_FPS 60
+#define TARGET_FPS 120
 
 /**
  * @brief Ticks per frame at target FPS.
  *
  * This is the minimum number of ticks that should pass between frames.
- * We use BASE_TICKS_PER_SECOND (1000) to get real 60 FPS timing regardless
- * of TIME_ADJUSTMENT. At 1000 Hz with TARGET_FPS=60, we wait ~16-17 ticks.
+ * We use BASE_TICKS_PER_SECOND (1000) to get real 120 FPS timing regardless
+ * of TIME_ADJUSTMENT. At 1000 Hz with TARGET_FPS=120, we wait ~8 ticks.
  */
 #define TICKS_PER_FRAME (BASE_TICKS_PER_SECOND / TARGET_FPS)
 
@@ -192,15 +192,14 @@
 #define ENEMY_PARALYSIS_TIME SECONDS_TO_TICKS(1)
 
 /**
- * @brief Attack display duration in frames.
+ * @brief Attack display duration in ticks.
  */
-#define ATTACK_DISPLAY_FRAMES 10
+#define ATTACK_DISPLAY_TIME SIXTEENTH_SECOND
 
 /**
- * @brief Delay before transitioning to next round (1 second at 60 FPS).
- * NOTE: This decrements once per frame, not per tick!
+ * @brief Life lost flash duration in ticks.
  */
-#define ROUND_CLEAR_DELAY TARGET_FPS /* 60 frames = 1 second */
+#define LIFE_LOST_FLASH_TIME QUARTER_SECOND
 
 /*============================================================================*
  *                    SYSTEM TIMES                                            *

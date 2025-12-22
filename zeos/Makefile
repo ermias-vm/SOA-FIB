@@ -9,7 +9,8 @@ AS86 = as86 -0 -a
 LD86 = ld86 -0
 
 # Parallel compilation configuration
-CORES ?= 1
+CORES ?= 1 # Only use 1 core by default
+#CORES ?= 4
 MAKEFLAGS += -j$(CORES)
 
 
@@ -124,6 +125,68 @@ system: system.o system.lds $(SYSOBJ)
 
 user: user.o user.lds $(USROBJ) 
 	$(LD) $(LDFLAGS) -T user.lds -o $@ $< $(USROBJ)
+
+# Print memory page requirements and check allocations
+meminfo:
+	@PAGE_SIZE=$$(grep -E '^\s*#define\s+PAGE_SIZE\s+' include/mm_address.h 2>/dev/null | awk '{print $$3}' | xargs printf "%d" 2>/dev/null || echo 4096) && \
+	NUM_PAG_KERNEL=$$(grep -E '^\s*#define\s+NUM_PAG_KERNEL\s+' include/mm_address.h 2>/dev/null | awk '{print $$3}' || echo 256) && \
+	NUM_PAG_DATA=$$(grep -E '^\s*#define\s+NUM_PAG_DATA\s+' include/mm_address.h 2>/dev/null | awk '{print $$3}' || echo 20) && \
+	NUM_PAG_CODE=$$(grep -E '^\s*#define\s+NUM_PAG_CODE\s+' include/mm_address.h 2>/dev/null | awk '{print $$3}' || echo 20) && \
+	KERNEL_START=$$(grep -E '^\s*#define\s+KERNEL_START\s+' include/mm_address.h 2>/dev/null | awk '{print $$3}' | xargs printf "%d" 2>/dev/null || echo 65536) && \
+	L_USER_START=$$(grep -E '^\s*#define\s+L_USER_START\s+' include/mm_address.h 2>/dev/null | awk '{print $$3}' | xargs printf "%d" 2>/dev/null || echo 1048576) && \
+	SYS_SIZE=$$(wc -c < system.out) && \
+	USER_SIZE=$$(wc -c < user.out) && \
+	DATA_END_ADDR=$$(objdump -h user 2>/dev/null | grep '\.bss' | awk '{printf "%d", ("0x" $$4) + ("0x" $$3)}') && \
+	CODE_START_ADDR=$$(objdump -h user 2>/dev/null | grep '\.text' | head -1 | awk '{printf "%d", "0x" $$4}') && \
+	CODE_END_ADDR=$$(objdump -h user 2>/dev/null | grep '\.text' | head -1 | awk '{printf "%d", ("0x" $$4) + ("0x" $$3)}') && \
+	DATA_USED=$$(( $$CODE_START_ADDR - $$L_USER_START )) && \
+	CODE_SIZE=$$(( $$CODE_END_ADDR - $$CODE_START_ADDR )) && \
+	KERNEL_PAGES_NEEDED=$$(( ($$SYS_SIZE + $$PAGE_SIZE - 1) / $$PAGE_SIZE )) && \
+	KERNEL_END=$$(( $$KERNEL_START + $$SYS_SIZE )) && \
+	DATA_PAGES_NEEDED=$$(( ($$DATA_USED + $$PAGE_SIZE - 1) / $$PAGE_SIZE )) && \
+	CODE_PAGES_NEEDED=$$(( ($$CODE_SIZE + $$PAGE_SIZE - 1) / $$PAGE_SIZE )) && \
+	echo "" && \
+	echo "╔════════════════════════════════════════════════════════════════════════╗" && \
+	echo "║                     MEMORY PAGE REQUIREMENTS                           ║" && \
+	echo "╠════════════════════════════════════════════════════════════════════════╣" && \
+	echo "║  Page size: $$PAGE_SIZE bytes (0x$$(printf '%x' $$PAGE_SIZE))" && \
+	echo "╠════════════════════════════════════════════════════════════════════════╣" && \
+	echo "║  KERNEL (system.out)" && \
+	echo "║    Address range: 0x$$(printf '%x' $$KERNEL_START) - 0x$$(printf '%x' $$KERNEL_END)" && \
+	echo "║    Size: $$SYS_SIZE bytes" && \
+	echo "║    Pages needed: $$KERNEL_PAGES_NEEDED | Allocated: $$NUM_PAG_KERNEL (NUM_PAG_KERNEL)" && \
+	echo "╠════════════════════════════════════════════════════════════════════════╣" && \
+	echo "║  USER (user.out) - Total: $$USER_SIZE bytes" && \
+	echo "║  ┌─ DATA section (0x$$(printf '%x' $$L_USER_START) - 0x$$(printf '%x' $$CODE_START_ADDR))" && \
+	echo "║  │    Used: $$DATA_USED bytes" && \
+	echo "║  │    Pages needed: $$DATA_PAGES_NEEDED | Allocated: $$NUM_PAG_DATA (NUM_PAG_DATA)" && \
+	echo "║  └─ CODE section (0x$$(printf '%x' $$CODE_START_ADDR) - 0x$$(printf '%x' $$CODE_END_ADDR))" && \
+	echo "║       Size: $$CODE_SIZE bytes" && \
+	echo "║       Pages needed: $$CODE_PAGES_NEEDED | Allocated: $$NUM_PAG_CODE (NUM_PAG_CODE)" && \
+	echo "╠════════════════════════════════════════════════════════════════════════╣" && \
+	WARN=0 && \
+	if [ $$KERNEL_PAGES_NEEDED -gt $$NUM_PAG_KERNEL ]; then \
+		echo "║  ⚠ WARNING: KERNEL - NUM_PAG_KERNEL insufficient!" && \
+		echo "║    Need $$KERNEL_PAGES_NEEDED pages, only $$NUM_PAG_KERNEL allocated" && \
+		echo "║    → PAGE FAULT will occur during kernel execution" && \
+		WARN=1; \
+	fi && \
+	if [ $$DATA_PAGES_NEEDED -gt $$NUM_PAG_DATA ]; then \
+		echo "║  ⚠ WARNING: USER DATA - NUM_PAG_DATA insufficient!" && \
+		echo "║    Need $$DATA_PAGES_NEEDED pages, only $$NUM_PAG_DATA allocated" && \
+		echo "║    → PAGE FAULT will occur accessing user data/bss" && \
+		WARN=1; \
+	fi && \
+	if [ $$CODE_PAGES_NEEDED -gt $$NUM_PAG_CODE ]; then \
+		echo "║  ⚠ WARNING: USER CODE - NUM_PAG_CODE insufficient!" && \
+		echo "║    Need $$CODE_PAGES_NEEDED pages, only $$NUM_PAG_CODE allocated" && \
+		echo "║    → PAGE FAULT will occur during user code execution" && \
+		WARN=1; \
+	fi && \
+	if [ $$WARN -eq 0 ]; then \
+		echo "║  ✓ All page allocations are sufficient" ; \
+	fi && \
+	echo "╚════════════════════════════════════════════════════════════════════════╝"
 
 
 ################################################################################

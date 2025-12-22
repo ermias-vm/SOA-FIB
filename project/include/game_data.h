@@ -66,7 +66,6 @@ typedef struct {
     int tunnel_count;
 
     /* Difficulty settings */
-    int enemy_speed;     /* Lower = faster (ticks between moves) */
     int ghost_threshold; /* Ticks before ghost mode activates */
 } LevelData;
 
