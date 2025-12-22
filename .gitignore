@@ -58,7 +58,6 @@ docs/*.txt
 
 # Other files
 docs/*.txt
-docs/img
 /backup
 /REF
 TODO
