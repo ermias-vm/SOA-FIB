@@ -609,9 +609,7 @@ void render_enemies(Enemy *enemies, int count) {
         } else if (enemy->base.type == ENTITY_FYGAR) {
             display_char = CHAR_FYGAR;
             /* Fygar is always green */
-            {
-                enemy_color.fg = COLOR_GREEN;
-            }
+            enemy_color.fg = COLOR_GREEN;
         } else {
             display_char = '?';
             enemy_color.fg = COLOR_WHITE;

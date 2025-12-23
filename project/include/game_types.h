@@ -257,7 +257,7 @@ typedef struct {
 /**
  * @brief Screen position calculation (byte offset in video memory).
  */
-#define SCREEN_POS(x, y) (((y) * SCREEN_WIDTH + (x)) * 2)
+#define SCREEN_POS(x, y) (((y)*SCREEN_WIDTH + (x)) * 2)
 
 /**
  * @brief Check if position is within screen bounds.
