@@ -111,9 +111,11 @@ Dig Dug is a classic arcade game where the player digs underground tunnels to el
 - **Build System**: GNU Make
 
 ## Course Information
-**Subject**: Sistemas Operatius Avançats (SOA)  
-**Institution**: Facultat d'Informàtica de Barcelona (FIB) - UPC  
-**Academic Year**: 2025-2026
+
+- **Subject**: Advanced Operating Systems (SOA)
+- **Institution**: Facultat d'Informàtica de Barcelona (FIB) – UPC
+- **Academic Year**: 2025–2026
+- **Project Grade**: 10/10
 
                            
 ## 👥 Credits 
