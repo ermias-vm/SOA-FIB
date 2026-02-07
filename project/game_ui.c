@@ -367,7 +367,7 @@ void ui_draw_credits_screen(void) {
 
     /* Course info */
     ui_draw_centered_text(17, "SOA - FIB UPC", text_color);
-    ui_draw_centered_text(18, "2024-2025", text_color);
+    ui_draw_centered_text(18, "2025-2026", text_color);
 
     /* Return option */
     ui_draw_centered_text(21, "Press ESC to return", text_color);
